@@ -1,0 +1,92 @@
+# project:
+#   type: website 
+#   output-dir: 'RENDERED_website'
+
+# website:
+#   title: "Justin Andrew Johnson"
+#   navbar:
+#     left:
+#       - text: Home
+#         file: index.qmd
+#       - text: Installation
+#         file: installation.qmd
+#       - text: Quickstart
+#         file: quickstart.qmd
+#       - text: Code examples
+#         menu:
+#           - text: "Spatial Alignment of Rasters"
+#             file: alignment/index.qmd
+#           - text: "Project Flow"
+#             file: project_flow/index.qmd
+
+
+# format:
+#   html:
+#     theme: cosmo
+#     css: styles.css
+#     toc: true
+
+project:
+  type: book
+  output-dir: RENDERED_website
+
+book:
+  title: "Hazelbean documentation"
+  author: "Justin Johnson"
+  page-navigation: true
+
+  chapters: 
+  - index.qmd
+
+  - part: Installation      
+    chapters:
+      - installation.qmd
+      # - Introduction/introduction_big_data_slides.ipynb
+      
+
+  # - part: Python
+  #   chapters:       
+  #     - Python_Introduction/python_setup.ipynb
+  #     - Python_Introduction/jupyter_intro.ipynb
+  #     - Python_Introduction/python_assignment_0.ipynb
+  #     - Python_Introduction/python_basics.ipynb
+  #     - Python_Introduction/numpy_arrays.ipynb
+  #     - Python_Introduction/pandas_tables.ipynb
+  #     - Python_Introduction/gdal_rasters.ipynb
+  #     - Python_Introduction/python_assignment_1.ipynb
+
+  # - part: Machine Learning
+  #   chapters:
+  #     - Machine_Learning/introduction_big_data.ipynb
+  #     - Machine_Learning/linear_regression.ipynb
+  #     - Machine_Learning/support_vector_machines.ipynb
+  #     - Machine_Learning/regularization_intro.ipynb
+  #     - Machine_Learning/regularization_with_lasso.ipynb
+  #     - Machine_Learning/neural_networks_intro.ipynb
+  #     - Machine_Learning/nn_multilayer_perceptron.ipynb
+
+  # - part: Spatial Analysis
+  #   chapters:
+  #     - Spatial_Analysis/spatial_data_intro.ipynb
+  #     - Spatial_Analysis/classification_intro.ipynb
+  #     - Spatial_Analysis/lulc_classification.ipynb
+  #     - Spatial_Analysis/python_assignment_2.ipynb
+
+  # - part: Appendices
+  #   chapters:
+  #     - Appendices/hosting_notes.ipynb
+  #     - Appendices/quarto_notes.qmd
+
+# bibliography: references.bib
+
+execute:
+  freeze: true
+  cache: true
+
+format:
+  html:
+    theme: cosmo
+editor: visual
+
+
+

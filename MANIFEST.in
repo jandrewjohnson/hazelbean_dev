@@ -1,0 +1,2 @@
+recursive-include *.cp36-win_amd64.pyd *.pyx *.pyd *.c
+recursive-include hazelbean/calculation_core *.py, *.cp36-win_amd64.pyd *.pyx *.pyd *.c

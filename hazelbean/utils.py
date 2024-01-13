@@ -1,0 +1,1135 @@
+import os, sys, shutil, warnings
+import geopandas as gpd
+import pprint
+from collections import OrderedDict
+import numpy as np
+
+import hazelbean as hb
+import math
+from osgeo import gdal
+import contextlib
+import logging
+from google.cloud import storage
+
+import pandas as pd
+
+L = hb.get_logger('hazelbean utils')
+
+def debug(msg, *args, level=100, same_line_as_previous=False, **kwargs):
+    # LEARNING POINT, when using the * operator in a function with other named args, it had to come before the named args, e.g. level=10 in the above.
+        
+    if level <= 50:
+        to_print = str(msg) + ' ' + ' '.join([str(i) for i in args]) + ' ' + ' '.join([str(k) + ': ' + str(v) + '\n' for k, v in kwargs.items() if k != 'logger_level'])
+        
+        if same_line_as_previous:
+            print("\r" + to_print, end="")    
+        else:
+            print(to_print)
+
+def log(msg, *args, level=10, same_line_as_previous=False, **kwargs):
+    # LEARNING POINT, when using the * operator in a function with other named args, it had to come before the named args, e.g. level=10 in the above.
+        
+    if level <= 50:
+        to_print = str(msg) + ' ' + ' '.join([str(i) for i in args]) + ' ' + ' '.join([str(k) + ': ' + str(v) + '\n' for k, v in kwargs.items() if k != 'logger_level'])
+        
+        if same_line_as_previous:
+            print("\r" + to_print, end="")    
+        else:
+            print(to_print)
+    
+def hprint(*args, **kwargs):
+    return hb_pprint(*args, **kwargs)
+
+def pp(*args, **kwargs):
+    return hb_pprint(*args, **kwargs)
+
+def hb_pprint(*args, **kwargs):
+
+    num_values = len(args)
+
+    print_level = kwargs.get('print_level', 2) # NO LONGER IMPLEMENTED
+    return_as_string = kwargs.get('return_as_string', False)
+    include_type = kwargs.get('include_type', False)
+
+    indent = kwargs.get('indent', 2)
+    width = kwargs.get('width', 120)
+    depth = kwargs.get('depth', None)
+
+    printable = ''
+
+    for i in range(num_values):
+        if type(args[i]) == hb.ArrayFrame:
+            # handles its own pretty printing via __str__
+            line = str(args[i])
+        elif type(args[i]) is OrderedDict:
+            line = 'OrderedDict\n'
+            for k, v in args[i].items():
+                if type(v) is str:
+                    item = '\'' + v + '\''
+                else:
+                    item = str(v)
+                line += '    ' + str(k) + ': ' + item + ',\n'
+                # PREVIOS ATTEMPT Not sure why was designed this way.
+                # line += '    \'' + str(k) + '\': ' + item + ',\n'
+        elif type(args[i]) is dict:
+            line = 'dict\n'
+            line += pprint.pformat(args[i], indent=indent, width=width, depth=depth)
+            # for k, v in args[i].items():
+            #     if type(v) is str:
+            #         item = '\'' + v + '\''
+            #     else:
+            #         item = str(v)
+            #     line += '    ' + str(k) + ': ' + item + ',\n'
+        elif type(args[i]) is list:
+            line = 'list\n'
+            line += pprint.pformat(args[i], indent=indent, width=width, depth=depth)
+            # for j in args[i]:
+            #     line += '  ' + str(j) + '\n'
+        elif type(args[i]) is np.ndarray:
+
+            try:
+                line = hb.describe_array(args[i])
+            except:
+                line = '\nUnable to describe array.'
+
+        else:
+            line = pprint.pformat(args[i], indent=indent, width=width, depth=depth)
+
+        if include_type:
+            line = type(args[i]).__name__ + ': ' + line
+        if i < num_values - 1:
+            line += '\n'
+        printable += line
+
+    if return_as_string:
+        return printable
+    else:
+        print (printable)
+        return printable
+
+def concat(*to_concat):
+    to_return = ''
+    for v in to_concat:
+        to_return += str(v)
+
+    return to_return
+
+
+@contextlib.contextmanager
+def capture_gdal_logging():
+    """Context manager for logging GDAL errors with python logging.
+
+    GDAL error messages are logged via python's logging system, at a severity
+    that corresponds to a log level in ``logging``.  Error messages are logged
+    with the ``osgeo.gdal`` logger.
+
+    Parameters:
+        ``None``
+
+    Returns:
+        ``None``"""
+    osgeo_logger = logging.getLogger('osgeo')
+
+    def _log_gdal_errors(err_level, err_no, err_msg):
+        """Log error messages to osgeo.
+
+        All error messages are logged with reasonable ``logging`` levels based
+        on the GDAL error level.
+
+        Parameters:
+            err_level (int): The GDAL error level (e.g. ``gdal.CE_Failure``)
+            err_no (int): The GDAL error number.  For a full listing of error
+                codes, see: http://www.gdal.org/cpl__error_8h.html
+            err_msg (string): The error string.
+
+        Returns:
+            ``None``"""
+        osgeo_logger.log(
+            level=GDAL_ERROR_LEVELS[err_level],
+            msg='[errno {err}] {msg}'.format(
+                err=err_no, msg=err_msg.replace('\n', ' ')))
+
+    gdal.PushErrorHandler(_log_gdal_errors)
+    try:
+        yield
+    finally:
+        gdal.PopErrorHandler()
+
+def describe(input_object, file_extensions_in_folder_to_describe=None, surpress_print=False, surpress_logger=False):
+    # Generalization of describe_array for many types of things.
+
+    description = ''
+
+    input_object_type = type(input_object).__name__
+    if type(input_object) is hb.ArrayFrame:
+        description = hb.describe_af(input_object.path)
+
+    if type(input_object) is np.ndarray:
+        description = hb.describe_array(input_object)
+    elif type(input_object) is str:
+        try:
+            folder, filename = os.path.split(input_object)
+        except:
+            folder, filename = None, None
+        try:
+            file_label, file_ext = os.path.splitext(filename)
+        except:
+            file_label, file_ext = None, None
+        if file_ext in hb.common_gdal_readable_file_extensions or file_ext in ['.npy']:
+            description = hb.describe_path(input_object)
+        elif not file_ext:
+            description = 'type: folder, contents: '
+            description += ' '.join(os.listdir(input_object))
+            if file_extensions_in_folder_to_describe == '.tif':
+                description += '\n\nAlso describing all files of type ' + file_extensions_in_folder_to_describe
+                for filename in os.listdir(input_object):
+                    if os.path.splitext(filename)[1] == '.tif':
+                        description += '\n' + describe_path(input_object)
+        else:
+            description = 'Description of this is not yet implemented: ' + input_object
+
+    ds = None
+    array = None
+    if not surpress_print:
+        pp_output = hb.hb_pprint(description)
+    else:
+        pp_output = hb.hb_pprint(description, return_as_string=True)
+
+    if not surpress_logger:
+        hb.log(pp_output)
+    return description
+
+def safe_string(string_possibly_unicode_or_number):
+    """Useful for reading Shapefile DBFs with funnycountries"""
+    return str(string_possibly_unicode_or_number).encode("utf-8", "backslashreplace").decode()
+
+def describe_af(input_af):
+    if not input_af.path and not input_af.shape:
+        return '''Hazelbean ArrayFrame (empty). The usual next steps are to set the shape (af.shape = (30, 50),
+                    then set the path (af.path = \'C:\\example_raster_folder\\example_raster.tif\') and finally set the raster
+                    with one of the set raster functions (e.g. af = af.set_raster_with_zeros() )'''
+    elif input_af.shape and not input_af.path:
+        return 'Hazelbean ArrayFrame with shape set (but no path set). Shape: ' + str(input_af.shape)
+    elif input_af.shape and input_af.path and not input_af.data_type:
+        return 'Hazelbean ArrayFrame with path set. ' + input_af.path + ' Shape: ' + str(input_af.shape)
+    elif input_af.shape and input_af.path and input_af.data_type and not input_af.geotransform:
+        return 'Hazelbean ArrayFrame with array set. ' + input_af.path + ' Shape: ' + str(input_af.shape) + ' Datatype: ' + str(input_af.data_type)
+
+    elif not os.path.exists(input_af.path):
+        raise NameError('AF pointing to ' + str(input_af.path) + ' used as if the raster existed, but it does not. This often happens if tried to load an AF from a path that does not exist.')
+
+    else:
+        if input_af.data_loaded:
+            return '\nHazelbean ArrayFrame (data loaded) at ' + input_af.path + \
+                   '\n      Shape: ' + str(input_af.shape) + \
+                   '\n      Datatype: ' + str(input_af.data_type) + \
+                   '\n      No-Data Value: ' + str(input_af.ndv) + \
+                   '\n      Geotransform: ' + str(input_af.geotransform) + \
+                   '\n      Bounding Box: ' + str(input_af.bounding_box) + \
+                   '\n      Projection: ' + str(input_af.projection)+ \
+                   '\n      Num with data: ' + str(input_af.num_valid) + \
+                   '\n      Num no-data: ' + str(input_af.num_ndv) + \
+                   '\n      ' + str(hb.pp(input_af.data, return_as_string=True)) + \
+                   '\n      Histogram ' + hb.pp(hb.enumerate_array_as_histogram(input_af.data), return_as_string=True) + '\n\n'
+        else:
+            return '\nHazelbean ArrayFrame (data not loaded) at ' + input_af.path + \
+                   '\n      Shape: ' + str(input_af.shape) + \
+                   '\n      Datatype: ' + str(input_af.data_type) + \
+                   '\n      No-Data Value: ' + str(input_af.ndv) + \
+                   '\n      Geotransform: ' + str(input_af.geotransform) + \
+                   '\n      Bounding Box: ' + str(input_af.bounding_box) + \
+                   '\n      Projection: ' + str(input_af.projection)
+
+                    # '\nValue counts (up to 30) ' + str(hb.pp(hb.enumerate_array_as_odict(input_af.data), return_as_string=True)) + \
+
+def describe_dataframe(df):
+    p = 'Dataframe of length ' + str(len(df.index)) + ' with ' + str(len(df.columns)) + ' columns. Index first 10: ' + str(list(df.index.values)[0:10])
+    for column in df.columns:
+        col = df[column]
+        p += '\n    ' + str(column) + ': min ' + str(np.min(col)) + ', max ' + str(np.max(col)) + ', mean ' + str(np.mean(col)) + ', median ' + str(np.median(col)) + ', sum ' + str(np.sum(col)) + ', num_nonzero ' + str(np.count_nonzero(col)) + ', nanmin ' + str(np.nanmin(col)) + ', nanmax ' + str(np.nanmax(col)) + ', nanmean ' + str(np.nanmean(col)) + ', nanmedian ' + str(np.nanmedian(col)) + ', nansum ' + str(np.nansum(col))
+    return(p)
+
+def describe_path(path):
+    ext = os.path.splitext(path)[1]
+    # TODOO combine the disparate describe_* functionality
+    # hb.pp(hb.common_gdal_readable_file_extensions)
+    if ext in hb.common_gdal_readable_file_extensions:
+        ds = gdal.Open(path)
+        if ds.RasterXSize * ds.RasterYSize > 10000000000:
+            return 'too big to describe'  # 'type: LARGE gdal_uri, dtype: ' + str(ds.GetRasterBand(1).DataType) + 'no_data_value: ' + str(ds.GetRasterBand(1).GetNoDataValue()) + ' sum: ' + str(sum_geotiff(input_object)) +  ', shape: ' + str((ds.RasterYSize, ds.RasterXSize)) + ', size: ' + str(ds.RasterXSize * ds.RasterYSize) + ', object: ' + input_object
+        else:
+            try:
+                array = ds.GetRasterBand(1).ReadAsArray()
+                return hb.describe_array(array)
+            except:
+                return 'Too big to open.'
+    elif ext in ['.npy', '.npz']:
+        try:
+            array = hb.load_npy_as_array(path)
+            return hb.describe_array(array)
+        except:
+            return 'Unable to describe NPY file because it couldnt be opened as an array'
+
+    # try:
+    #     af = hb.ArrayFrame(input_path)
+    #     s = describe_af(af)
+    #     hb.log(str(s))
+    # except:
+    #     pass
+
+
+def describe_array(input_array):
+    description = 'Array of shape '  + str(np.shape(input_array))+ ' with dtype ' + str(input_array.dtype) + '. sum: ' + str(np.sum(input_array)) + ', min: ' + str(
+        np.min(input_array)) + ', max: ' + str(np.max(input_array)) + ', range: ' + str(
+        np.max(input_array) - np.min(input_array)) + ', median: ' + str(np.median(input_array)) + ', mean: ' + str(
+        np.mean(input_array)) + ', num_nonzero: ' + str(np.count_nonzero(input_array)) + ', size: ' + str(np.size(input_array)) + ' nansum: ' + str(
+        np.nansum(input_array)) + ', nanmin: ' + str(
+        np.nanmin(input_array)) + ', nanmax: ' + str(np.nanmax(input_array)) + ', nanrange: ' + str(
+        np.nanmax(input_array) - np.nanmin(input_array)) + ', nanmedian: ' + str(np.nanmedian(input_array)) + ', nanmean: ' + str(
+        np.nanmean(input_array))
+    return description
+
+def round_to_nearest_base(x, base):
+    return base * round(x/base)
+
+def round_up_to_nearest_base(x, base):
+    return base * math.ceil(x/base)
+
+def round_down_to_nearest_base(x, base):
+    return base * math.floor(x/base)
+
+
+def round_significant_n(input, n):
+    # round_significant_n(3.4445678, 1)
+    x = input
+    try:
+        int(x)
+        absable = True
+    except:
+        absable = False
+    if x != 0 and absable:
+        out = round(x, -int(math.floor(math.log10(abs(x)))) + (n - 1))
+    else:
+        out = 0.0
+    return out
+
+def round_to_nearest_containing_increment(input, increment, direction):
+    if direction == 'down':
+        return int(increment * math.floor(float(input) / increment))
+    elif direction == 'up':
+        return int(increment * math.ceil(float(input) / increment))
+    else:
+        raise NameError('round_to_nearest_containing_increment failed.')
+
+
+# TODOO Rename to_bool and maybe have a separate section of casting functions?
+def str_to_bool(input):
+    """Convert alternate versions of the word true (e.g. from excel) to actual python bool object."""
+    return str(input).lower() in ("yes", "true", "t", "1", "y")
+
+def normalize_array_memsafe(input_path, output_path, low=0, high=1, min_override=None, max_override=None, ndv=None, log_transform=True):
+
+    raster_statistics =  hb.read_raster_stats(input_path)
+    if min_override is None:
+        min_override = raster_statistics['min']
+    if max_override is None:
+        max_override = raster_statistics['max']
+
+    input_list = [input_path, low, high, min_override, max_override, ndv, log_transform]
+    hb.log('normalize_array_memsafe on ', input_path, output_path, low, high, min_override, max_override, ndv, log_transform)
+    hb.raster_calculator_flex(input_list, normalize_array, output_path=output_path)
+
+def normalize_array(array, low=0, high=1, min_override=None, max_override=None, ndv=None, log_transform=True):
+    """Returns array with range (0, 1]
+    Log is only defined for x > 0, thus we subtract the minimum value and then add 1 to ensure 1 is the lowest value present. """
+    array = array.astype(np.float64)
+    if ndv is not None: # Slightly slower computation if has ndv. optimization here to only consider ndvs if given.
+        if log_transform:
+            if min_override is None:
+                L.debug('Starting to log array for normalize with ndv.')
+                min = np.min(array[array != ndv])
+                L.debug('  Min was ' + str(min))
+            else:
+                min = min_override
+            to_add = np.float64(min * -1.0 + 1.0) # This is just to subtract out the min and then add 1 because can't log zero
+            array = np.where(array != ndv, np.log(array + to_add), ndv)
+            L.debug('  Finished logging array')
+
+        # Have to do again to get new min after logging.
+        if min_override is None:
+            L.debug('Getting min from array', array, array[array != ndv], array.shape)
+
+            min = np.min(array[array != ndv])
+        else:
+            min = min_override
+
+        if max_override is None:
+            hb.log('Getting max from array', array, array[array != ndv], array.shape)
+            max = np.max(array[array != ndv])
+        else:
+            max = max_override
+
+        normalizer = np.float64((high - low) / (max - min))
+
+        output_array = np.where(array != ndv, (array - min) * normalizer, ndv)
+    else:
+        if log_transform:
+            hb.log('Starting to log array for normalize with no ndv.')
+            min = np.min(array)
+            to_add = np.float64(min * -1.0 + 1.0)
+            array = array + to_add
+
+            array = np.log(array)
+
+        # Have to do again to get new min after logging.
+        if min_override is None:
+            min = np.min(array[array != ndv])
+        else:
+            min = min_override
+
+        if max_override is None:
+            max = np.max(array[array != ndv])
+        else:
+            max = max_override
+        normalizer = np.float64((high - low) / (max - min))
+
+        output_array = (array - min) *  normalizer
+
+    return output_array
+
+
+def get_ndv_from_path(intput_path):
+    """Return nodata value from first band in gdal dataset cast as numpy datatype.
+
+    Args:
+        dataset_uri (string): a uri to a gdal dataset
+
+    Returns:
+        nodata: nodata value for dataset band 1
+    """
+    dataset = gdal.Open(intput_path)
+    band = dataset.GetRasterBand(1)
+    nodata = band.GetNoDataValue()
+    if nodata is not None:
+        nodata_out = nodata
+    else:
+        # warnings.warn(
+        #     "Warning the nodata value in %s is not set", dataset_uri)
+        nodata_out = None
+
+    band = None
+    gdal.Dataset.__swig_destroy__(dataset)
+    dataset = None
+    return nodata_out
+
+def get_nodata_from_uri(dataset_uri):
+    """Return nodata value from first band in gdal dataset cast as numpy datatype.
+
+    Args:
+        dataset_uri (string): a uri to a gdal dataset
+
+    Returns:
+        nodata: nodata value for dataset band 1
+    """
+
+    warnings.warn('get_nodata_from_uri deprecated for get_ndv_from_path ')
+    dataset = gdal.Open(dataset_uri)
+    band = dataset.GetRasterBand(1)
+    nodata = band.GetNoDataValue()
+    if nodata is not None:
+        nodata_out = nodata
+    else:
+        # warnings.warn(
+        #     "Warning the nodata value in %s is not set", dataset_uri)
+        nodata_out = None
+
+    band = None
+    gdal.Dataset.__swig_destroy__(dataset)
+    dataset = None
+    return nodata_out
+
+
+# Make a non line breaking printer for updates.
+def print_in_place(to_print, pre=None, post=None):
+    to_print = str(to_print)
+    if pre:
+        to_print = str(pre) + to_print
+    if post:
+        to_print = to_print + str(post)
+
+    print("\r", end="")
+    print(to_print, end="")
+    # print('\r' + to_print, end="\r")
+
+    # LEARNING POINT, print with end='\r' didn't work because it was cleared before it was visible, possibly by pycharm
+    # print(to_print,  end='\r')
+
+
+
+# Make a non line breaking printer for updates.
+def pdot(pre=None, post=None):
+    to_dot = '.'
+    if pre:
+        to_dot = str(pre) + to_dot
+    if post:
+        to_dot = to_dot + str(post)
+    sys.stdout.write(to_dot)
+
+def parse_input_flex(input_flex):
+    if isinstance(input_flex, str):
+        output = hb.ArrayFrame(input_flex)
+    elif isinstance(input_flex, np.ndarray):
+        print('parse_input_flex is NYI for arrays because i first need to figure out how to have an af without georeferencing.')
+        # output = hb.create_af_from_array(input_flex)
+    else:
+        output = input_flex
+    return output
+
+def get_unique_keys_from_vertical_dataframe(df, columns_to_check=None):
+    if columns_to_check is None:
+        columns_to_check = list(df.columns)
+
+    keys_dict = {}
+    lengths_dict = {}
+
+    for column in columns_to_check:
+        uniques = df[column].unique()
+        keys_dict[column] = uniques
+        lengths_dict[column] = len(uniques)
+
+    return lengths_dict, keys_dict
+
+def calculate_on_vertical_df(df, level, op_type, focal_cell, suffix):
+    original_indices = df.index.copy()
+    original_columns = df.columns.copy()
+    if len(original_columns) > 1:
+        raise NameError('Are you sure this is vertical data?')
+    original_label = original_columns.values[0]
+
+    dfp = df.unstack(level=level)
+    r = dfp.columns.get_level_values(level=1)
+
+    dfp.columns = r
+
+    output_labels = []
+    for i in dfp.columns:
+        if op_type == 'difference_from_row' and i != focal_cell:
+            dfp[i + suffix] = dfp[i] - dfp[focal_cell]
+            output_labels.append(suffix)
+        if op_type == 'percentage_change_from_row' and i != focal_cell:
+            dfp[i + suffix] = ((dfp[i] - dfp[focal_cell]) / dfp[i]) * 100.0
+            output_labels.append(suffix)
+
+    dfo = pd.DataFrame(dfp.stack())
+
+    dfo = dfo.rename(columns={0: original_label})
+
+    dfor = dfo.reset_index()
+    dforr = dfor.set_index(original_indices.names)
+
+    # Reorder indices so it matches the input (restacking puts the targetted level outermost)
+
+    return dforr
+
+def df_plot(input_df, output_png_path, type='bar', legend_labels=None):
+
+    # Create the bar plot
+    input_df
+    import matplotlib.pyplot as plt
+    ax = input_df.plot(kind=type, rot=0, colormap='viridis', figsize=(10, 6))
+    # Set labels and title
+    plt.xlabel('Regions')
+    var = hb.file_root(output_png_path)
+    plt.ylabel('Percent change in ' + var)
+    plt.title('Change in ' + var + ' by region under three ag productivity shocks')
+    if legend_labels is not None:
+        plt.legend(title='Shock', loc='upper left', labels=legend_labels)
+
+    plt.axhline(y=0, color='gray', linestyle='dotted', linewidth=1, label='100%')
+
+    # Save the png to output_png_path
+    plt.savefig(output_png_path, dpi=300, bbox_inches='tight')
+
+def df_merge_list_of_csv_paths(csv_path_list, output_csv_path=None, on='index', left_on=None, right_on=None, column_suffix='fileroot',verbose=False):
+
+    merged_df = None
+
+    if on == 'index':
+        left_index = True
+        right_index = True
+        left_on = None
+        right_on = None
+        new_on = None
+    else:
+        new_on = on
+        left_index = False
+        right_index = False
+        left_on = on
+        right_on = on
+
+    for c, csv_path in enumerate(csv_path_list):
+        current_df = pd.read_csv(csv_path)  
+
+        if column_suffix == 'fileroot':
+            columns = {k: v for k, v in zip(current_df.columns, [str(i) + '_' + hb.file_root(csv_path) for i in current_df.columns])}
+            current_df.rename(columns=columns, inplace=True)
+        elif column_suffix == 'ignore':
+            pass # This means we're assuming each csv has some unique col.
+        elif type(column_suffix) is str:
+            columns = {k: v for k, v in zip(current_df.columns, [str(i) + '_' + column_suffix for i in current_df.columns])}
+            current_df.rename(columns=columns, inplace=True)
+        elif type(column_suffix) is list:
+            if len(column_suffix) == len(csv_path_list):
+                columns = {k: v for k, v in zip(current_df.columns, [str(i) + '_' + column_suffix[c] for i in current_df.columns if 'Unnamed' not in i])}
+                current_df.rename(columns=columns, inplace=True)
+            else:
+                raise NameError('column_suffix list must be same length as csv_path_list')
+
+        else:
+            raise NameError('column_suffix must be fileroot or a string or a list of strings.')
+
+
+        if c == 0:
+            merged_df = current_df
+        else:  
+
+            cols = [i for i in current_df.columns if i not in merged_df.columns]
+            if right_on:
+                cols +=  + [right_on]
+            new_df = current_df[cols]
+            # merged_df = pd.merge(merged_df, new_df, how='outer', left_on=left_on, right_on=right_on, left_index=left_index, right_index=right_index)
+            merged_df = df_merge(merged_df, new_df, how='outer', left_on=left_on, right_on=right_on, left_index=left_index, right_index=right_index, verbose=False)
+    if output_csv_path:
+        merged_df.to_csv(output_csv_path, index=False)
+  
+        
+    return merged_df
+
+def df_merge(left_input, right_input, how=None, on=None, left_on=False, right_on=False, left_index=False, right_index=False, compare_inner_outer=True, verbose=False):
+    
+    # Check if is string. If its not a string, we will strongly assume
+    # it is a GDF or a DF.
+    if type(left_input) is str:
+        if os.path.splitext(left_input)[1] == '.shp' or os.path.splitext(left_input)[1] == '.gpkg':
+            left_df = gpd.read_file(left_input)
+        else:
+            left_df = pd.read_csv(left_input)
+    else:
+        left_df = left_input
+        
+    if type(right_input) is str:
+        if os.path.splitext(right_input)[1] == '.shp' or os.path.splitext(right_input)[1] == '.gpkg':
+            left_df = gpd.read_file(right_input)
+        else:
+            left_df = pd.read_csv(right_input)
+    else:
+        right_df = right_input
+
+
+    # Check if either df is a GeoDataFrame
+    if type(right_df) is gpd.GeoDataFrame and not type(left_df) is gpd.GeoDataFrame:
+        raise NameError('Right df is a GeoDataFrame but left is not. This is not supported. Because it will drop the geometry column and fail on .to_file()')
+
+    if verbose:
+        hb.log(
+"""Merging: 
+    
+    left_df:
+""" + str(left_df) + """
+    right_df: 
+""" + str(right_df) + """    
+"""
+)
+    if on is not None:
+        if on == 'index':
+            left_index = True
+            right_index = True
+        else:
+            left_on = on
+            right_on = on
+    
+    if how is None:
+        how = 'outer'
+
+    # If no on or left_on, right_on is set, try to infer it from identical columns
+
+    shared_column_labels = set(left_df.columns).intersection(set(right_df.columns))
+    identical_columns = []
+    identical_column_labels = []
+    for col in shared_column_labels:
+        # LEARNING POINT, using df == df failed unintuitively because np.nan != np.nan. Any one instance of a nan cannot EQUAL another instance of a nan even though they seem identical. Perhaps this is because equals is implied to be a function of numbers?
+        # LEARNING POINT: left_df[col].equals(right_df[col]) solved the np.nan != np.nan problem that arose with left_df[col] == (right_df[col])
+        # LEARNING Point, however the above didn't address the fact that the column values being identical fails equals if the indices associated are not the same.
+        
+        # LEARNING POINT: in gtapv7_s65_a24_correspondence I had the case where the ids were identical but in different order.
+        # This is exactly what the merge function deals with, but it makes for a non-trivial identify-identical case
+        # I chose to have this be considered non-identical and let the user deal with it pre function.
+
+        if 'int' in str(left_df[col].dtype) or 'float' in str(left_df[col].dtype):
+            # temporarily replace np.nan with -9999 so that it can test equality between nans
+            left_df[col + '_temp'] = left_df[col].fillna(-9999)
+            right_df[col + '_temp'] = right_df[col].fillna(-9999)
+            
+            # left_array = np.where(np.isnan(left_df[col].values), -9999, left_df[col].values)
+            # right_array = np.where(np.isnan(right_df[col].values), -9999, right_df[col].values)
+
+            if hb.arrays_equal_ignoring_order(left_df[col + '_temp'].values, right_df[col + '_temp'].values, ignore_values=[-9999]):
+            # if np.array_equal(left_array, right_array):
+                identical_columns.append(left_df[col])
+                identical_column_labels.append(col)
+                
+            # Now drop the temp columns
+            left_df = left_df.drop(col + '_temp', axis=1)
+            right_df = right_df.drop(col + '_temp', axis=1)
+            
+        else:
+            a = left_df[col].sort_values().reset_index(drop=True).unique()
+            b = right_df[col].sort_values().reset_index(drop=True).unique()
+            # if np.array_equal(a, b):
+            if left_df[col].sort_values().reset_index(drop=True).equals(right_df[col].sort_values().reset_index(drop=True)):
+            # if left_df[col].equals(right_df[col]):
+                identical_columns.append(left_df[col])
+                identical_column_labels.append(col)
+                
+    if not any([left_on, right_on, left_index, right_index]):
+        # If found, assign the first int column as the col to merge on
+        for c, col in enumerate(identical_columns):
+            if 'int' in str(col.dtype):
+                left_on = identical_column_labels[c]
+                right_on = identical_column_labels[c]
+            break
+
+        # If still not found, try to find a suitable string-based merge column, but fail if
+        if not any([left_on, right_on, left_index, right_index]):
+            remove_unnamed = [i for i in identical_column_labels if 'Unnamed:' not in i]
+            if len(remove_unnamed) < 0:
+                raise NameError('BORK!')
+                # raise NameError('Too many identical column headers to infer which to merge on.')
+            elif len(remove_unnamed) == 0:
+                print('No identical column headers to infer which to merge on.')
+            else:
+                left_on = remove_unnamed[0]
+                right_on = remove_unnamed[0]
+
+
+    # Drop one of the identical columns so we don't get tons of redundant columns.
+    for col in identical_column_labels:
+        if col != left_on and col != right_on:
+            if verbose:
+                hb.log('Identical cols i that are not index or listed as merging on, so dropping right.')
+            right_df = right_df.drop(col, axis=1)
+
+    if compare_inner_outer:
+        if left_index and right_index:
+            df_inner = pd.merge(left_df, right_df, how='inner', left_index=left_index, right_index=right_index)
+            df_outer = pd.merge(left_df, right_df, how='outer', left_index=left_index, right_index=right_index)
+            if how == 'inner':
+                df = df_inner
+            elif how == 'outer':
+                df = df_outer
+            else:
+                df = pd.merge(left_df, right_df, how=how, left_index=left_index, right_index=right_index)
+            
+        else:
+            df_inner = pd.merge(left_df, right_df, how='inner', left_on=left_on, right_on=right_on)        
+            df_outer = pd.merge(left_df, right_df, how='outer', left_on=left_on, right_on=right_on)        
+            if how == 'inner':
+                df = df_inner
+            elif how == 'outer':
+                df = df_outer
+            else:
+                df = pd.merge(left_df, right_df, how=how, left_on=left_on, right_on=right_on)        
+                
+                
+                
+        # REIMPLEMENT THIS!!!
+        # comparison_dict = hb.df_compare_column_contents_as_dict(df_outer[left_on], df_outer[right_on])
+        
+        # if verbose:
+        #     hb.log('Comparison of entries in left and right after merge: ' + hb.print_dict(comparison_dict))
+            
+        # if len(comparison_dict['left_only']) > 0:
+        #     hb.log('\nWARNING!\nhb.df_merge lost the following left values: ' + str(comparison_dict['left_only']))
+        # if len(comparison_dict['right_only']) > 0:
+        #     hb.log('\nWARNING!\nhb.df_merge lost the following right values: ' + str(comparison_dict['right_only']))
+            
+    else:
+        if left_index and right_index:
+            df = pd.merge(left_df, right_df, how=how, left_index=left_index, right_index=right_index)
+        else:
+            df = pd.merge(left_df, right_df, how=how, left_on=left_on, right_on=right_on)
+    if verbose:
+        hb.log('Finished merge. Found the following DF:\n' + str(df) +'\n which has columns ' + str(list(df.columns.values)))
+    return df
+
+def df_merge_two_columns_filling_missing(df, left_col, right_col, output_col_name):
+    
+    # Combines two columns, filling missing values of left with the value of right
+    # while also checking that no value in left does not equal the value in right
+    # good for validating merge.
+    
+    left_series = df[left_col]
+    right_series = df[right_col]
+    
+    mismatch = df[left_col] != df[right_col]
+    mismatch_df = df[df[left_col] != df[right_col]][[left_col, right_col]]
+    
+    # Drop where at least one column has a nan
+    mismatch_df = mismatch_df.dropna()
+    
+    # if len(mismatch_df) > 0:
+    #     raise NameError('Mismatched values in columns ' + left_col + ' and ' + right_col + ' in dataframe ' + str(df) + ' at indices ' + str(mismatch_df.index.values))
+    
+    
+    df[output_col_name] = np.where(left_series.isnull(), right_series, left_series)
+
+    # Drop the two columns that were merged
+    df = df.drop([left_col, right_col], axis=1)
+    
+    return df
+    
+
+# TODOO Move this to a new dataframe_utils file.
+def df_reorder_columns(input_df, initial_columns=None, prespecified_order=None, remove_columns=None, sort_method=None):
+    """If both initial_columns and prespecified_order are given, initial columns will override. Initial columns will also
+    override remove columns. sort_method can be alphabetic or reverse_alphabetic."""
+    if initial_columns is None:
+        initial_columns = []
+    if prespecified_order is None:
+        prespecified_order = []
+    if initial_columns is None:
+        initial_columns = []
+    if remove_columns is None:
+        remove_columns = []
+
+    if len(prespecified_order) <= 0:
+
+        if sort_method == 'alphabetic':
+            sorted_columns = sorted(list(input_df.columns))
+        elif sort_method == 'reverse_alphabetic':
+            sorted_columns = sorted(list(input_df.columns), reverse=True)
+        else:
+            sorted_columns = list(input_df.columns)
+    else:
+        sorted_columns = prespecified_order
+
+    final_columns = initial_columns + [i for i in sorted_columns if i not in initial_columns and i not in remove_columns]
+
+    return input_df[final_columns]
+
+
+def convert_py_script_to_jupyter(input_path):
+    output_lines = []
+
+    output_lines.append('#%% md')
+    output_lines.append('')
+    output_lines.append('# ' + hb.file_root(input_path))
+    output_lines.append('')
+
+    current_state = 'md'
+    previous_state = 'md'
+
+    with open(input_path) as fp:
+        for line in fp:
+            line = line.replace('\n', '')
+            if line != '':
+
+                if line.replace(' ', '')[0] == '#':
+                    current_state = 'md'
+                else:
+                    current_state = 'py'
+                # print(current_state + ': ', line, line)
+
+                if current_state != previous_state:
+                    if current_state == 'md':
+                        output_lines.append('#%% md')
+                    elif current_state == 'py':
+                        output_lines.append('#%%')
+                    else:
+                        raise NameError('wtf')
+                    previous_state = current_state
+
+                if current_state == 'md':
+                    to_append = line.split('#', 1)[1].lstrip()
+                    output_lines.append(to_append)
+                elif current_state == 'py':
+                    output_lines.append(line)
+                else:
+                    raise NameError('wtf')
+
+                # output_lines.append(line + '\n')
+            else:
+                # print(current_state + ': ', 'BLANK LINE', line)
+                output_lines.append('')
+
+    for line in output_lines:
+        print(line)
+
+    # ## DOESNT WORK BECAUSE NEED TO STRUCTURE JSON AS WELL, better is just to copy paste into pycharm lol
+    # with open(output_path, 'w') as fp:
+    #     for line in output_lines:
+    #         print(line)
+    #         fp.write(line)
+
+def flatten_nested_dictionary(input_dict, return_type='values'):
+    def walk_dictionary(d, return_type):
+        for key, value in d.items():
+
+            if isinstance(value, dict):
+                yield from walk_dictionary(value, return_type)
+            else:
+                if return_type == 'both':
+                    yield (key, value)
+                elif return_type == 'keys':
+                    yield key
+                elif return_type == 'values':
+                    yield value
+
+    if return_type == 'both':
+        to_return = {}
+        returned_list = list(walk_dictionary(input_dict, return_type=return_type))
+        for i in returned_list:
+            to_return[i[0]] = i[1]
+        return to_return
+    elif return_type == 'keys':
+        return list((walk_dictionary(input_dict, return_type=return_type)))
+    elif return_type == 'values':
+        return list((walk_dictionary(input_dict, return_type=return_type)))
+
+
+def get_attributes_of_object_as_list_of_strings(input_object):
+    return [a for a in dir(input_object) if not a.startswith('__') and not callable(getattr(input_object, a))]
+
+def get_reclassification_dict_from_df(input_df_or_path, src_id_col='src_id', dst_id_col='dst_id', src_label_col='src_label', dst_label_col='dst_label'):
+    if isinstance(input_df_or_path, str):
+        df = pd.read_csv(input_df_or_path)
+    else:
+        df = input_df_or_path
+    src_ids = []
+    src_labels = []
+    dst_ids = []
+    dst_labels = []
+
+    dst_to_src_reclassification_dict = {}
+    src_to_dst_reclassification_dict = {}
+    dst_to_src_labels_dict = {}
+    src_to_dst_labels_dict = {}
+    for index, row in df.iterrows():
+        dst_id = row[dst_id_col]
+        dst_label = row[dst_label_col]
+        src_id = row[src_id_col]
+        src_label = row[src_label_col]
+        if not pd.isna(dst_id):
+            dst_ids.append(dst_id)
+        if not pd.isna(dst_label):
+            dst_labels.append(dst_label)
+
+        if not pd.isna(dst_id):
+            if dst_id not in dst_to_src_reclassification_dict:
+                dst_to_src_reclassification_dict[int(dst_id)] = []
+
+            if src_id not in src_to_dst_reclassification_dict:
+                src_to_dst_reclassification_dict[int(src_id)] = int(dst_id)
+
+            if src_label not in src_to_dst_labels_dict:
+                src_to_dst_labels_dict[src_label] = dst_label
+
+            if dst_label not in dst_to_src_labels_dict:
+                dst_to_src_labels_dict[str(dst_label)] = []
+
+            try:
+                if not pd.isna(row[src_id_col]):
+                    dst_to_src_reclassification_dict[dst_id].append(int(row[src_id_col]))
+                    src_ids.append(int(row[src_id_col]))
+
+            except:
+                L.debug('Failed to read ' + str(dst_id) + ' as int from ' + str(input_df_or_path) + ' so skipping.')
+
+            try:
+                if not pd.isna(row[src_label_col]):
+                    dst_to_src_labels_dict[dst_label].append(row[src_label_col])
+                    src_labels.append(row[src_label_col])
+            except:
+                L.debug('Failed to read ' + str(dst_label) + ' as int from ' + str(input_df_or_path) + ' so skipping.')
+    return_dict = {}
+    return_dict['dst_to_src_reclassification_dict'] = dst_to_src_reclassification_dict  # Dict of one-to-many keys to lists of what each dst_key should be mapped to from each src_key. Useful when aggrigating multiple layers to a aggregated dest type
+    return_dict['src_to_dst_reclassification_dict'] = src_to_dst_reclassification_dict # Dict of one to one src to dst mapping. Useful when going to a specific value.
+    return_dict['dst_to_src_labels_dict'] = dst_to_src_labels_dict # Dictionary of lists of labels that map to each dst label
+    return_dict['src_ids'] = remove_duplicates_in_order(src_ids) # Unique list of src_ids
+    return_dict['dst_ids'] = remove_duplicates_in_order(dst_ids) # Unique list of dst_ids
+    return_dict['src_labels'] = remove_duplicates_in_order(src_labels) # Unique list of src_labels
+    return_dict['dst_labels'] = remove_duplicates_in_order(dst_labels) # Unique list of dst_labels
+    return_dict['src_ids_to_labels'] = {k: v for k, v in zip(return_dict['src_ids'], return_dict['src_labels'])} # one-to-one dictionary of src ids to labels
+    return_dict['dst_ids_to_labels'] = {k: v for k, v in zip(return_dict['dst_ids'], return_dict['dst_labels'])} # one-to-one dictionary of dst ids to labels
+    return_dict['src_labels_to_ids'] = {k: v for k, v in zip(return_dict['src_labels'], return_dict['src_ids'])} # one-to-one dictionary of src labels to ids
+    return_dict['dst_labels_to_ids'] = {k: v for k, v in zip(return_dict['dst_labels'], return_dict['dst_ids'])} # one-to-one dictionary of dst labels to ids
+
+    return return_dict
+
+def assign_df_row_to_object_attributes(input_object, input_row):
+    for attribute_name, attribute_value in list(zip(input_row.index, input_row.values)):
+        setattr(input_object, attribute_name, attribute_value)
+
+def get_list_of_conda_envs_installed():
+    import subprocess
+    command = 'conda info --envs'
+    output = subprocess.check_output(command)
+    output_as_list = str(output).split('\\r\\n')
+    pared_list = [i.split(' ')[0] for i in output_as_list[2:]]
+
+    return pared_list
+
+
+def check_conda_env_exists(env_name):
+
+    if env_name in get_list_of_conda_envs_installed():
+        return True
+    else:
+        return False
+
+
+def get_first_extant_path(relative_path, possible_dirs, verbose=False):
+    # Searches for a file in a list of possible directories and returns the first one it finds.
+    # If it doesn't find any, it returns the first one it tried.
+    # If it was given None, just return None
+
+    if hb.path_exists(relative_path):
+        return relative_path
+
+    # Check if it's relative
+    if relative_path is not None:
+        if relative_path[1] == ':':
+            hb.log('The path given to hb.get_first_extant_path() does not appear to be relative (nor does it exist at the unmodified path): ' + str(relative_path) + ', ' + str(possible_dirs))
+
+    for possible_dir in possible_dirs:
+        if relative_path is not None:
+            path = os.path.join(possible_dir, relative_path)
+            if verbose:
+                hb.log('Checking for path: ' + str(path))
+            if hb.path_exists(path, verbose=verbose):
+                return path
+        else:
+            return None
+    
+    # If it was neither found nor None, THEN return the path constructed from the first element in possible_dirs
+    path = os.path.join(possible_dirs[0], relative_path)
+    return path
+
+
+
+def path_to_url(input_path, local_path_to_strip, url_start=''):
+    splitted_path = hb.split_assume_two(input_path.replace('\\', '/'), local_path_to_strip.replace('\\', '/')) 
+    right_path = splitted_path[1]
+    if right_path.startswith('/'):
+        right_path = right_path[1:]
+    url = os.path.join(url_start, right_path)
+    url = url.replace('\\', '/')
+
+    return url
+
+def url_to_path(input_url, left_path, path_start):
+    splitted_path = hb.split_assume_two(input_url, left_path) 
+
+    path = os.path.join(path_start, left_path, splitted_path[1])
+    path = path.replace('/', '\\')
+
+    return path
+
+def remove_duplicates_in_order(lst):
+  """
+  Removes duplicates from a list while preserving the order of the remaining elements.
+
+  Args:
+    lst: The list to remove duplicates from.
+
+  Returns:
+    A new list without duplicates.
+  """
+
+  seen = set()
+  new_lst = []
+  for item in lst:
+    if item not in seen:
+      seen.add(item)
+      new_lst.append(item)
+
+  return new_lst
+
+def df_convert_column_type(input_df, type_to_replace, new_type, columns='all', ignore_nan=False, verbose=False):
+    # Refer to types as numpy types    
+    
+    hb.log('WARNING!  this failed when there were nans in the field being inted.', level=200)
+    ### One possiblie solution is to replace with intable and nanable types as below
+    # # Manually set dtype for two remaining cols. This was not possible to fix via the function
+    # # df_convert_column_type for unknown reasons, but probably because the nan-value in gadm
+    # # combined with Operation on a Copy Warning.
+    # df['gadm_r263_id'] = df['gadm_r263_id'].astype('Int64')
+    # df['gtapv7_r251_id'] = df['gtapv7_r251_id'].astype('Int64')
+
+    if columns == 'all':
+        columns = input_df.columns
+        
+    for col in columns:
+        hb.log('Converting column ' + str(col) + ' from ' + str(type_to_replace) + ' to ' + str(new_type), level=100)
+        
+        # check if it has the dtype attribute
+        if hasattr(input_df[col], 'dtype'):
+        
+            if input_df[col].dtype == type_to_replace:
+                if ignore_nan:
+                    to_fill = -999999991
+                    its_in_it = to_fill in input_df[col].values
+                    if its_in_it:
+                        raise NameError('Really wtf... what are the odds of that. please submit a pull request to fix this improbable case.')
+                    else:
+                        # Test if there are ONLY nans
+                        if input_df[col].isnull().values.all():
+                            if verbose:
+                                hb.log('All values in column ' + str(col) + ' are nan, so skipping.', level=10)
+                        else:
+                            pd.set_option('mode.chained_assignment', None)
+                            input_df[col] = input_df[col].replace(np.nan, to_fill)
+                            input_df[col] = input_df[col].astype(new_type) 
+                            input_df[col] = input_df[col].replace(to_fill, np.nan)
+                            pd.set_option('mode.chained_assignment', 'warn')
+                            
+                else:
+                    input_df.loc[:, col] = input_df[col].astype(new_type)
+    return input_df
+
+
+def list_find_duplicates(lst):
+    seen = set()
+    duplicates = set()
+    for x in lst:
+        if x in seen:
+            duplicates.add(x)
+        else:
+            seen.add(x)
+    return duplicates
+
+
+def arrays_equal_ignoring_order(array1, array2, ignore_values=None):
+    unique1, counts1 = np.unique(array1, return_counts=True)
+    unique2, counts2 = np.unique(array2, return_counts=True)
+    
+    if ignore_values is not None:
+        for ignore_value in ignore_values:
+            # Take that O(n) = 1!
+            if unique1[0] == ignore_value:
+                unique1 = unique1[1:]
+                counts1 = counts1[1:]
+            if unique2[0] == ignore_value:
+                unique2 = unique2[1:]
+                counts2 = counts2[1:]
+            if unique1[-1] == ignore_value:
+                unique1 = unique1[:-1]
+                counts1 = counts1[:-1]
+            if unique2[-1] == ignore_value:
+                unique2 = unique2[:-1]
+                counts2 = counts2[:-1]
+                
+    identical = np.array_equal(np.asarray((unique1, counts1)).T, np.asarray((unique2, counts2)).T)
+    if not identical:
+        hb.log('Compared arrays and found different unique, count sets: ', unique1, counts1, unique2, counts2, level=100)
+    return identical

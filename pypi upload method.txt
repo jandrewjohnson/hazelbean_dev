@@ -1,0 +1,38 @@
+TO RELEASE 2.7
+- run scripts/generate_27_release.py
+- edit setup.py created in release dir
+- cd c:/onedrive/projects/hazelbean/releases/hazelbean_0.3.0_32bit_py2.7
+- c:/anaconda2/python.exe setup.py sdist
+- c:/anaconda363/scripts/twine upload dist/* --skip-existing
+
+
+TO RELEASE 3.6.3
+- run scripts/generate_363_release.py
+- edit setup.py created in release dir
+- cd c:/onedrive/projects/hazelbean/releases/hazelbean_0.3.0_64bit_py3.6.3
+- python setup.py sdist
+- twine upload dist/* --skip-existing
+
+
+
+OLD VERSION
+
+python.exe setup.py sdist
+
+Shorter version... ignore git, just change setup.py, rerun sdist command, then use twine
+
+
+- if desired create new folder in projects/hazelbean/releases/hazelbean_x.y.z
+- in this, create the package folder, 'projects/hazelbean/releases/hazelbean_x.y.z/hazelbean'
+- copy files (not dirs) in previous hazelbean release to get setup.py etc files in place at projects/hazelbean/releases/hazelbean_x.y.z
+- Move new code from projects/hazelbean to projects/hazelbean/releases/hazelbean_x.y.z/hazelbean
+- make sure to remove .pyc
+- update setup.py to have new
+- ADD TO IGNORE the .pypirc setup file.
+- git commit and push
+- add a tag specific to the version being released with "git tag 0.x.y.z   # -m "Adds a tag so that we can put this on PyPI.""
+- update tag information with "git push --tags origin master". Not sure if this is necessary.
+- SKIP FAILS: Run following python command in the new release dir (hazelbean_0.2.0): "python setup.py sdist upload -r pypi"
+- INSTEAD: python setup.py sdist. This creates tar.gz
+- upload with twine via command line "twine upload dist/* --skip-existing"
+

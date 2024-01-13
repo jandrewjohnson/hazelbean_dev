@@ -1,0 +1,28 @@
+# Installation steps
+
+-   Install Mambaforge from https://github.com/conda-forge/miniforge#mambaforge
+-   For convenience, during installation, I select yes for "Add Mambaforge to my PATH environment Variable"
+-   (PC) Open the Miniforge Prompt (search for it in the start menu) or (Mac) just type "mamba init"
+-   Create a new mamba environment with the following commands (here it is named hazelbean_env):
+
+`mamba create -n hazelbean_env -c conda-forge`
+
+-   Activate the environment
+
+`mamba activate hazelbean_env`
+
+-   Install libraries using conda command:
+
+`mamba install -c conda-forge natcap.invest geopandas rasterstats netCDF4 cartopy xlrd markdown qtpy qtawesome plotly descartes pygeoprocessing taskgraph cython rioxarray dask google-cloud-datastore google-cloud-storage aenum anytree statsmodels openpyxl seaborn twine pyqt ipykernel imageio pandoc conda numba intake`
+
+-   And then finally, install non-conda distributions via pip:
+
+`pip install mglearn pandoc datascience hazelbean`
+
+## Numpy errors
+
+If numpy throws "wrong size or changes size binary": upgrade numpy at the end of the installation process. See for details: https://stackoverflow.com/questions/66060487/valueerror-numpy-ndarray-size-changed-may-indicate-binary-incompatibility-exp
+
+## Mac specific errors
+
+Your python environment has to have permissions to access and write to the base data folder.
