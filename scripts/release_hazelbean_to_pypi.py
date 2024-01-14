@@ -21,7 +21,7 @@ from .context import sample
 
 
 
-release_name = 'hazelbean_1.5.2'
+release_name = 'hazelbean_1.5.4'
 version = release_name.split('_')[1]
 target_dir = '..'
 release_dir = os.path.join('../../', 'hazelbean_stable')
