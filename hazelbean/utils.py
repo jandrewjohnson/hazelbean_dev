@@ -595,7 +595,7 @@ def df_merge_list_of_csv_paths(csv_path_list, output_csv_path=None, on='index', 
 
             cols = [i for i in current_df.columns if i not in merged_df.columns]
             if right_on:
-                cols +=  + [right_on]
+                cols += [right_on]
             new_df = current_df[cols]
             # merged_df = pd.merge(merged_df, new_df, how='outer', left_on=left_on, right_on=right_on, left_index=left_index, right_index=right_index)
             merged_df = df_merge(merged_df, new_df, how='outer', left_on=left_on, right_on=right_on, left_index=left_index, right_index=right_index, verbose=False)
