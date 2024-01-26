@@ -151,6 +151,8 @@ class Task(anytree.NodeMixin):
         self.creates_dir = kwargs.get('creates_dir', True)
         self.logging_level = None  # Will be inherited from project flow or set explicitly
         self.report_time_elapsed_when_task_completed = True  # Will be inherited from project flow or set explicitly
+        self.documentation = None 
+        self.note = None 
 
         if self.function.__name__ == 'execute':
             self.run = 1
@@ -291,7 +293,8 @@ class  ProjectFlow(object):
 
         self.input_dir = getattr(self, 'input_dir', os.path.join(self.project_dir, 'input'))
         self.output_dir = getattr(self, 'output_dir', os.path.join(self.project_dir, 'output'))
-
+        self.documentation = None 
+        self.note = None 
         #
         self.registered_dirs = ['.', self.input_dir]
         # self.registered_dirs = ['.', self.input_dir, self.project_base_data_dir, self.model_base_data_dir, self.base_data_dir]
