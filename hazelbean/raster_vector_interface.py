@@ -692,7 +692,8 @@ def zonal_statistics(
                                                                   unique_zone_ids=unique_zone_ids, stats_to_retrieve=stats_to_retrieve, verbose=verbose)
 
         # Create a DF of the exhaustive, continuous ints in unique_zone_ids, which may have lots of zeros.
-        df = pd.DataFrame(index=unique_zone_ids, data={output_column_prefix + '_sums': sums[1: ]})
+        df = pd.DataFrame(index=unique_zone_ids, data={output_column_prefix + '_sums': sums})
+        # df = pd.DataFrame(index=unique_zone_ids, data={output_column_prefix + '_sums': sums[1: ]}) # PREVIOUSLY HAD THIS LINE! PROBABLY BROKEN ELSEWHERE
 
 
     elif stats_to_retrieve == 'sums_counts':
