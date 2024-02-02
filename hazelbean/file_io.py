@@ -733,6 +733,78 @@ def merge_dataframes_with_remap(left_df, right_df, remap_df_or_path, remap_left_
     merged_df = pd.merge(left_df, right_df, left_on=left_on, right_on=right_on, how=how)
     return merged_df
 
+def check_if_has_key(notebook_path):
+    """Bespoke for quarto notebooks and related publishing. Checks if the notebook has a key in the first cell."""
+    with open(notebook_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+        has_key = False
+        for v in data['cells']:
+            if v['source'][0].lstrip().startswith('# KEY'):
+                has_key = True
+                break
+    return has_key
+
+def strip_quarto_header_from_ipynb(input_path, output_path):
+    
+    """Bespoke for quarto notebooks and related publishing. Removes the quarto header from an ipynb file.
+    """
+    skip_block = False
+    to_write = []
+    # print('hb.strip_quarto_header_and_keys_from_ipynb() on ', input_path, output_path)
+    with open(input_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+        output_dict = {}
+        output_dict['cells'] = []
+        for v in data['cells']:
+            if not v['source'][0].lstrip().startswith('---'):
+                output_dict['cells'].append(v)
+                
+                
+    output_dict['metadata'] = {
+            "kernelspec": {
+            "name": "python3",
+            "language": "python",
+            "display_name": "Python 3 (ipykernel)"
+            }        },  
+    output_dict['nbformat'] = 4
+    output_dict['nbformat_minor'] = 4
+    # print('output_path', output_path, '\n', output_dict)
+    with open(output_path, 'w', encoding='utf-8') as f:
+        json.dump(output_dict, f, ensure_ascii=False, indent=4) 
+          
+def strip_quarto_header_and_keys_from_ipynb(input_path, output_path):
+    """Bespoke for quarto notebooks and related publishing. Removes the quarto header from an ipynb file.
+    """
+    skip_block = False
+    to_write = []
+    # print('hb.strip_quarto_header_and_keys_from_ipynb() on ', input_path, output_path)
+    with open(input_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+        output_dict = {}
+        output_dict['cells'] = []
+        for v in data['cells']:
+            if not v['source'][0].lstrip().startswith('---') and not v['source'][0].lstrip().startswith('# KEY'):
+                output_dict['cells'].append(v)
+                
+                
+    output_dict['metadata'] = {
+            "kernelspec": {
+            "name": "python3",
+            "language": "python",
+            "display_name": "Python 3 (ipykernel)"
+            }        },  
+    output_dict['nbformat'] = 4
+    output_dict['nbformat_minor'] = 4
+    # print('output_path', output_path, '\n', output_dict)
+    with open(output_path, 'w', encoding='utf-8') as f:
+        json.dump(output_dict, f, ensure_ascii=False, indent=4)                
+    # # Write it
+    # with open(output_path, 'w', encoding='utf-8') as f:
+    #     f.writelines(to_write)
+                    
+
+
+
 if __name__=='__main__':
     pass
     #nose.run()

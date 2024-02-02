@@ -371,10 +371,15 @@ class  ProjectFlow(object):
                     
                     if hasattr(self, 'data_credentials_path'):
                         if self.data_credentials_path is not None:
-                            cloud_utils.download_google_cloud_blob(self.input_bucket_name, source_blob_name, self.data_credentials_path, destination_file_name, chunk_size=262144*5,)
+                            try: # If the file is in the cload, download it.
+                                cloud_utils.download_google_cloud_blob(self.input_bucket_name, source_blob_name, self.data_credentials_path, destination_file_name, chunk_size=262144*5,)
+                                return path
+                            except: # If it wasn't there, assume it is a local file that needs to be created.
+                                pass 
                         else:
                             url = "https://storage.googleapis.com" + '/' + self.input_bucket_name + '/' + source_blob_name
                             cloud_utils.download_google_cloud_blob(self.input_bucket_name, source_blob_name, self.data_credentials_path, destination_file_name, chunk_size=262144*5,)
+                            return path
                             # cloud_utils.gsutil_download_url(url, destination_file_name, skip_if_target_exists=False)
                             # /gtap_invest_seals_2023_04_21/base_data/cartographic/gadm/gadm_410_adm0_labels.csv
                 else:
