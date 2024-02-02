@@ -1519,6 +1519,9 @@ def convert_file_via_quarto(input_path, output_path, verbose=False):
 
 
 def compile_exam_from_md(exam_template_path, question_bank_path, output_filename, output_dir, number_of_variations=4, randomize=True, questions_to_include=None):
+    
+    # START HERE: Make it also optionally output an unrandomized version for troubleshooting.
+    # TODOO: Idea, add boxes around questions that enable smart page breaks
     import numpy as np
     if questions_to_include is None:
         questions_to_include = 'all'
@@ -1570,7 +1573,7 @@ def compile_exam_from_md(exam_template_path, question_bank_path, output_filename
     all_variation_answers_t = np.array(all_variation_answers, dtype=object).T.tolist()
     new_row = np.array([''] + ['Version ' + str(i+1) for i in range(number_of_variations)])
     all_variation_answers_t = np.insert(all_variation_answers_t, 0, new_row, axis=0)
-    hb.python_object_to_csv(all_variation_answers_t, os.path.join(output_dir, output_fileroot + 'COMBINED_KEY' + '.csv'), csv_type='2d_list')
+    hb.python_object_to_csv(all_variation_answers_t, os.path.join(output_dir, output_fileroot + '_COMBINED_KEY' + '.csv'), csv_type='2d_list')
 
 
 def parse_markdown_path_to_dict(input_path):
@@ -1710,8 +1713,11 @@ def make_exam_md_from_dicts(header_dict, question_bank_path, random_seed, random
 
     if is_key:
         for c, i in enumerate(included_questions_md_string_randomized):
-            answer = i.split('Answer: ')[1].split(' ', 1)[0].replace(' ', '').replace('\n', '')
-            answers.append(answer)
+            try:
+                answer = i.split('Answer: ')[1].split(' ', 1)[0].replace(' ', '').replace('\n', '')
+                answers.append(answer)
+            except:
+                hb.log('Unable to add answer')
 
 
     return new_md_string, answers
