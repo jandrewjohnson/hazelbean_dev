@@ -254,7 +254,7 @@ def pretty_time(format=None):
 
 
 
-def create_directories(directory_list):
+def create_directories(directory_list, ignore_dots_in_dirname=False):
     """Make directories provided in list of path strings.
 
     This function will create any of the directories in the directory list
@@ -274,7 +274,10 @@ def create_directories(directory_list):
 
     for dir_name in directory_list:
         split_dir_name = None
-        has_extension = os.path.splitext(dir_name)[1]
+        if ignore_dots_in_dirname:
+            has_extension = os.path.splitext(dir_name)[1]
+        else:
+            has_extension = ''
         if len(has_extension) > 0:
             split_dir_name = os.path.split(dir_name)[0]
         else:

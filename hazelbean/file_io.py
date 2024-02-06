@@ -775,13 +775,13 @@ def strip_quarto_header_from_ipynb(input_path, output_path):
 def strip_quarto_header_and_keys_from_ipynb(input_path, output_path):
     """Bespoke for quarto notebooks and related publishing. Removes the quarto header from an ipynb file.
     """
-    skip_block = False
-    to_write = []
+
     # print('hb.strip_quarto_header_and_keys_from_ipynb() on ', input_path, output_path)
     with open(input_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
         output_dict = {}
         output_dict['cells'] = []
+        
         for v in data['cells']:
             if not v['source'][0].lstrip().startswith('---') and not v['source'][0].lstrip().startswith('# KEY'):
                 output_dict['cells'].append(v)
