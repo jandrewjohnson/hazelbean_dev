@@ -224,6 +224,17 @@ def path_file_root(input_path):
 def file_root(input_path):
     return path_file_root(input_path)
 
+def path_print(input_path):
+    return_path = input_path
+    exists = path_exists(input_path, verbose=False)
+    is_dir = os.path.isdir(input_path)
+    
+    return_path += ' Abspath: ' + str(os.path.abspath(input_path)) + ' Exists: ' + str(exists) + ' Is dir: ' + str(is_dir)
+    if is_dir:
+        # n objects
+        return_path += ' Number of objects: ' + str(len(os.listdir(input_path)))
+    return return_path 
+
 
 def pretty_time(format=None):
     # Returns a nicely formated string of YEAR-MONTH-DAY_HOURS-MIN-SECONDS based on the the linux timestamp
