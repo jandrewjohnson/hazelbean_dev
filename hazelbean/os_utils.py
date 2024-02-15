@@ -1518,7 +1518,88 @@ def convert_file_via_quarto(input_path, output_path, verbose=False):
     os.system(command)
 
 
-def compile_exam_from_md(exam_template_path, question_bank_path, output_filename, output_dir, number_of_variations=4, randomize=True, questions_to_include=None):
+def compile_exam_from_md(exam_template_path, question_bank_path, output_filename, output_dir, number_of_variations=4, randomize=True, include_unrandomized=True, questions_to_include=None):
+    import numpy as np
+    if questions_to_include is None:
+        questions_to_include = 'all'
+
+    template_dict = hb.parse_markdown_path_to_dict(exam_template_path)
+
+    header_dict = template_dict['Header']
+
+    titlepage_dict = template_dict['Titlepage']
+    titlepage_md_string = hb.parse_dict_to_markdown_string(titlepage_dict)
+    
+    output_path = os.path.join(output_dir, output_filename)
+
+    output_fileroot, output_filename_extension = os.path.splitext(output_filename)
+    hb.create_directories(output_path)
+
+    all_variation_answers = []
+
+    if include_unrandomized:
+        for is_key in (False, True):
+            included_questions_md_string, current_answers = hb.make_exam_md_from_dicts(header_dict, question_bank_path, 1, False, is_key=is_key)
+            # if len(current_answers) > 0:
+            #     all_variation_answers.append(current_answers)
+            title_page_variant_md_string = titlepage_md_string.replace('<^-version_number-^>', 'UNRANDOMIZED')
+            output_string = title_page_variant_md_string + "<div style=\"page-break-after: always;\"></div>\n\n\\newpage" + included_questions_md_string
+
+            if is_key:
+                temp_md_path = output_fileroot + '_version_' + 'UNRANDOMIZED' +'_KEY.md'
+                temp_output_path = output_fileroot + '_version_' + 'UNRANDOMIZED' +'_KEY' + output_filename_extension
+                final_output_path = os.path.join(output_dir, output_fileroot + '_version_' + 'UNRANDOMIZED' +'_KEY' + output_filename_extension)
+            else:
+                temp_md_path = output_fileroot + '_version_' + 'UNRANDOMIZED'+'.md'
+                temp_output_path = output_fileroot + '_version_' + 'UNRANDOMIZED' + output_filename_extension
+                final_output_path = os.path.join(output_dir, output_fileroot + '_version_' + 'UNRANDOMIZED' + output_filename_extension)
+
+            # output_md_path = hb.replace_ext(temp_md_path, '.md')
+            hb.write_to_file(output_string, temp_md_path)
+            hb.convert_file_via_quarto(temp_md_path, temp_output_path, verbose=True)
+
+            hb.remove_path(temp_md_path)
+            hb.rename_with_overwrite(temp_output_path, final_output_path)
+
+
+
+    for variation_id in range(number_of_variations):    
+        for is_key in (False, True):
+            random_seed = variation_id
+            included_questions_md_string, current_answers = hb.make_exam_md_from_dicts(header_dict, question_bank_path, random_seed, randomize, is_key=is_key)
+            if len(current_answers) > 0:
+                all_variation_answers.append(current_answers)
+            title_page_variant_md_string = titlepage_md_string.replace('<^-version_number-^>', str(variation_id + 1))
+            output_string = title_page_variant_md_string + "<div style=\"page-break-after: always;\"></div>\n\n\\newpage" + included_questions_md_string
+
+            
+
+            # variation_output_path = hb.suri(output_path, 'version_' + str(variation_id+1))
+
+            if is_key:
+                temp_md_path = output_fileroot + '_version_' + str(variation_id+1) +'_KEY.md'
+                temp_output_path = output_fileroot + '_version_' + str(variation_id+1) +'_KEY' + output_filename_extension
+                final_output_path = os.path.join(output_dir, output_fileroot + '_version_' + str(variation_id+1) +'_KEY' + output_filename_extension)
+            else:
+                temp_md_path = output_fileroot + '_version_' + str(variation_id+1) +'.md'
+                temp_output_path = output_fileroot + '_version_' + str(variation_id+1) + output_filename_extension
+                final_output_path = os.path.join(output_dir, output_fileroot + '_version_' + str(variation_id+1) + output_filename_extension)
+
+            # output_md_path = hb.replace_ext(temp_md_path, '.md')
+            hb.write_to_file(output_string, temp_md_path)
+            hb.convert_file_via_quarto(temp_md_path, temp_output_path, verbose=True)
+
+            hb.remove_path(temp_md_path)
+            hb.rename_with_overwrite(temp_output_path, final_output_path)
+            
+    all_variation_answers.insert(0, list(range(1, len(all_variation_answers[0])+1)))
+    all_variation_answers_t = np.array(all_variation_answers, dtype=object).T.tolist()
+    new_row = np.array([''] + ['Version ' + str(i+1) for i in range(number_of_variations)])
+    all_variation_answers_t = np.insert(all_variation_answers_t, 0, new_row, axis=0)
+    hb.python_object_to_csv(all_variation_answers_t, os.path.join(output_dir, output_fileroot + 'COMBINED_KEY' + '.csv'), csv_type='2d_list')
+
+
+def compile_exam_from_md_old(exam_template_path, question_bank_path, output_filename, output_dir, number_of_variations=4, randomize=True, questions_to_include=None):
     
     # START HERE: Make it also optionally output an unrandomized version for troubleshooting.
     # TODOO: Idea, add boxes around questions that enable smart page breaks
