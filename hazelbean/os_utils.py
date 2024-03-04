@@ -1127,6 +1127,21 @@ def displace_file(src_path, to_displace_path, displaced_path=None, delete_origin
     if delete_original:
         os.remove(displaced_uri)
 
+def path_rename(input_path, new_path, skip_if_exists=False):
+    if not skip_if_exists:
+        try:
+            os.rename(input_path, new_path)
+        except:
+            raise NameError('Failed to rename ' + input_path + ' to ' + new_path)
+    else:
+        if not os.path.exists(new_path):
+            try:
+                os.rename(input_path, new_path)
+            except:
+                raise NameError('Failed to rename ' + input_path + ' to ' + new_path)
+        else:
+            'we good'
+    
 def rename_with_overwrite(src_path, dst_path):
     if os.path.exists(dst_path):
         hb.remove_path(dst_path)
@@ -1205,7 +1220,7 @@ def remove_uri_at_exit(input):
         hb.config.uris_to_delete_at_exit.append(input.path)
 
 # TODOO consider if this should be named remove_path or path_remove or path.remove
-def remove_path(path):
+def path_remove(path):
     if os.path.exists(path):
         if os.path.isdir(path):
             for root, dirs, files in os.walk(path, topdown=False):
@@ -1221,6 +1236,8 @@ def remove_path(path):
     else:
         'couldnt find path, but no worries, we good.'
 
+def remove_path(path):
+    hb.path_remove(path)
         # if os.path.isdir(path):
     #     shutil.rmtree(path, ignore_errors=True)
     # else:
@@ -1235,6 +1252,27 @@ def remove_path(path):
     # except:
     #     'Probably just didnt exist.'
 
+def path_move(src_path, dst_path):
+    """
+    
+    This will follow the shutil approach about moving dirs versus files.
+    
+     Recursively move a file or directory to another location. This is
+    similar to the Unix "mv" command. Return the file or directory's
+    destination.
+
+    If the destination is a directory or a symlink to a directory, the source
+    is moved inside the directory. The destination path must not already
+    exist.
+
+    If the destination already exists but is not a directory, it may be
+    overwritten depending on os.rename() semantics.
+    
+    
+    """
+    
+    hb.move_file(src_path, dst_path)
+    
 def move_file(source_path, destination_path):
     """
     Move a file from source_path to destination_path CREATING ANY NECESSARY PATHS.
@@ -1518,17 +1556,20 @@ def convert_file_via_quarto(input_path, output_path, verbose=False):
     os.system(command)
 
 
-def compile_exam_from_md(exam_template_path, question_bank_path, output_filename, output_dir, number_of_variations=4, randomize=True, include_unrandomized=True, questions_to_include=None):
+def compile_exam_from_md(exam_template_path, question_bank_dir, output_filename, output_dir, number_of_variations=4, randomize=True, include_unrandomized=True, questions_to_include=None):
     import numpy as np
     if questions_to_include is None:
         questions_to_include = 'all'
 
-    template_dict = hb.parse_markdown_path_to_dict(exam_template_path)
-
+    template_dict = hb.parse_template_path_to_dict(exam_template_path)
+    hb.log(template_dict)
     header_dict = template_dict['Header']
-
+    
+    # Get filenames from header_dict
+    test_bank_file_roots = [k for k, v in header_dict.items() if type(v) is dict]
+    
     titlepage_dict = template_dict['Titlepage']
-    titlepage_md_string = hb.parse_dict_to_markdown_string(titlepage_dict)
+    titlepage_md_string = hb.parse_template_dict_to_titlepage_md_string(titlepage_dict)
     
     output_path = os.path.join(output_dir, output_filename)
 
@@ -1539,6 +1580,7 @@ def compile_exam_from_md(exam_template_path, question_bank_path, output_filename
 
     if include_unrandomized:
         for is_key in (False, True):
+            question_bank_path = question_bank_dir
             included_questions_md_string, current_answers = hb.make_exam_md_from_dicts(header_dict, question_bank_path, 1, False, is_key=is_key)
             # if len(current_answers) > 0:
             #     all_variation_answers.append(current_answers)
@@ -1596,7 +1638,7 @@ def compile_exam_from_md(exam_template_path, question_bank_path, output_filename
     all_variation_answers_t = np.array(all_variation_answers, dtype=object).T.tolist()
     new_row = np.array([''] + ['Version ' + str(i+1) for i in range(number_of_variations)])
     all_variation_answers_t = np.insert(all_variation_answers_t, 0, new_row, axis=0)
-    hb.python_object_to_csv(all_variation_answers_t, os.path.join(output_dir, output_fileroot + 'COMBINED_KEY' + '.csv'), csv_type='2d_list')
+    hb.python_object_to_csv(all_variation_answers_t, os.path.join(output_dir, output_fileroot + '_COMBINED_KEY' + '.csv'), csv_type='2d_list')
 
 
 def compile_exam_from_md_old(exam_template_path, question_bank_path, output_filename, output_dir, number_of_variations=4, randomize=True, questions_to_include=None):
@@ -1656,8 +1698,79 @@ def compile_exam_from_md_old(exam_template_path, question_bank_path, output_file
     all_variation_answers_t = np.insert(all_variation_answers_t, 0, new_row, axis=0)
     hb.python_object_to_csv(all_variation_answers_t, os.path.join(output_dir, output_fileroot + '_COMBINED_KEY' + '.csv'), csv_type='2d_list')
 
+def parse_template_path_to_dict(input_path):
 
-def parse_markdown_path_to_dict(input_path):
+
+# def parse_header_dict_and_question_bank_dir_to_dict(header_dict, input_dir):
+# def parse_template_path_to_dict(input_path):
+    
+    # Check header for filenames
+    # filenames = [k for k, v in header_dict.items() if isinstance(v,)]
+    
+    output_dict = {}
+    current_dict = output_dict
+    with open(input_path, 'r', encoding="utf8") as fp:
+        lines = fp.readlines()
+        for line in lines:
+            
+            # Strip linebreaks at end of each line (is implied by list)
+            if line[-1:] == '\n':
+                line = line[:-1]
+            if line != '':
+                
+                if line.startswith('#'):
+                    in_header = True
+                    if line.startswith('# '):
+                        header_text = line.split('# ', 1)[1]
+                        h1 = header_text                    
+                        output_dict[h1] = {}
+                        output_dict[h1]['^-text-^'] = []
+                        current_dict = output_dict[h1]
+                    if line.startswith('## '):
+                        header_text = line.split('# ', 1)[1]
+                        h2 = header_text                    
+                        output_dict[h1][h2] = {} 
+                        output_dict[h1][h2]['^-text-^'] = []
+                        current_dict = output_dict[h1][h2]
+                    if line.startswith('### '):
+                        header_text = line.split('# ', 1)[1]
+                        h3 = header_text                    
+                        output_dict[h1][h2][h3] = {}
+                        output_dict[h1][h2][h3]['^-text-^'] = []
+                        current_dict = output_dict[h1][h2][h3]
+                    if line.startswith('#### '):
+                        header_text = line.split('# ', 1)[1]
+                        h4 = header_text                    
+                        output_dict[h1][h2][h3][h4]= {}
+                        output_dict[h1][h2][h3][h4]['^-text-^'] = []
+                        current_dict = output_dict[h1][h2][h3][h4]
+                    if line.startswith('##### '):
+                        header_text = line.split('# ', 1)[1]
+                        h5 = header_text                    
+                        output_dict[h1][h2][h3][h4][h5] = {}
+                        output_dict[h1][h2][h3][h4][h5]['^-text-^'] = []
+                        current_dict = output_dict[h1][h1][h2][h3][h4][h5]
+                    if line.startswith('###### '):
+                        header_text = line.split('# ', 1)[1]
+                        h6 = header_text                    
+                        output_dict[h1][h2][h3][h4][h5][h6] = {}
+                        output_dict[h1][h2][h3][h4][h5][h6]['^-text-^'] = []
+                        current_dict = output_dict[h1][h2][h3][h4][h5][h6]     
+                else:
+                    5
+                    a = current_dict['^-text-^']
+                    a.append(line)
+                    # a = current_dict['^-text-^'].append(line)
+                        
+
+                # print(header_text)
+
+    5
+    return output_dict
+  
+
+
+def parse_markdown_path_to_dict_old(input_path):
     output_dict = {}
     current_dict = output_dict
     with open(input_path, 'r', encoding="utf8") as fp:
@@ -1719,7 +1832,7 @@ def parse_markdown_path_to_dict(input_path):
     5
     return output_dict
         
-def parse_dict_to_markdown_string(input_dict):
+def parse_template_dict_to_titlepage_md_string(input_dict):
     current_level = 0
     md_string = ''
     def walk_level(level_dict, md_string, current_level):
@@ -1750,10 +1863,17 @@ def parse_dict_to_markdown_string(input_dict):
     print(to_return)
     return to_return
 
-def make_exam_md_from_dicts(header_dict, question_bank_path, random_seed, randomize, is_key=False):
+def make_exam_md_from_dicts(header_dict, question_bank_dir, random_seed, randomize, is_key=False):
     import random
-    question_bank_dict = hb.parse_markdown_path_to_dict(question_bank_path)
     
+    # START HERE: Fubared the order. How do i do this if i have multiple filesto load?
+    print([k for k, v in header_dict.items() if isinstance(v, dict)])
+    question_bank_dict = {}
+    for k in [k for k, v in header_dict.items() if isinstance(v, dict)]:
+        question_bank_path = os.path.join(question_bank_dir, k + '.qmd')
+        new_dict = hb.parse_template_path_to_dict(question_bank_path)
+        question_bank_dict.update(new_dict)
+
     output_question_number = 1
     included_questions_md_string = ''
     answers = []
@@ -1796,6 +1916,7 @@ def make_exam_md_from_dicts(header_dict, question_bank_path, random_seed, random
         for c, i in enumerate(included_questions_md_string_randomized):
             try:
                 answer = i.split('Answer: ')[1].split(' ', 1)[0].replace(' ', '').replace('\n', '')
+                answer = answer[0] # lol can't have more than 1 place obptions
                 answers.append(answer)
             except:
                 hb.log('Unable to add answer')

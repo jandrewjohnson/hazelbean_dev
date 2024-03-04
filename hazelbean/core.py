@@ -285,10 +285,12 @@ def create_directories(directory_list, ignore_dots_in_dirname=False):
 
     for dir_name in directory_list:
         split_dir_name = None
+        
+        # NYI
         if ignore_dots_in_dirname:
             has_extension = os.path.splitext(dir_name)[1]
         else:
-            has_extension = ''
+            has_extension = os.path.splitext(dir_name)[1]
         if len(has_extension) > 0:
             split_dir_name = os.path.split(dir_name)[0]
         else:

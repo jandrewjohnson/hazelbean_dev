@@ -10,6 +10,7 @@ from osgeo import gdal
 import contextlib
 import logging
 from google.cloud import storage
+import hashlib
 
 import pandas as pd
 
@@ -1133,3 +1134,17 @@ def arrays_equal_ignoring_order(array1, array2, ignore_values=None):
     if not identical:
         hb.log('Compared arrays and found different unique, count sets: ', unique1, counts1, unique2, counts2, level=100)
     return identical
+
+def hash_file_path(file_path):
+    """Compute and return the SHA-256 hash of a binary-redable file (like a png) specified by its file path.
+    And return a string of the hash."""
+    sha256 = hashlib.sha256()
+    try:
+        with open(file_path, 'rb') as f:
+            while chunk := f.read(8192):
+                sha256.update(chunk)
+        return sha256.hexdigest()
+    except FileNotFoundError:
+        return "File not found."
+    except Exception as e:
+        return f"An error occurred: {e}"
