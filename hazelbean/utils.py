@@ -606,7 +606,35 @@ def df_merge_list_of_csv_paths(csv_path_list, output_csv_path=None, on='index', 
         
     return merged_df
 
-def df_merge(left_input, right_input, how=None, on=None, left_on=False, right_on=False, left_index=False, right_index=False, compare_inner_outer=True, verbose=False):
+def df_merge(left_input, 
+             right_input, 
+             how=None, 
+             on=None, 
+             left_on=False,
+             right_on=False,
+             fill_left_col_nan_with_right_value=False,
+             compare_inner_outer=True, 
+             full_check_for_identicallity=False,
+             cols_to_ignore_for_analysis=['geometry'],
+             verbose=False,
+             supress_warnings=False,
+             ):
+    
+    """
+    Convenience wrapper for pd.merge. Differences:
+    
+    - Works with Geopandas too while minimizing slowness from printing geometry
+    - Simplified to taking left_on and right_on as primary 
+        - The only way to set left_index = True is via left_on = 'index'
+    - Removes duplicate columns before merge
+    - Readds _on column so it doesn't go away
+    - Better logging
+    - Checks for cases where left or right merge cols have unique columns (which could lead to nans getting filled in.
+    - Lets you merge right values into left ndv
+    
+    All this assumes that left is primary and we will ignore geometry from right.
+    
+    """
     
     # Check if is string. If its not a string, we will strongly assume
     # it is a GDF or a DF.
@@ -626,35 +654,48 @@ def df_merge(left_input, right_input, how=None, on=None, left_on=False, right_on
     else:
         right_df = right_input
 
+    # Always specify left_on and right_on as the merge names
+    if on and not left_on:
+        left_on = on
+    if on and not right_on:
+        right_on = on
+        
+    # If left_on is 'index' we'll use that
 
     # Check if either df is a GeoDataFrame
     if type(right_df) is gpd.GeoDataFrame and not type(left_df) is gpd.GeoDataFrame:
         raise NameError('Right df is a GeoDataFrame but left is not. This is not supported. Because it will drop the geometry column and fail on .to_file()')
+
+    # Drop geometry cols for now for faster processing
+    if type(left_df) is gpd.GeoDataFrame:
+        left_geometry = left_df[[left_on, 'geometry']]
+        left_df = left_df[[i for i in left_df.columns if i != 'geometry']]
+    if type(right_df) is gpd.GeoDataFrame:
+        # right_geometry = right_df['geometry']
+        right_df = right_df[[i for i in right_df.columns if i != 'geometry']]
+
 
     if verbose:
         hb.log(
 """Merging: 
     
     left_df:
-""" + str(left_df) + """
+""" + str(left_df[[i for i in left_df.columns if i != 'geometry']]) + """
     right_df: 
-""" + str(right_df) + """    
+""" + str(right_df[[i for i in right_df.columns if i != 'geometry']]) + """    
 """
 )
-    if on is not None:
-        if on == 'index':
-            left_index = True
-            right_index = True
-        else:
-            left_on = on
-            right_on = on
-    
+
     if how is None:
         how = 'outer'
 
-    # If no on or left_on, right_on is set, try to infer it from identical columns
+    # If no on, left_on, or right_on is set, try to infer it from identical columns
 
     shared_column_labels = set(left_df.columns).intersection(set(right_df.columns))
+    
+    # Ignore columns that need ignoring
+    shared_column_labels = [i for i in shared_column_labels if i not in cols_to_ignore_for_analysis]
+    
     identical_columns = []
     identical_column_labels = []
     for col in shared_column_labels:
@@ -665,34 +706,30 @@ def df_merge(left_input, right_input, how=None, on=None, left_on=False, right_on
         # LEARNING POINT: in gtapv7_s65_a24_correspondence I had the case where the ids were identical but in different order.
         # This is exactly what the merge function deals with, but it makes for a non-trivial identify-identical case
         # I chose to have this be considered non-identical and let the user deal with it pre function.
+        if full_check_for_identicallity:
+            if 'int' in str(left_df[col].dtype) or 'float' in str(left_df[col].dtype):
+                # temporarily replace np.nan with -9999 so that it can test equality between nans
+                left_df[col + '_temp'] = left_df[col].fillna(-9999)
+                right_df[col + '_temp'] = right_df[col].fillna(-9999)
 
-        if 'int' in str(left_df[col].dtype) or 'float' in str(left_df[col].dtype):
-            # temporarily replace np.nan with -9999 so that it can test equality between nans
-            left_df[col + '_temp'] = left_df[col].fillna(-9999)
-            right_df[col + '_temp'] = right_df[col].fillna(-9999)
-            
-            # left_array = np.where(np.isnan(left_df[col].values), -9999, left_df[col].values)
-            # right_array = np.where(np.isnan(right_df[col].values), -9999, right_df[col].values)
-
-            if hb.arrays_equal_ignoring_order(left_df[col + '_temp'].values, right_df[col + '_temp'].values, ignore_values=[-9999]):
-            # if np.array_equal(left_array, right_array):
-                identical_columns.append(left_df[col])
-                identical_column_labels.append(col)
+                if hb.arrays_equal_ignoring_order(left_df[col + '_temp'].values, right_df[col + '_temp'].values, ignore_values=[-9999]):
+                    identical_columns.append(left_df[col])
+                    identical_column_labels.append(col)
+                    
+                # Now drop the temp columns
+                left_df = left_df.drop(col + '_temp', axis=1)
+                right_df = right_df.drop(col + '_temp', axis=1)
                 
-            # Now drop the temp columns
-            left_df = left_df.drop(col + '_temp', axis=1)
-            right_df = right_df.drop(col + '_temp', axis=1)
-            
+            else:
+                if left_df[col].sort_values().reset_index(drop=True).equals(right_df[col].sort_values().reset_index(drop=True)):
+                    identical_columns.append(left_df[col])
+                    identical_column_labels.append(col)
         else:
-            a = left_df[col].sort_values().reset_index(drop=True).unique()
-            b = right_df[col].sort_values().reset_index(drop=True).unique()
-            # if np.array_equal(a, b):
-            if left_df[col].sort_values().reset_index(drop=True).equals(right_df[col].sort_values().reset_index(drop=True)):
-            # if left_df[col].equals(right_df[col]):
+            if left_df[col].equals(right_df[col]):
                 identical_columns.append(left_df[col])
-                identical_column_labels.append(col)
-                
-    if not any([left_on, right_on, left_index, right_index]):
+                identical_column_labels.append(col)            
+            
+    if not any([left_on, right_on]):
         # If found, assign the first int column as the col to merge on
         for c, col in enumerate(identical_columns):
             if 'int' in str(col.dtype):
@@ -701,7 +738,7 @@ def df_merge(left_input, right_input, how=None, on=None, left_on=False, right_on
             break
 
         # If still not found, try to find a suitable string-based merge column, but fail if
-        if not any([left_on, right_on, left_index, right_index]):
+        if not any([left_on, right_on]):
             remove_unnamed = [i for i in identical_column_labels if 'Unnamed:' not in i]
             if len(remove_unnamed) < 0:
                 raise NameError('BORK!')
@@ -712,7 +749,6 @@ def df_merge(left_input, right_input, how=None, on=None, left_on=False, right_on
                 left_on = remove_unnamed[0]
                 right_on = remove_unnamed[0]
 
-
     # Drop one of the identical columns so we don't get tons of redundant columns.
     for col in identical_column_labels:
         if col != left_on and col != right_on:
@@ -721,53 +757,72 @@ def df_merge(left_input, right_input, how=None, on=None, left_on=False, right_on
             right_df = right_df.drop(col, axis=1)
 
     if compare_inner_outer:
-        if left_index and right_index:
-            df_inner = pd.merge(left_df, right_df, how='inner', left_index=left_index, right_index=right_index)
-            df_outer = pd.merge(left_df, right_df, how='outer', left_index=left_index, right_index=right_index)
-            if how == 'inner':
-                df = df_inner
-            elif how == 'outer':
-                df = df_outer
-            else:
-                df = pd.merge(left_df, right_df, how=how, left_index=left_index, right_index=right_index)
-            
+        if left_on == 'index' and right_on == 'index':
+            df_inner = pd.merge(left_df, right_df, how='inner', left_index=True, right_index=True)
+            df_outer = pd.merge(left_df, right_df, how='outer', left_index=True, right_index=True)
+        elif left_on == 'index':
+            df_inner = pd.merge(left_df, right_df, how='inner', left_index=True, right_on=right_on)
+            df_outer = pd.merge(left_df, right_df, how='outer', left_index=True, right_on=right_on)      
+        elif right_on == 'index':
+            df_inner = pd.merge(left_df, right_df, how='inner', left_on=left_on, right_index=True)
+            df_outer = pd.merge(left_df, right_df, how='outer', left_on=left_on, right_index=True)
         else:
-            df_inner = pd.merge(left_df, right_df, how='inner', left_on=left_on, right_on=right_on)        
-            df_outer = pd.merge(left_df, right_df, how='outer', left_on=left_on, right_on=right_on)        
-            if how == 'inner':
-                df = df_inner
-            elif how == 'outer':
-                df = df_outer
-            else:
-                df = pd.merge(left_df, right_df, how=how, left_on=left_on, right_on=right_on)        
-                
-                
-                
-        # REIMPLEMENT THIS!!!
-        # comparison_dict = hb.df_compare_column_contents_as_dict(df_outer[left_on], df_outer[right_on])
-        
-        # if verbose:
-        #     hb.log('Comparison of entries in left and right after merge: ' + hb.print_dict(comparison_dict))
+            df_inner = pd.merge(left_df, right_df, how='inner', left_on=left_on, right_on=right_on)    
+            df_outer = pd.merge(left_df, right_df, how='outer', left_on=left_on, right_on=right_on)    
             
-        # if len(comparison_dict['left_only']) > 0:
-        #     hb.log('\nWARNING!\nhb.df_merge lost the following left values: ' + str(comparison_dict['left_only']))
-        # if len(comparison_dict['right_only']) > 0:
-        #     hb.log('\nWARNING!\nhb.df_merge lost the following right values: ' + str(comparison_dict['right_only']))
+        if how == 'inner':
+            df = df_inner
+        elif how == 'outer':
+            df = df_outer
+        else:
+            if left_on == 'index' and right_on == 'index':
+                df = pd.merge(left_df, right_df, how=how, left_index=True, right_index=True)
+            elif left_on == 'index':
+                df = pd.merge(left_df, right_df, how=how, left_index=True, right_on=right_on)     
+            elif right_on == 'index':
+                df = pd.merge(left_df, right_df, how=how, left_on=left_on, right_index=True)          
+            else:
+                df = pd.merge(left_df, right_df, how=how, left_on=left_on, right_on=right_on)     
+                
+        comparison_dict = hb.df_compare_column_contents_as_dict(df_outer[left_on], df_outer[right_on])
+        
+        if verbose:
+            hb.log('Comparison of entries in left and right after merge: ' + hb.print_iterable(comparison_dict, return_as_string=True))
+        
+        if not supress_warnings:
+            if len(comparison_dict['left_only']) > 0:
+                hb.log('\nWARNING!\nIn hb.df_merge, left had non-shared values in merge-col: ' + str(comparison_dict['left_only']))
+            if len(comparison_dict['right_only']) > 0:
+                hb.log('\nWARNING!\nIn hb.df_merge, right had non-shared values in merge-col: ' + str(comparison_dict['right_only']))
             
     else:
-        if left_index and right_index:
-            df = pd.merge(left_df, right_df, how=how, left_index=left_index, right_index=right_index)
+        if left_on == 'index' and right_on == 'index':
+            df = pd.merge(left_df, right_df, how=how, left_index=True, right_index=True)
+        elif left_on == 'index':
+            df = pd.merge(left_df, right_df, how=how, left_index=True, right_on=right_on)     
+        elif right_on == 'index':
+            df = pd.merge(left_df, right_df, how=how, left_on=left_on, right_index=True)          
         else:
-            df = pd.merge(left_df, right_df, how=how, left_on=left_on, right_on=right_on)
+            df = pd.merge(left_df, right_df, how=how, left_on=left_on, right_on=right_on)    
+
     if verbose:
         hb.log('Finished merge. Found the following DF:\n' + str(df) +'\n which has columns ' + str(list(df.columns.values)))
+        
+    if left_geometry is not None:
+        df = pd.merge(left_df, left_geometry, how='left', on=left_on)
+        
+    # NYI fill_left_col_nan_with_right_value
+    ## Have to think this through. Would those inherit the geometry of right then?]
     return df
 
-def df_merge_two_columns_filling_missing(df, left_col, right_col, output_col_name):
+def df_fill_left_col_nan_with_right_value(df, left_col, right_col, output_col_name=None):
     
     # Combines two columns, filling missing values of left with the value of right
     # while also checking that no value in left does not equal the value in right
     # good for validating merge.
+    
+    if output_col_name is None:
+        output_col_name = left_col
     
     left_series = df[left_col]
     right_series = df[right_col]
@@ -781,12 +836,15 @@ def df_merge_two_columns_filling_missing(df, left_col, right_col, output_col_nam
     # if len(mismatch_df) > 0:
     #     raise NameError('Mismatched values in columns ' + left_col + ' and ' + right_col + ' in dataframe ' + str(df) + ' at indices ' + str(mismatch_df.index.values))
     
-    
-    df[output_col_name] = np.where(left_series.isnull(), right_series, left_series)
+    output_col_name_temp = output_col_name + '_' + hb.random_alphanumeric_string()
+    df[output_col_name_temp] = np.where(left_series.isnull(), right_series, left_series)
 
     # Drop the two columns that were merged
     df = df.drop([left_col, right_col], axis=1)
     
+    columns = {output_col_name_temp: output_col_name}
+    df.rename(columns=columns, inplace=True)
+
     return df
     
 

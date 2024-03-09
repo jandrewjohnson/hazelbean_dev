@@ -630,9 +630,15 @@ def dictionary_to_dataframe(input_dictionary, output_path=None):
             output_df.to_excel(output_path)
     return output_df
 
+# def read_csv(input_path):
+#     df = pd.read_csv(input_path)
+    
+#     for col in df.columns:
+#         if col.split('_')[-1] == 'list':
+#             for 
 
 def propose_fuzzy_merge(left_df, right_df, on=None, left_on=None, right_on=None, how=None,
-                        fuzzy_merge_csv_path=None, fuzzy_merge_report_path=None, cutoff=0.5):
+                        fuzzy_merge_csv_path=None, fuzzy_merge_report_path=None, cutoff=0.65):
 
     if on is not None:
         left_on = on
@@ -692,7 +698,7 @@ def propose_fuzzy_merge(left_df, right_df, on=None, left_on=None, right_on=None,
     comparison_dict_left = hb.compare_sets_as_dict(potential_left_uniques, potential_merge_uniques)
 
 
-    comparison_dict_right = hb.compare_sets_as_dict_as_dict(potential_right_uniques, potential_merge_uniques)
+    comparison_dict_right = hb.compare_sets_as_dict(potential_right_uniques, potential_merge_uniques)
     
 
     # pd.merge(food_balance_pivot_reduced_df, food_balance_pivot_reduced_df, on='item_name', how='outer')
@@ -1000,15 +1006,31 @@ def qmd_path_to_marked_qmd_path(qmd_path, marked_qmd_path):
             else:
                 content_lines.append(line)
 
-        header_string = '\n'.join(header_lines)
+
         output_content_lines = []
+
+        
+        if len(header_lines) == 0:
+            header_lines = """---
+format: 
+    revealjs:
+        theme: simple
+        margin: 0       
+        self-contained: false
+        scrollable: true
+        code-fold: show
+        slide-number: true  
+        preview-links: auto
+        css: styles.css
+        incremental: true  
+        auto-stretch: false
+---""".split('\n')
         
         # Iterate through content_lines
         slide_content = []
         for c, line in enumerate(content_lines):
             
-            # Get tags
-            tags = []
+
             if line.startswith('# '):
                 # New section slide
                 if line.rstrip().endswith('>'):
@@ -1039,6 +1061,9 @@ def qmd_path_to_marked_qmd_path(qmd_path, marked_qmd_path):
             
             # Get all the content of that slide 
             if new_slide:
+                # Get tags
+                tags = []
+                already_inserted_new_col = False
                 slide_content = []
                 for item_c in range(len(content_lines)):
                     if item_c + c + 1 >= len(content_lines):
@@ -1048,7 +1073,20 @@ def qmd_path_to_marked_qmd_path(qmd_path, marked_qmd_path):
                     else:
                         slide_content.append(content_lines[item_c + c])
                 slide_content.append('')
- 
+                
+            n_images = 0
+            # Count how many instances of ![ there are in the slide_content
+            for line in slide_content:
+                if line.lstrip().startswith('!['):
+                    n_images += 1
+
+            if n_images > 1:
+                if new_slide:
+                    tags.append('<list-left-images-right>')
+                    
+                    # START HERE, this isn't getting added
+                    slide_content[0] = slide_content[0] + ' <list-left-images-right>'
+                
             
             # Iterate through tags to modify slide_content
             if len(tags) > 0:
@@ -1077,18 +1115,22 @@ def qmd_path_to_marked_qmd_path(qmd_path, marked_qmd_path):
                         slide_content.insert(-1, ":::")
                         output_content_lines += slide_content
                     elif tag == "<list-left-images-right>":
-                        slide_content[0] = slide_content[0].replace('<list-left-images-right>', "\n\n::: columns \n::: {.column width=\"40%\"} \n")
+                        slide_content[0] = slide_content[0].replace('<list-left-images-right>', "\n\n::: columns \n::: {.column width=\"70%\"} \n::: r-fit-text \n")
                         to_insert = []
                         for c, slide_content_line in enumerate(slide_content):
-                            if slide_content_line.lstrip().startswith('!['):
-                                to_insert.append((c-1, '::: \n::: {.column width=\"60%\"}'))
+                            if slide_content_line.lstrip().startswith('![') and not already_inserted_new_col:
+                                to_insert.append((c-1, '::: \n::: \n::: {.column width=\"30%\"}'))
+                                already_inserted_new_col = True
                                 break
                             # output_content_lines.append(slide_content_line)
                         for i, v in to_insert:
                             slide_content.insert(i, v)
-                            
-                        slide_content.append(':::\n:::\n')
-                        output_content_lines += slide_content
+                        
+                        if new_slide: # NOTE AWKWARDNESS. I create the whole slide's content. 
+                            #Then i iterate over each line, creating the slide's content once for each line...
+                            # Would be better to only generate it once.
+                            slide_content.append(':::\n:::\n')
+                            output_content_lines += slide_content
             else:
                 if new_slide:
                     if 'imgbg' not in tags and 'list-left-images-right' not in tags:

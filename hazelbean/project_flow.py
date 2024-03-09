@@ -351,7 +351,7 @@ class  ProjectFlow(object):
                 if possible_dir in relative_path:
                     relative_path = relative_path.replace(possible_dir, '')
                     found_possible_dir_in_input = True
-                    hb.log('WARNING: You gave an absolute path to hb.get_path. It still sorta worked because it found the possible_dirs in the path and removed them, but this is not good practice.')
+                    hb.log('WARNING: You gave an absolute path to hb.get_path. It still might work if it found the possible_dirs in the path and removed them, but this is not good practice.')
                     break
             
             # First just check if it's found at the unmodified abs path. 
@@ -383,7 +383,9 @@ class  ProjectFlow(object):
                             # cloud_utils.gsutil_download_url(url, destination_file_name, skip_if_target_exists=False)
                             # /gtap_invest_seals_2023_04_21/base_data/cartographic/gadm/gadm_410_adm0_labels.csv
                 else:
+
                     path = os.path.join(possible_dir, relative_path)
+
                     if hb.path_exists(path, verbose=verbose):
                         return path
 

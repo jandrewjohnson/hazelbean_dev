@@ -1928,9 +1928,10 @@ def make_exam_md_from_dicts(header_dict, question_bank_dir, random_seed, randomi
 
 # TODOO I decided that every print-generating function should default to NOT printing but just returning the string,
 # which could be overriden by setting return_as_string to False. 
-def print_iterable(input_iterable, level = -1, max_length_to_visualize=255, input_name=None):
-    a = describe_iterable(input_iterable, level=level, max_length_to_visualize=max_length_to_visualize, input_name=input_name)
-    print(a)
+def print_iterable(input_iterable, level = -1, max_length_to_visualize=255, return_as_string=False, input_name=None):
+    a = describe_iterable(input_iterable, level=level, max_length_to_visualize=max_length_to_visualize, return_as_string=return_as_string, input_name=input_name)
+    if not return_as_string:
+        print(a)
     return a
     
 def describe_iterable(input_iterable, level=-1, max_length_to_visualize=255, return_as_string=True, input_name=None):
@@ -2023,7 +2024,8 @@ def describe_iterable(input_iterable, level=-1, max_length_to_visualize=255, ret
         prepend = '    ' * level
         return_string += prepend + 'String given to describe_iterable, but okay....: ' + str(input_iterable) + '\n'
     level -= 1     
-    return return_string
+    if return_string:
+        return return_string
 
 
 
