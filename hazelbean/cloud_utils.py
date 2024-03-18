@@ -123,7 +123,7 @@ def download_urls_list(input_list, target_dir, use_gsutil=False):
 
 
 
-def download_google_cloud_blob(bucket_name, source_blob_name, credentials_path, destination_file_name, chunk_size=262144*5,):
+def download_google_cloud_blob(bucket_name, source_blob_name, credentials_path, destination_file_name, chunk_size=262144*5, verbose=False):
     """There is a duplicate version of this that i want to get rid of in the seals repo. Downloads a blob from the bucket."""
     require_database = True
     if hb.path_exists(credentials_path) and require_database:
@@ -144,16 +144,19 @@ def download_google_cloud_blob(bucket_name, source_blob_name, credentials_path, 
     try:
         bucket = client.bucket(bucket_name)
     except Exception as e:
-        L.critical('Unable to get bucket ' + str(bucket_name) + ' with exception ' + str(e))
+        if verbose:
+            hb.log('Unable to get bucket ' + str(bucket_name) + ' with exception ' + str(e))
 
     try:
         # source_blob_name = 'base_data/' + source_blob_name
         blob = bucket.get_blob(source_blob_name) # LEARNING POINT, difference between bucket.blob and bucket.get_blob is the latter sets extra attributes like blob.size.
     except Exception as e:
-        L.critical('Unable to get blob ' + str(source_blob_name) + ' with exception ' + str(e))
+        if verbose:
+            hb.log('Unable to get blob ' + str(source_blob_name) + ' with exception ' + str(e))
 
     if blob is None:
-        L.critical('Unable to get blob ' + str(source_blob_name) + ' from ' + source_blob_name + ' in ' + bucket_name + '.')
+        if verbose:
+            hb.log('Unable to get blob ' + str(source_blob_name) + ' from ' + source_blob_name + ' in ' + bucket_name + '.')
 
 
     L.info('Starting to download to ' + destination_file_name + ' from ' + source_blob_name + ' in ' + bucket_name + '. The size of the object is ' + str(blob.size))
@@ -165,7 +168,8 @@ def download_google_cloud_blob(bucket_name, source_blob_name, credentials_path, 
     try:
         blob.download_to_filename(destination_file_name)
     except Exception as e:
-        L.critical('Blob download_to_file failed for ' + str(destination_file_name) + ' with exception ' + str(e))
+        if verbose:
+            hb.log('Blob download_to_file failed for ' + str(destination_file_name) + ' with exception ' + str(e))
 
 
 

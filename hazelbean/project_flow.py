@@ -380,7 +380,8 @@ class  ProjectFlow(object):
                     if hasattr(self, 'data_credentials_path'):
                         if self.data_credentials_path is not None:
                             try: # If the file is in the cload, download it.
-                                hb.log('Downloading ' + str(source_blob_name) + ' from ' + str(self.input_bucket_name) + ' to ' + str(destination_file_name) + ' in ' + str(self.cur_dir))
+                                if verbose:
+                                    hb.log('Downloading ' + str(source_blob_name) + ' from ' + str(self.input_bucket_name) + ' to ' + str(destination_file_name) + ' in ' + str(self.cur_dir))
                                 cloud_utils.download_google_cloud_blob(self.input_bucket_name, source_blob_name, self.data_credentials_path, destination_file_name, chunk_size=262144*5,)
                                 return path
                             except: # If it wasn't there, assume it is a local file that needs to be created.
