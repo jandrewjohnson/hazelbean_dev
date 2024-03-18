@@ -124,7 +124,7 @@ def download_urls_list(input_list, target_dir, use_gsutil=False):
 
 
 def download_google_cloud_blob(bucket_name, source_blob_name, credentials_path, destination_file_name, chunk_size=262144*5,):
-    """REPLACED IN SEALS BY SEALS VERSION. Downloads a blob from the bucket."""
+    """There is a duplicate version of this that i want to get rid of in the seals repo. Downloads a blob from the bucket."""
     require_database = True
     if hb.path_exists(credentials_path) and require_database:
         
@@ -132,9 +132,11 @@ def download_google_cloud_blob(bucket_name, source_blob_name, credentials_path, 
         client = storage.Client.from_service_account_json(credentials_path)
     else:
         if credentials_path is not None:
-            hb.log('Unable to find database license. Your code currently is stating it should be found at ' + str(credentials_path) + ' with abspath of ' + str(hb.path_abs(credentials_path)) + ' relative to where the run script was launched. Defaulting to publicly available data. If you would like to generate your own database, disable this check (set require_database to False). Otherwise, feel free to reach out to the developer of SEALS to acquire the license key. It is only limited because the data are huge and expensive to host (600+ Gigabytes).')
+            hb.log('Unable to find referenced database license. Your code currently is stating it should be found at ' + str(credentials_path) + ' with abspath of ' + str(hb.path_abs(credentials_path)) + ' relative to where the run script was launched. Defaulting to publicly available data. If you would like to generate your own database, disable this check (set require_database to False). Otherwise, feel free to reach out to the developer of SEALS to acquire the license key. It is only limited because the data are huge and expensive to host (600+ Gigabytes).')
         else:
             hb.log('No credentials path provided. Defaulting to publicly available data.')
+            bucket_name = 'gtap_invest_seals_2023_04_21'
+            
         # If credentials path does not exist or is none, just get a client without credentials. This will only work if the bucket is public.
         client = storage.Client.create_anonymous_client()
         
@@ -145,7 +147,7 @@ def download_google_cloud_blob(bucket_name, source_blob_name, credentials_path, 
         L.critical('Unable to get bucket ' + str(bucket_name) + ' with exception ' + str(e))
 
     try:
-        source_blob_name = 'base_data/' + source_blob_name
+        # source_blob_name = 'base_data/' + source_blob_name
         blob = bucket.get_blob(source_blob_name) # LEARNING POINT, difference between bucket.blob and bucket.get_blob is the latter sets extra attributes like blob.size.
     except Exception as e:
         L.critical('Unable to get blob ' + str(source_blob_name) + ' with exception ' + str(e))

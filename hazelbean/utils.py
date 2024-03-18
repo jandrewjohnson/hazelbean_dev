@@ -11,11 +11,50 @@ import contextlib
 import logging
 from google.cloud import storage
 import hashlib
+import inspect
 
 import pandas as pd
 
 L = hb.get_logger('hazelbean utils')
 
+def get_all_frames_locations_as_list():
+    locations = []
+    # Start with the current frame, then follow the chain of calling frames
+    frame = inspect.currentframe()
+
+    while frame:
+        # Extract the file name and line number from the current frame
+        file_name = frame.f_code.co_filename
+        line_number = frame.f_lineno
+        locations.append(f"{file_name}:{line_number}")
+        frame = frame.f_back  # Move to the next outer frame
+
+    # Remove the call to this function itself from the list
+    return locations[1:]  # Skip the first entry (this function call)
+
+
+
+def get_current_script_location(exclude_frame_string_filter=None, separator=', '):
+    if exclude_frame_string_filter is None:
+        exclude_frame_string_filter = ['ProjectFlow', 'project_flow', '.vscode', 'runpy', 'hazelbean\\utils', 'hazelbean/utils']
+
+    # Get the current frame object, then go back one step to get the frame of the caller
+    caller_frame = inspect.currentframe().f_back
+    # Extract the file name and line number from the caller's frame
+    file_name = caller_frame.f_code.co_filename
+    line_number = caller_frame.f_lineno
+    locations = get_all_frames_locations_as_list()
+    return separator.join([i for i in locations if not any([j in i for j in exclude_frame_string_filter])])
+
+def print_with_location(*args, **kwargs):
+    # Get the current frame object, then go back one step to get the frame of the caller
+    caller_frame = inspect.currentframe().f_back
+    # Extract the file name and line number from the caller's frame
+    file_name = caller_frame.f_code.co_filename
+    line_number = caller_frame.f_lineno
+    # Print the file name, line number, and the original message
+    print(f"[{file_name}:{line_number}]", *args, **kwargs)
+    
 def debug(msg, *args, level=100, same_line_as_previous=False, **kwargs):
     # LEARNING POINT, when using the * operator in a function with other named args, it had to come before the named args, e.g. level=10 in the above.
         
@@ -27,11 +66,14 @@ def debug(msg, *args, level=100, same_line_as_previous=False, **kwargs):
         else:
             print(to_print)
 
-def log(msg, *args, level=10, same_line_as_previous=False, **kwargs):
+def log(msg, *args, level=10, same_line_as_previous=False, include_script_location=False, **kwargs):
     # LEARNING POINT, when using the * operator in a function with other named args, it had to come before the named args, e.g. level=10 in the above.
         
     if level <= 50:
         to_print = str(msg) + ' ' + ' '.join([str(i) for i in args]) + ' ' + ' '.join([str(k) + ': ' + str(v) + '\n' for k, v in kwargs.items() if k != 'logger_level'])
+        
+        if include_script_location:
+            to_print += ' ' + get_current_script_location()
         
         if same_line_as_previous:
             print("\r" + to_print, end="")    
@@ -1048,6 +1090,9 @@ def check_conda_env_exists(env_name):
 
 
 def get_first_extant_path(relative_path, possible_dirs, verbose=False):
+    do_deprecation_statement = 1
+    if do_deprecation_statement:
+        hb.log('hb.get_first_extant_path is deprecated. Use p.get_path() instead. This fucntion was called via ', relative_path, possible_dirs)
     # Searches for a file in a list of possible directories and returns the first one it finds.
     # If it doesn't find any, it returns the first one it tried.
     # If it was given None, just return None

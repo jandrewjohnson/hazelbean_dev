@@ -320,9 +320,16 @@ class  ProjectFlow(object):
         self.output_dir = os.path.join(self.project_dir, 'outputs')
 
 
-    def get_path(self, relative_path, *join_path_args, possible_dirs='default', copy_to_project=False, verbose=False):
+    def get_path(self, relative_path, *join_path_args, possible_dirs='default', prepend_possible_dirs=None, copy_to_project=False, verbose=False):
         ### NOTE: This is a PROJECT METHOD. There is currently no hb level function cause then you'd just have to pass the project.
         
+        path_as_inputted = relative_path
+        
+        default_bucket = 'gtap_invest_seals_2023_04_21'
+        
+        ## START HERE, I totally messed up the logic on when what should be downloaded to where
+        if 'lulc_esa_2017' in relative_path:
+            pass
         # For convenience, p.get_path will assume that any list of strings should be joined to gether to make the relative path
         if len(join_path_args) > 0:
             hb.debug("Joining relative paths from args list.")
@@ -340,48 +347,60 @@ class  ProjectFlow(object):
             
             # Check if self has google_drive_path attribute and if so, add it to the possible_dirs
 
-            if hasattr(self, 'input_bucket_name'):
-                possible_dirs.append('input_bucket_name')
+        if not hasattr(self, 'input_bucket_name'):
+            self.input_bucket_name = default_bucket
+        
+        if self.input_bucket_name is None:
+            self.input_bucket_name = default_bucket
+            
+        if hasattr(self, 'input_bucket_name'):
+            possible_dirs.append('input_bucket_name')
+                
+        if prepend_possible_dirs is not None:
+            possible_dirs = prepend_possible_dirs + possible_dirs
             
 
-        if os.path.isabs(relative_path):
-            # Check that it has one of the possible_dirs already embedded in it
-            found_possible_dir_in_input = False
-            for possible_dir in possible_dirs:
-                if possible_dir in relative_path:
-                    relative_path = relative_path.replace(possible_dir, '')
-                    found_possible_dir_in_input = True
-                    hb.log('WARNING: You gave an absolute path to hb.get_path. It still might work if it found the possible_dirs in the path and removed them, but this is not good practice.')
-                    break
-            
-            # First just check if it's found at the unmodified abs path. 
-            if not found_possible_dir_in_input:       
-                if hb.path_exists(relative_path):
-                    return relative_path
-                else:
-                    raise NameError('The path given to hb.get_path() does not appear to be relative, is not relative to one of the possible dirs, and does not exist at the unmodified path): ' + str(relative_path) + ', ' + str(possible_dirs))
-                    
+
         # It is releative, so search the possible dirs
         for possible_dir in possible_dirs:
             if type(possible_dir) is str:
                 if possible_dir == 'input_bucket_name':
                     source_blob_name =  relative_path.replace('\\', '/')
-                    destination_file_name = os.path.join(self.cur_dir, relative_path)
-                    hb.log('Downloading ' + str(source_blob_name) + ' from ' + str(self.input_bucket_name) + ' to ' + str(destination_file_name) + ' in ' + str(self.cur_dir))
+                    
+                    # Interesting undefined choice here, if it was only found in the bucket, it should go in base data yeah? or in the project input dir? or in the cur_dir?
+                    destination_file_name = os.path.join(self.base_data_dir, relative_path)
+                    # destination_file_name = os.path.join(self.cur_dir, relative_path)
+
+
+
+                    # destination_file_name = source_blob_name
+                    
+                    
                     
                     if hasattr(self, 'data_credentials_path'):
                         if self.data_credentials_path is not None:
                             try: # If the file is in the cload, download it.
+                                hb.log('Downloading ' + str(source_blob_name) + ' from ' + str(self.input_bucket_name) + ' to ' + str(destination_file_name) + ' in ' + str(self.cur_dir))
                                 cloud_utils.download_google_cloud_blob(self.input_bucket_name, source_blob_name, self.data_credentials_path, destination_file_name, chunk_size=262144*5,)
                                 return path
                             except: # If it wasn't there, assume it is a local file that needs to be created.
                                 pass 
                         else:
+                            try:
+                                url = "https://storage.googleapis.com" + '/' + self.input_bucket_name + '/' + source_blob_name
+                                cloud_utils.download_google_cloud_blob(self.input_bucket_name, source_blob_name, self.data_credentials_path, destination_file_name, chunk_size=262144*5,)
+                                return path
+                            except:  # If it wasn't there, assume it is a local file that needs to be created.
+                                pass 
+                    else:
+                        self.data_credentials_path = None
+                        try:
                             url = "https://storage.googleapis.com" + '/' + self.input_bucket_name + '/' + source_blob_name
                             cloud_utils.download_google_cloud_blob(self.input_bucket_name, source_blob_name, self.data_credentials_path, destination_file_name, chunk_size=262144*5,)
                             return path
-                            # cloud_utils.gsutil_download_url(url, destination_file_name, skip_if_target_exists=False)
-                            # /gtap_invest_seals_2023_04_21/base_data/cartographic/gadm/gadm_410_adm0_labels.csv
+                        except:  # If it wasn't there, assume it is a local file that needs to be created.
+                            pass                             
+
                 else:
 
                     path = os.path.join(possible_dir, relative_path)
@@ -389,7 +408,35 @@ class  ProjectFlow(object):
                     if hb.path_exists(path, verbose=verbose):
                         return path
 
-        # If it was neither found nor None, THEN return the path constructed from the first element in possible_dirs
+
+
+        if os.path.isabs(relative_path):
+            # Check that it has one of the possible_dirs already embedded in it
+            found_possible_dir_in_input = False
+            for possible_dir in possible_dirs:
+                if possible_dir in relative_path:
+                    relative_path = relative_path.replace(possible_dir, '')
+                    if relative_path[1] == '/' or relative_path[1] == '\\':
+                        relative_path = relative_path[1:]
+                    elif relative_path[0] == '/' or relative_path[0] == '\\':
+                        relative_path = relative_path[1:]
+                        
+                    found_possible_dir_in_input = True
+                    
+                    break
+            
+            # First just check if it's found at the unmodified abs path. 
+            if hb.path_exists(path_as_inputted): 
+                return path_as_inputted # This is the one case where it's okay
+                
+            
+            if not found_possible_dir_in_input:       
+                if hb.path_exists(relative_path):
+                    hb.log('WARNING: You gave an absolute path to hb.get_path. It still might work if it found the possible_dirs in the path and removed them, but this is not good practice. Inputted path: ', relative_path, 'Possible dirs: ', possible_dirs, include_script_location=True)
+                    return relative_path
+                else:
+                    raise NameError('The path given to hb.get_path() does not appear to be relative, is not relative to one of the possible dirs, does not exist at the unmodified path, and or is not available for download on your selected cloud bucket): ' + str(relative_path) + ', ' + str(possible_dirs))
+                            # If it was neither found nor None, THEN return the path constructed from the first element in possible_dirs
         # Get the first non None element in possible_dirs
         possible_dirs = [i for i in possible_dirs if i is not None]
         path = os.path.join(possible_dirs[0], relative_path)
