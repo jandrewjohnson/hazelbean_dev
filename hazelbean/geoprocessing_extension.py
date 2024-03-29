@@ -16,6 +16,7 @@ import functools
 import queue
 import threading
 import json
+import pygeoprocessing
 
 # pgp takes about 1 sec to import.
 # HACK I am just not importing this because stat_worker was written in the C and I want to update pgp before I start using that stuff.

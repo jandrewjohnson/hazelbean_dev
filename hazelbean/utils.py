@@ -641,7 +641,7 @@ def df_merge_list_of_csv_paths(csv_path_list, output_csv_path=None, on='index', 
                 cols += [right_on]
             new_df = current_df[cols]
             # merged_df = pd.merge(merged_df, new_df, how='outer', left_on=left_on, right_on=right_on, left_index=left_index, right_index=right_index)
-            merged_df = df_merge(merged_df, new_df, how='outer', left_on=left_on, right_on=right_on, left_index=left_index, right_index=right_index, verbose=False)
+            merged_df = df_merge(merged_df, new_df, how='outer', left_on=left_on, right_on=right_on, verbose=False)
     if output_csv_path:
         merged_df.to_csv(output_csv_path, index=False)
   
@@ -708,6 +708,8 @@ def df_merge(left_input,
     if type(right_df) is gpd.GeoDataFrame and not type(left_df) is gpd.GeoDataFrame:
         raise NameError('Right df is a GeoDataFrame but left is not. This is not supported. Because it will drop the geometry column and fail on .to_file()')
 
+    left_geometry = None
+    right_geometry = None
     # Drop geometry cols for now for faster processing
     if type(left_df) is gpd.GeoDataFrame:
         left_geometry = left_df[[left_on, 'geometry']]
@@ -852,6 +854,11 @@ def df_merge(left_input,
         
     if left_geometry is not None:
         df = pd.merge(left_df, left_geometry, how='left', on=left_on)
+        
+        print('df', df)
+        
+        # Convert the df to a geodataframe
+        df = gpd.GeoDataFrame(df, geometry='geometry')
         
     # NYI fill_left_col_nan_with_right_value
     ## Have to think this through. Would those inherit the geometry of right then?]

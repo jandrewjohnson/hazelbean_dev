@@ -226,8 +226,9 @@ class  ProjectFlow(object):
             L.debug('Could not identify a calling script.')
 
         # self.calling_globals = inspect.stack()[1][0].f_globals
-
-
+        user_dir = os.path.expanduser('~')
+        default_extra_dirs = ['Files']
+        
         ## PROJECT LEVEL ATTRIBUTES
         # Set the project-level logging level. Individual tasks can overwrite this.
         self.logging_level = logging.INFO
@@ -258,7 +259,8 @@ class  ProjectFlow(object):
         if hb.path_exists(hb.config.BASE_DATA_DIR):
             self.base_data_dir = hb.config.BASE_DATA_DIR
         else:
-            self.base_data_dir = None
+            self.base_data_dir = os.path.join(user_dir, os.sep.join(default_extra_dirs), 'base_data')
+
 
         if hb.path_exists(hb.config.EXTERNAL_BULK_DATA_DIR):
             self.external_bulk_data_dir = hb.config.EXTERNAL_BULK_DATA_DIR
@@ -297,6 +299,8 @@ class  ProjectFlow(object):
         self.note = None 
         #
         self.registered_dirs = ['.', self.input_dir]
+        
+        self.L = hb.get_logger('project_flow')
         # self.registered_dirs = ['.', self.input_dir, self.project_base_data_dir, self.model_base_data_dir, self.base_data_dir]
 
 

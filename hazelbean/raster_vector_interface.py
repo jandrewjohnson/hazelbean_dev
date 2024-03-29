@@ -738,6 +738,7 @@ def zonal_statistics(
 
         if vector_output_path is not None:
             gdfo.to_file(vector_output_path, driver='GPKG')
+            
     else:
         # Make a new column that copys the index value
         df['id'] = df.index

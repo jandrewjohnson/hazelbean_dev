@@ -134,7 +134,8 @@ def download_google_cloud_blob(bucket_name, source_blob_name, credentials_path, 
         if credentials_path is not None:
             hb.log('Unable to find referenced database license. Your code currently is stating it should be found at ' + str(credentials_path) + ' with abspath of ' + str(hb.path_abs(credentials_path)) + ' relative to where the run script was launched. Defaulting to publicly available data. If you would like to generate your own database, disable this check (set require_database to False). Otherwise, feel free to reach out to the developer of SEALS to acquire the license key. It is only limited because the data are huge and expensive to host (600+ Gigabytes).')
         else:
-            hb.log('No credentials path provided. Defaulting to publicly available data.')
+            if verbose:
+                hb.log('No credentials path provided. Defaulting to publicly available data.')
             bucket_name = 'gtap_invest_seals_2023_04_21'
             
         # If credentials path does not exist or is none, just get a client without credentials. This will only work if the bucket is public.
