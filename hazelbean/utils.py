@@ -12,6 +12,7 @@ import logging
 from google.cloud import storage
 import hashlib
 import inspect
+import subprocess
 
 import pandas as pd
 
@@ -1078,14 +1079,59 @@ def assign_df_row_to_object_attributes(input_object, input_row):
     for attribute_name, attribute_value in list(zip(input_row.index, input_row.values)):
         setattr(input_object, attribute_name, attribute_value)
 
-def get_list_of_conda_envs_installed():
-    import subprocess
+def call_conda_info():
+    command = 'conda info'
+    output = subprocess.check_output(command)
+    print('output', output)
+    return output
+
+def get_list_of_conda_envs_installed(include_dirs=False):
+   
     command = 'conda info --envs'
     output = subprocess.check_output(command)
-    output_as_list = str(output).split('\\r\\n')
-    pared_list = [i.split(' ')[0] for i in output_as_list[2:]]
 
+    output_as_list = str(output).split('\\r\\n')
+    output_replaced = str(output).replace('\\r\\n', '\\\\')
+    output_split = output_replaced.split(' ')
+    if include_dirs:
+        pared_list = []
+        
+        for c, i in enumerate(output_as_list[3:]):
+            j = i.split(' ')[-1]
+            k = j.replace('\\\\', '/')
+
+            # Check if j is a directory
+            if os.path.isdir(k):
+                pared_list.append(k)
+
+    else:
+        pared_list = [i.split(' ')[0] for i in output_as_list[2:]]
     return pared_list
+
+def check_if_library_in_conda_env(library_name, conda_env_name):
+
+    """Check if a package is installed in a specific Conda environment."""
+    try:
+        call_conda_info()
+        # Run 'conda list' in the specified environment
+        result = subprocess.run(['conda', 'list', '-p', conda_env_name, library_name], stdout=subprocess.PIPE, text=True)
+        if library_name in result.stdout:
+            return True
+        else:
+            return False
+    except Exception as e:
+        print(f"Error checking package {library_name} in environment at {conda_env_name}: {e}")
+        return False
+
+def check_which_conda_envs_have_library_installed(library_name):
+    envs_list = get_list_of_conda_envs_installed(include_dirs=True)
+    
+    envs_with_library = []
+    for env_name in envs_list:
+        if check_if_library_in_conda_env(library_name, env_name):
+            envs_with_library.append(env_name)
+    return envs_with_library
+        
 
 
 def check_conda_env_exists(env_name):
