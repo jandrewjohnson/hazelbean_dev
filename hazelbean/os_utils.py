@@ -1452,6 +1452,13 @@ def replace_in_file_via_dict(input_path, output_path, replace_dict):
     with open(output_path, 'w') as file:
         file.write(filedata)
 
+def add_lines_to_file(input_file, new_lines):
+    with open(input_file, 'a') as file:
+        for line in new_lines:
+            file.write(line + '\n')
+
+
+
 def path_replace_extension(input_path, new_extension):
     if not new_extension.startswith('.'):
         new_extension = '.' + new_extension
