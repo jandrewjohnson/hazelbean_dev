@@ -341,6 +341,7 @@ class  ProjectFlow(object):
                 if type(i) is not str:
                     raise NameError('get_path was given non-string args to the *join_path_args. This is not allowed!')
             relative_path = os.path.join(relative_path, *join_path_args)
+            relative_joined_path = relative_path
             
         if type(relative_path) is not str:
             raise NameError('relative_path must be a string. You gave ' + str(relative_path))
@@ -431,8 +432,8 @@ class  ProjectFlow(object):
                     break
             
             # First just check if it's found at the unmodified abs path. 
-            if hb.path_exists(path_as_inputted): 
-                return path_as_inputted # This is the one case where it's okay
+            if hb.path_exists(relative_joined_path): 
+                return relative_joined_path # This is the one case where it's okay
                 
             
             if not found_possible_dir_in_input:       
