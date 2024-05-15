@@ -595,7 +595,7 @@ def df_plot(input_df, output_png_path, type='bar', legend_labels=None):
     plt.savefig(output_png_path, dpi=300, bbox_inches='tight')
 
 def df_merge_list_of_csv_paths(csv_path_list, output_csv_path=None, on='index', left_on=None, right_on=None, column_suffix='fileroot',verbose=False):
-
+    print('CAVEAT NYI, only use on otherwise left and right_on get overwrit')
     merged_df = None
 
     if on == 'index':
@@ -617,15 +617,22 @@ def df_merge_list_of_csv_paths(csv_path_list, output_csv_path=None, on='index', 
         if column_suffix == 'fileroot':
             columns = {k: v for k, v in zip(current_df.columns, [str(i) + '_' + hb.file_root(csv_path) for i in current_df.columns])}
             current_df.rename(columns=columns, inplace=True)
+           
         elif column_suffix == 'ignore':
             pass # This means we're assuming each csv has some unique col.
         elif type(column_suffix) is str:
             columns = {k: v for k, v in zip(current_df.columns, [str(i) + '_' + column_suffix for i in current_df.columns])}
+            columns = {k: v for k, v in columns.items() if v != on and v != left_on and v != right_on}
             current_df.rename(columns=columns, inplace=True)
+            
+        
         elif type(column_suffix) is list:
             if len(column_suffix) == len(csv_path_list):
                 columns = {k: v for k, v in zip(current_df.columns, [str(i) + '_' + column_suffix[c] for i in current_df.columns if 'Unnamed' not in i])}
+                columns = {k: v for k, v in columns.items() if v != on + '_' + column_suffix[c] and v != left_on + '_' + column_suffix[c] and v != right_on + '_' + column_suffix[c]}
+
                 current_df.rename(columns=columns, inplace=True)
+               
             else:
                 raise NameError('column_suffix list must be same length as csv_path_list')
 
@@ -640,7 +647,10 @@ def df_merge_list_of_csv_paths(csv_path_list, output_csv_path=None, on='index', 
             cols = [i for i in current_df.columns if i not in merged_df.columns]
             if right_on:
                 cols += [right_on]
-            new_df = current_df[cols]
+            # new_df = current_df[cols]
+            
+            new_df = current_df
+            
             # merged_df = pd.merge(merged_df, new_df, how='outer', left_on=left_on, right_on=right_on, left_index=left_index, right_index=right_index)
             merged_df = df_merge(merged_df, new_df, how='outer', left_on=left_on, right_on=right_on, verbose=False)
     if output_csv_path:
@@ -800,6 +810,17 @@ def df_merge(left_input,
             if verbose:
                 hb.log('Identical cols i that are not index or listed as merging on, so dropping right.')
             right_df = right_df.drop(col, axis=1)
+    if not supress_warnings:
+        if len(identical_column_labels) > 0:
+            hb.log('Identical columns found: ' + str(identical_column_labels) + ' which might cause troubles if youre doing something like math that is supposed to have a zero (rather than dropping)')
+    
+    # Check types of merge columns
+    if verbose:
+        hb.log('Left merge column type: ' + str(left_df[left_on].dtype) + ' Right merge column type: ' + str(right_df[right_on].dtype))
+        
+        # Also print all the columns dtypes
+        # hb.log('Left columns: ' + ['    ' + k +': ' + v + '\n' for k, v in zip(str(left_df.columns), str(left_df.dtypes))] + ' Right columns: ' + ['    ' + k +': ' + v + '\n' for k, v in zip(right_df.columns, right_df.dtypes)])
+
 
     if compare_inner_outer:
         if left_on == 'index' and right_on == 'index':
@@ -896,7 +917,8 @@ def df_fill_left_col_nan_with_right_value(df, left_col, right_col, output_col_na
     df.rename(columns=columns, inplace=True)
 
     return df
-    
+
+
 
 # TODOO Move this to a new dataframe_utils file.
 def df_reorder_columns(input_df, initial_columns=None, prespecified_order=None, remove_columns=None, sort_method=None):
@@ -1005,6 +1027,16 @@ def flatten_nested_dictionary(input_dict, return_type='values'):
     elif return_type == 'values':
         return list((walk_dictionary(input_dict, return_type=return_type)))
 
+def flatten_list(input_list):
+    stack = input_list[::-1]
+    flat_list = []
+    while stack:
+        element = stack.pop()
+        if isinstance(element, list):
+            stack.extend(element[::-1])
+        else:
+            flat_list.append(element)
+    return flat_list
 
 def get_attributes_of_object_as_list_of_strings(input_object):
     return [a for a in dir(input_object) if not a.startswith('__') and not callable(getattr(input_object, a))]
@@ -1085,7 +1117,7 @@ def call_conda_info():
     print('output', output)
     return output
 
-def get_list_of_conda_envs_installed(include_dirs=False):
+def get_list_of_conda_envs_installed(include_dirs=True):
    
     command = 'conda info --envs'
     output = subprocess.check_output(command)
@@ -1135,8 +1167,9 @@ def check_which_conda_envs_have_library_installed(library_name):
 
 
 def check_conda_env_exists(env_name):
-
-    if env_name in get_list_of_conda_envs_installed():
+    envs_installed = get_list_of_conda_envs_installed()
+    hb.log('envs_installed', envs_installed)
+    if any([env_name in i for i  in envs_installed]):
         return True
     else:
         return False

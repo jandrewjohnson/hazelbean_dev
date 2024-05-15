@@ -252,7 +252,10 @@ def zonal_statistics_flex(input_raster,
             df = df[[vector_index_column] + vector_columns_to_include_in_output + ['sums']]
             df = df.sort_values(by=[vector_index_column])
             if output_column_prefix is not None:
-                rename_dict = {'sums': output_column_prefix + '_sums'}
+                if output_column_prefix == '':
+                    rename_dict = {'sums': output_column_prefix}
+                else:                    
+                    rename_dict = {'sums': output_column_prefix + '_sums'}
                 df = df.rename(columns=rename_dict)
 
         if csv_output_path is not None:
@@ -316,7 +319,8 @@ def zonal_statistics_flex(input_raster,
 
             df = df[[vector_index_column] + vector_columns_to_include_in_output + [str(i) for i in enumeration_classes]]
 
-            if output_column_prefix is not None:
+            if output_column_prefix is not None and output_column_prefix != '':
+                
                 if enumeration_labels is not None:
                     rename_dict = {str(i): output_column_prefix + '_' + enumeration_labels[c] for c, i in enumerate(enumeration_classes)}
                 else:
@@ -414,12 +418,18 @@ def zonal_statistics_rasterized(zone_ids_raster_path, values_raster_path, zones_
             values_ds = gdal.OpenEx(values_raster_path)
             # No idea why, but using **block_offset_new_gdal_api failed, so I unpack it manually here.
             try:
-                zones_array = zones_ds.ReadAsArray(block_offset_new_gdal_api['xoff'], block_offset_new_gdal_api['yoff'], block_offset_new_gdal_api['buf_xsize'], block_offset_new_gdal_api['buf_ysize']).astype(np.int64)
                 values_array = values_ds.ReadAsArray(block_offset_new_gdal_api['xoff'], block_offset_new_gdal_api['yoff'], block_offset_new_gdal_api['buf_xsize'], block_offset_new_gdal_api['buf_ysize']).astype(np.float64)
+            except:
+                L.critical('unable to load ' + values_raster_path)
+                pass
+            
+            try:
+                zones_array = zones_ds.ReadAsArray(block_offset_new_gdal_api['xoff'], block_offset_new_gdal_api['yoff'], block_offset_new_gdal_api['buf_xsize'], block_offset_new_gdal_api['buf_ysize']).astype(np.int64)
 
             except:
-                L.critical('unable to load' + zone_ids_raster_path + ' ' + values_raster_path)
-                pass
+                L.critical('unable to load ' + zone_ids_raster_path)
+                pass            
+            
                 # zones_array = zones_ds.ReadAsArray(block_offset_new_gdal_api['xoff'], block_offset_new_gdal_api['yoff']).astype(np.int64)
                 # values_array = values_ds.ReadAsArray(block_offset_new_gdal_api['xoff'], block_offset_new_gdal_api['yoff']).astype(np.float64)
 
@@ -447,6 +457,7 @@ def zonal_statistics_rasterized(zone_ids_raster_path, values_raster_path, zones_
                         # If is vertical stripe, just read based on y buffer.
                         multiply_raster = multiply_ds.ReadAsArray(0, block_offset_new_gdal_api['yoff'], 1, block_offset_new_gdal_api['buf_ysize']).astype(np.float64)
                     else:
+                        # "C:\Users\jajohns\Files\seals\projects\test_iucn_30by30\intermediate\project_aoi\pyramids\aoi_ha_per_cell_coarse.tif"
                         multiply_raster = multiply_ds.ReadAsArray(block_offset_new_gdal_api['xoff'], block_offset_new_gdal_api['yoff'], block_offset_new_gdal_api['buf_xsize'], block_offset_new_gdal_api['buf_ysize']).astype(np.float64)
                 else:
                     multiply_raster = np.asarray([[1]], dtype=np.float64)
@@ -479,7 +490,7 @@ def zonal_statistics(
         enumeration_classes=None,
         enumeration_labels=None,
         multiply_raster_path=None,
-        output_column_prefix=None,
+        output_column_prefix=None, # If None uses the fileroot, use '' to be blank.
         vector_columns_to_keep='all',
         csv_output_path=None,
         vector_output_path=None,
@@ -630,7 +641,7 @@ def zonal_statistics(
             if zones_raster_data_type >= 5:
                 numpy_dtype = np.int64
                 if unique_zone_ids is None:
-                    unique_zone_ids = np.arange(0, 256, dtype=numpy_dtype)
+                    unique_zone_ids = np.arange(0, max_enumerate_value, dtype=numpy_dtype)
             else:
                 numpy_dtype = np.uint8
                 if unique_zone_ids is None:
@@ -691,8 +702,15 @@ def zonal_statistics(
         _, sums = hb.raster_vector_interface.zonal_statistics_rasterized(zone_ids_raster_path, input_raster_path, zones_ndv=zones_ndv, values_ndv=values_ndv,
                                                                   unique_zone_ids=unique_zone_ids, stats_to_retrieve=stats_to_retrieve, verbose=verbose)
 
+        # Make a df from unique_zone_ids
+        u_df = pd.DataFrame(data=unique_zone_ids)
         # Create a DF of the exhaustive, continuous ints in unique_zone_ids, which may have lots of zeros.
-        df = pd.DataFrame(index=unique_zone_ids, data={output_column_prefix + '_sums': sums})
+
+
+        df_sums = pd.DataFrame(data={output_column_prefix + '_sums': sums})
+        df_sums['id'] = df_sums.index
+        df = hb.df_merge(u_df, df_sums, how='outer', left_on=0, right_on='id')
+        # df_sums = pd.DataFrame(index=unique_zone_ids, data={output_column_prefix + '_sums': sums})
         # df = pd.DataFrame(index=unique_zone_ids, data={output_column_prefix + '_sums': sums[1: ]}) # PREVIOUSLY HAD THIS LINE! PROBABLY BROKEN ELSEWHERE
 
 
@@ -720,10 +738,16 @@ def zonal_statistics(
                                                                  enumeration_classes=enumeration_classes, multiply_raster_path=multiply_raster_path,
                                                                  verbose=verbose, )
         enumeration = np.asarray(enumeration)
-        if enumeration_labels is not None:
-            df = pd.DataFrame(index=unique_zone_ids, columns=[output_column_prefix + '_' + enumeration_labels[c]  + '_' + str(i) for c, i in enumerate(enumeration_classes)], data=enumeration)
+        if output_column_prefix:
+            output_column_prefix_fixed = output_column_prefix + '_'
         else:
-            df = pd.DataFrame(index=unique_zone_ids, columns=[output_column_prefix + '_class_' + str(i) for c, i in enumerate(enumeration_classes)], data=enumeration)
+            output_column_prefix_fixed = ''
+        
+        if enumeration_labels is not None:
+            
+            df = pd.DataFrame(index=unique_zone_ids, columns=[output_column_prefix_fixed + enumeration_labels[c] for c, i in enumerate(enumeration_classes)], data=enumeration)
+        else:
+            df = pd.DataFrame(index=unique_zone_ids, columns=[output_column_prefix_fixed + str(i) for c, i in enumerate(enumeration_classes)], data=enumeration)
 
     # If a vector was given, use it to select out just the index values that are in the gdf
     if zones_vector_path:
@@ -744,8 +768,14 @@ def zonal_statistics(
         df['id'] = df.index
         
         # Keep only where the id is greater than zero
-        df = df[df[output_column_prefix + '_sums'] > 0]
+        if output_column_prefix + '_sums' in df.columns:
+            df = df[df[output_column_prefix + '_sums'] > 0]
+        else: # Then it is an enumeration
+            df = df[~(df[[i for i in df.columns if i != 'id']] == 0).all(axis=1)]
+            
         if csv_output_path is not None:
+            # Save the df but make everything a float
+            df = df.astype(float)
             df.to_csv(csv_output_path, index=None)
         
 

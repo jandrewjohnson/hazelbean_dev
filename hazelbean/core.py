@@ -216,6 +216,20 @@ def path_all_exist(*args, verbose=False):
             
     return True
 
+def path_standardize_separators(input_path):
+    r1 = input_path.replace(os.sep, '/')
+    r2 = r1.replace('\\', '/')
+    return r2
+    
+    
+    
+def path_trisplit(input_path):
+
+    clean_path = path_standardize_separators(input_path)
+    split_path = clean_path.split('/')
+    return split_path
+    
+    
 def path_file_root(input_path):
     # if isinstance(input_path, hb.InputPath):
     #     input_path = str(input_path)

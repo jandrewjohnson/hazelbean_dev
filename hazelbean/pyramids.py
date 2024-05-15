@@ -1,8 +1,10 @@
-import os, logging, math, time
+import os, logging, math, time, sys
 import hazelbean as hb
 from decimal import Decimal
 import multiprocessing
 import difflib
+from rasterio.transform import rowcol
+import rasterio
 
 # Note, these four imports add about 1 second. but they're so universally used it's hard to avoid it
 from osgeo import gdal, osr, ogr
@@ -1099,6 +1101,7 @@ def make_path_global_pyramid(
         overwrite_overviews=False,
         calculate_stats=True,
         overwrite_stats=False,
+        fill_to_global_extent=False, # NYI and BROKEN!
         clean_temporary_files=False,
         raise_exception=False,
         make_overviews_external=True,
@@ -1127,11 +1130,22 @@ def make_path_global_pyramid(
 
     ds = gdal.OpenEx(input_path)
     n_c, n_r = ds.RasterXSize, ds.RasterYSize
+    orginal_n_c, orginal_n_r = ds.RasterXSize, ds.RasterYSize
     gt = ds.GetGeoTransform()
 
+    orginal_gt = gt
     ulx, xres, _, uly, _, yres = gt[0], gt[1], gt[2], gt[3], gt[4], gt[5]
+    orginal_ulx, orginal_xres, _, orginal_uly, _, orginal_yres = gt[0], gt[1], gt[2], gt[3], gt[4], gt[5]
     if verbose:
         L.info('   ulx: ' + str(ulx) + ', uly: ' + str(uly) + ', xres: ' + str(xres) + ', yres: ' + str(yres) + ', n_c: ' + str(n_c) + ', n_r: ' + str(n_r))
+
+    if fill_to_global_extent:
+        if verbose:
+            L.info('Filling to global extent with value ' + str(fill_to_global_extent))
+        ulx = -180.0
+        uly = 90.0
+        
+
 
     if -180.001 < ulx < -179.999:
         ulx = -180.0
@@ -1139,14 +1153,23 @@ def make_path_global_pyramid(
         uly = 90.0
 
     if ulx != -180.0 or uly != 90.0:
-        result_string = 'Input path not pyramid ready because UL not at -180 90 (or not close enough): ' + str(input_path)
+        result_string = 'Input path not pyramid ready because UL not at -180 90 (or not close enough): ' + str(input_path) +'. \n    Instead they were: ' + str(ulx) + ', ' + str(uly)
         if raise_exception:
             raise NameError(result_string)
         else:
             L.info(result_string)
             return False
-    lrx = ulx + resolution * n_c
-    lry = uly + -1.0 * resolution * n_r
+    
+    changed_extent = False
+    if fill_to_global_extent:
+        lrx = 180.0
+        lry = -90.0
+        n_c = int((lrx - ulx) / resolution)
+        n_r = int((uly - lry) / resolution)
+        changed_extent = True
+    else:        
+        lrx = ulx + resolution * n_c
+        lry = uly + -1.0 * resolution * n_r
 
     if lrx != 180.0 or lry != -90.0:
 
@@ -1160,10 +1183,10 @@ def make_path_global_pyramid(
     output_geotransform = pyramid_compatible_geotransforms[arcseconds]
     ds = None
 
-    if output_geotransform != gt:
+    if output_geotransform != gt and fill_to_global_extent is None:
         L.warning('Changing geotransform of ' + str(input_path) + ' to ' + str(output_geotransform) + ' from ' + str(gt))
 
-    hb.set_geotransform_to_tuple(input_path, output_geotransform)
+    # hb.set_geotransform_to_tuple(input_path, output_geotransform)
 
     ds = gdal.OpenEx(input_path, gdal.GA_Update)
     md = ds.GetMetadata()
@@ -1234,6 +1257,10 @@ def make_path_global_pyramid(
         else:
             if ndv != -9999.0:
                 ndv = -9999.0
+                
+    if changed_extent:
+        L.info('Changed extent of ' + str(input_path) + ' to global extent. New extent is ' + str(ulx) + ', ' + str(uly) + ', ' + str(lrx) + ', ' + str(lry))
+        rewrite_array = True
 
     if verbose:
         L.info('output data_type: ' + str(data_type) + ', output ndv: ' + str(ndv))
@@ -1249,7 +1276,16 @@ def make_path_global_pyramid(
 
     if rewrite_array:
         L.info('make_path_spatially_clean triggered rewrite_array for ' + str(input_path))
-
+        if changed_extent:
+            dst_size = (n_c, n_r)
+            # Create a raster with just the fill value but with a global extent
+            if fill_to_global_extent == 'ndv':
+                final_fill_to_global_extent_value = ndv
+            else:
+                final_fill_to_global_extent_value = fill_to_global_extent
+            warp_add_padding(input_path, displacement_path, output_geotransform, dst_size, final_fill_to_global_extent_value)
+            input_path = displacement_path
+            
         def sanitize_array(x):
             x = x.astype(hb.gdal_number_to_numpy_type[data_type])
 
@@ -1260,7 +1296,7 @@ def make_path_global_pyramid(
             return x
 
         hb.raster_calculator_flex(input_path, sanitize_array, temp_write_path, datatype=data_type, ndv=ndv, gtiff_creation_options=options)
-
+ 
 
     # Rename files to displace old input. This has to be done before external-file operations are completed.
     if output_path:
@@ -1269,20 +1305,21 @@ def make_path_global_pyramid(
             os.rename(temp_write_path, output_path)
             processed_path = output_path
         else:
-            processed_path = input_path
+            processed_path = output_path
+            hb.path_copy(input_path, processed_path)
     else:
         if os.path.exists(temp_write_path):
             os.rename(input_path, displacement_path)
             os.rename(temp_write_path, input_path)
         processed_path = input_path
 
-    # Do metadata and compression tasks
+   # Do metadata and compression tasks
     if make_overviews_external:
         ds = gdal.OpenEx(processed_path)
     else:
         ds = gdal.OpenEx(processed_path, gdal.GA_Update)
 
-    # make_rat = False  # Arcaic form from ESRI, KEPT FOR REFERENCE ONLY
+    # make_rat = False  # Arcaic form from ESRI, KEPT FOR REFERENCE ONLY. And hilarity.
     # if make_rat:
     #     rat = gdal.RasterAttributeTable()
     #
@@ -1331,6 +1368,34 @@ def make_path_global_pyramid(
             ds.GetRasterBand(1).GetHistogram(approx_ok=0)
     ds = None
     return True
+
+
+def warp_add_padding(input_path, output_path, dst_geotransform, dst_size, fill_value):
+    dataset = gdal.Open(input_path)
+    geotransform = dataset.GetGeoTransform()
+    
+    dataset.SetGeoTransform(dst_geotransform)
+    width = dst_size[0] * dst_geotransform[1]
+    height = dst_size[1] * dst_geotransform[1]
+
+    # Calculate new bounds based on the padding
+    xmin = dst_geotransform[0]
+    ymax = dst_geotransform[3]
+    xmax = xmin + width
+    ymin = ymax - height 
+        
+    def progress_callback(complete, message, user_data):
+        """ Reports progress of a GDAL operation. """
+        print(f"Progress: {complete*100:.2f}% completed.", end="")
+        return 1  # Returning 1 continues, 0 would cancel the operation
+
+    # Execute gdalwarp with the new bounds
+    warp_options = gdal.WarpOptions(format='GTiff', outputBounds=[xmin, ymin, xmax, ymax], creationOptions=hb.DEFAULT_GTIFF_CREATION_OPTIONS, dstNodata=fill_value, callback=progress_callback)
+
+    gdal.Warp(output_path, dataset, options=warp_options)
+
+    dataset = None  # Close the dataset
+
 
 def make_dir_global_pyramid(input_dir, output_path=None, make_overviews=True, calculate_stats=True, clean_temporary_files=False,
                             resolution=None, raise_exception=False, make_overviews_external=True, verbose=True):
@@ -1555,18 +1620,38 @@ def assert_paths_same_pyramid(path_1, path_2, raise_exception=False, surpress_ou
                 return False
 
 
-def set_geotransform_to_tuple(input_path, desired_geotransform):
+def set_geotransform_to_tuple(input_path, desired_geotransform, output_path=None):
     """
     FROM CONFIG:
     geotransform_global_5m = (-180.0, 0.08333333333333333, 0.0, 90.0, 0.0, -0.08333333333333333)  # NOTE, the 0.08333333333333333 is defined very precisely as the answer a 64 bit compiled python gives from the answer 1/12 (i.e. 5 arc minutes)
     geotransform_global_30s = (-180.0, 0.008333333333333333, 0.0, 90.0, 0.0, -0.008333333333333333)  # NOTE, the 0.008333333333333333 is defined very precisely as the answer a 64 bit compiled python gives from the answer 1/120 (i.e. 30 arc seconds) Note that this has 1 more digit than 1/12 due to how floating points are stored in computers via exponents.
     geotransform_global_10s = (-180.0, 0.002777777777777778, 0.0, 90.0, 0.0, -0.002777777777777778)  # NOTE, the 0.002777777777777778 is defined very precisely
     """
-    ds = gdal.OpenEx(input_path, gdal.GA_Update)
-    gt = ds.GetGeoTransform()
-    ds.SetGeoTransform(desired_geotransform)
-    gt = ds.GetGeoTransform()
-    ds = None
+    
+    if output_path is None:
+        ds = gdal.OpenEx(input_path, gdal.GA_Update)
+        gt = ds.GetGeoTransform()
+        ds.SetGeoTransform(desired_geotransform)
+        gt = ds.GetGeoTransform()
+        ds = None
+    else:
+        hb.path_copy(input_path, output_path)
+        ds = gdal.OpenEx(output_path, gdal.GA_Update)
+        gt = ds.GetGeoTransform()
+        ds.SetGeoTransform(desired_geotransform)
+        gt = ds.GetGeoTransform()
+        ds = None
+                
+        ## LEARNING POINT: FASTER OPTION WAS JUST TO COPY AND THEN RESET THE GEOTRANSFORM
+        # ds = gdal.OpenEx(input_path)
+        # driver = gdal.GetDriverByName('GTiff')
+        # new_ds = driver.Create(output_path, ds.RasterXSize, ds.RasterYSize, 1, ds.GetRasterBand(1).DataType, options=hb.DEFAULT_GTIFF_CREATION_OPTIONS)
+        # new_ds.SetGeoTransform(desired_geotransform)
+        # new_ds.SetProjection(ds.GetProjection())
+        # array = ds.GetRasterBand(1).ReadAsArray()
+        # new_ds.GetRasterBand(1).WriteArray(array)
+        # new_ds = None
+        # ds = None
 
 def change_array_datatype_and_ndv(input_path, output_path, data_type, input_ndv=None, output_ndv=None):
     output_data_type_numpy = hb.default_no_data_values_by_gdal_number_in_numpy_types[data_type]
@@ -1711,6 +1796,9 @@ def load_geotiff_chunk_by_bb(input_path, bb, inclusion_behavior='centroid', stri
     if given output_path will make it write there (potentially EXTREMELY computaitonally slow)
     if output_path is True and not a string, will save to a atemp file.
      """
+     
+    if not hb.path_exists(input_path):
+        raise NameError('load_geotiff_chunk_by_bb unable to open ' + str(input_path))
     c, r, c_size, r_size = hb.bb_path_to_cr_size(input_path, bb, inclusion_behavior=inclusion_behavior)
     L.debug('bb_path_to_cr_widthheight generated', c, r, c_size, r_size)
 

@@ -294,6 +294,7 @@ class  ProjectFlow(object):
         self.task_names_defined = [] # Store a list of tasks defined somewhere in the target script. For convenience, e.g., when setting runtime conditionals based on function names existence.
 
         self.input_dir = getattr(self, 'input_dir', os.path.join(self.project_dir, 'input'))
+        self.intermediate_dir = getattr(self, 'intermediate_dir', os.path.join(self.project_dir, 'intermediate'))
         self.output_dir = getattr(self, 'output_dir', os.path.join(self.project_dir, 'output'))
         self.documentation = None 
         self.note = None 
@@ -327,29 +328,67 @@ class  ProjectFlow(object):
     def get_path(self, relative_path, *join_path_args, possible_dirs='default', prepend_possible_dirs=None, copy_to_project=False, verbose=False):
         ### NOTE: This is a PROJECT METHOD. There is currently no hb level function cause then you'd just have to pass the project.
         
+        # This is tricky cause tehre are four possible cases
+        # 1. relative path has no directories, join path args is empty
+        # 2. relative path has directories, join path args is empty
+        # 3. relative path has no directories, join path args is not empty
+        # 4. relative path has directories, join path args is not empty
+        
         path_as_inputted = relative_path
         
+        
+        # first get the length of the relative_path after splitting
+
+        split_relative_path = hb.path_trisplit(relative_path)
+        
+        if len(split_relative_path) == 1:
+            # Check if it has an extension
+            if len(join_path_args) == 0:
+                # hb.path_standardize_separators(self.intermediate_dir)
+                split1 = self.cur_dir.split(self.intermediate_dir)[1]
+                split2 = split1.split(os.sep)
+                paths_from_cur_dir = [i for i in split2 if i]
+                
+                relative_path = os.path.join(os.sep.join(paths_from_cur_dir), relative_path)
+                
+                
+            else:
+                relative_path = os.path.join(relative_path, os.sep.join(join_path_args))
+                
+        else:
+            if len(join_path_args) == 0:
+                relative_path = os.sep.join(split_relative_path)
+            else:
+                raise NameError('You gave both extra dirs i relative_path and join_path_args')
+        
         default_bucket = 'gtap_invest_seals_2023_04_21'
-        
-        ## START HERE, I totally messed up the logic on when what should be downloaded to where
-        if 'lulc_esa_2017' in relative_path:
-            pass
-        # For convenience, p.get_path will assume that any list of strings should be joined to gether to make the relative path
-        if len(join_path_args) > 0:
-            hb.debug("Joining relative paths from args list.")
-            for i in join_path_args:
-                if type(i) is not str:
-                    raise NameError('get_path was given non-string args to the *join_path_args. This is not allowed!')
-            relative_path = os.path.join(relative_path, *join_path_args)
-            relative_joined_path = relative_path
-            
-        if type(relative_path) is not str:
-            raise NameError('relative_path must be a string. You gave ' + str(relative_path))
-        
+
+        # # For convenience, p.get_path will assume that any list of strings should be joined to gether to make the relative path
+        # if len(join_path_args) > 0:
+        #     hb.debug("Joining relative paths from args list.")
+        #     for i in join_path_args:
+        #         if type(i) is not str:
+        #             raise NameError('get_path was given non-string args to the *join_path_args. This is not allowed!')
+        #     relative_path = os.path.join(relative_path, *join_path_args)
+        #     relative_joined_path = relative_path
+        #     # elif os.path.exists(self.cur_dir):
+        #     paths_to_right_of_intermediate_dir = relative_path.split(self.intermediate_dir)[0]
+        #     extra_dirs = [relative_path] + [i for i in join_path_args[:-1]]
+        # else:
+        #     relative_joined_path = relative_path
+        #     paths_to_right_of_intermediate_dir = self.cur_dir.split(self.intermediate_dir)[0]
+        #     extra_dirs = [relative_path] + [i for i in paths_to_right_of_intermediate_dir]
+        # if type(relative_path) is not str:
+        #     raise NameError('relative_path must be a string. You gave ' + str(relative_path))
+        relative_joined_path = relative_path
 
         if possible_dirs == 'default':
-            possible_dirs = [self.cur_dir, self.input_dir, self.base_data_dir]
+            possible_dirs = [self.intermediate_dir, self.input_dir, self.base_data_dir]
             
+        # if len(join_path_args) > 1:
+        #     to_insert = os.path.join(self.intermediate_dir, os.sep.join([path_as_inputted] + list(join_path_args)[:-1]))
+        #     possible_dirs.insert(0, to_insert)
+        
             # Check if self has google_drive_path attribute and if so, add it to the possible_dirs
 
         if not hasattr(self, 'input_bucket_name'):
@@ -376,7 +415,8 @@ class  ProjectFlow(object):
                     destination_file_name = os.path.join(self.base_data_dir, relative_path)
                     # destination_file_name = os.path.join(self.cur_dir, relative_path)
 
-
+                    if verbose:
+                            hb.log('p.get_path looking online at: ' + str(self.input_bucket_name) + ' ' + str(source_blob_name) + ' ' + str(self.data_credentials_path) + ' ' + str(destination_file_name))
 
                     # destination_file_name = source_blob_name
                     
@@ -411,8 +451,21 @@ class  ProjectFlow(object):
 
                     path = os.path.join(possible_dir, relative_path)
 
+
+                    
+                    
+
                     if hb.path_exists(path, verbose=verbose):
                         return path
+                    
+                    # HACK IUCN RUSH. Also check filepath against possible dir
+                    # Though maybe it's not a bad ahck? Basically, what we need to consider is that
+                    # sometimes you need to have the cur_dir define the post twist path but sometimes not and you just want to ignore any post twith paths
+                    # incorrectly impli9ed by the cur_dir structure.
+                    split_path = os.path.join(possible_dir, os.path.split(path)[1])
+                    if hb.path_exists(split_path, verbose=verbose):
+                        return split_path
+                    
 
 
 

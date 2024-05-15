@@ -534,7 +534,14 @@ def python_object_to_csv(input_iterable, output_uri, csv_type=None, verbose=Fals
     else:
         raise NameError('Not sure how to handle that data_type.')
 
-    open(output_uri, 'w').write(to_write)
+
+    # Write the string to a file
+    with open(output_uri, 'w', newline='', encoding='utf-8') as file:
+        file.write(to_write)        
+    # with open('n_cells_per_zone.csv', 'w', newline='') as file:
+    #     writer = csv.writer(file)
+    #     writer.writerows(data)
+    #     open(output_uri, 'w', encoding='utf').write(to_write)
 
     if verbose:
         print (('\nWriting python object to csv at ' + output_uri + '. Auto-detected the data_type to be: ' + data_type))
@@ -569,16 +576,16 @@ def determine_data_type_and_dimensions_for_write(input_python_object):
             data_type = '2d_list_odict_NOT_SUPPORTED'
         else:
             raise NameError('2d_list_odict_NOT_SUPPORTED unknown')
-    elif isinstance(input_python_object, OrderedDict):
+    elif isinstance(input_python_object, OrderedDict) or isinstance(input_python_object, dict):
         first_row_key = next(iter(input_python_object))
         first_row = input_python_object[first_row_key]
-        if isinstance(first_row, (str, int, float, bool)):
+        if isinstance(first_row, (str, int, float, bool, np.ubyte, np.byte, np.int16, np.int32, np.int64, np.float32, np.float64)):
             data_type = '1d_odict'
         # elif isinstance(first_row, dict):
         #     raise TypeError('Only works with OrderedDicts not dicts.')
         elif isinstance(first_row, list):
             data_type = '2d_odict_list'
-        elif isinstance(first_row, OrderedDict):
+        elif isinstance(first_row, OrderedDict) or isinstance(first_row, dict):
             data_type = '2d_odict'
         else:
             raise NameError('Unsupported object type. Did you give a blank OrderedDict to python_object_to_csv()?. \nYou Gave:\n\n' + str(input_python_object))

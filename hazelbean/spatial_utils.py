@@ -1638,7 +1638,8 @@ def enumerate_raster_path(input_path, use_dask=None, max_to_report=None):
     if use_dask:
         output_dict = hb.unique_count_dask(input_path, n_workers=None, threads_per_worker=None, memory_limit=None)
     else:
-        output_dict = zip(np.unique(hb.as_array(input_path), return_counts=True))
+        uniques = np.unique(hb.as_array(input_path), return_counts=True)
+        output_dict = dict(zip(list(uniques[0]), list(uniques[1])))
 
     return output_dict
 
