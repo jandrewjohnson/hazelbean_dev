@@ -1583,7 +1583,11 @@ def as_array_resampled_to_size(path, max_size=200000, return_all_parts=False, ve
     # Use gdal ReadAsArray to only resample to a small enough raster.
     # This is faster than numpy approaches because it uses the band method to only selectively read from disk.
     # HOWEVER, i think there is a huge performance hit if the raster is compressed.
-    ds = gdal.Open(path)
+    try:
+        ds = gdal.Open(path)
+    except:
+        raise NameError('as_array_resampled_to_size failed because ' + str(path) + ' does not exist.')
+    
     band = ds.GetRasterBand(1)
     cols = ds.RasterXSize
     rows = ds.RasterYSize

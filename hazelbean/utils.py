@@ -833,6 +833,10 @@ def df_merge(left_input,
             df_inner = pd.merge(left_df, right_df, how='inner', left_on=left_on, right_index=True)
             df_outer = pd.merge(left_df, right_df, how='outer', left_on=left_on, right_index=True)
         else:
+            if not left_on in left_df.columns:
+                raise NameError('Left merge column not in left df columns: ' + left_on + ' not in ' + str(left_df.columns))
+            if not left_on in left_df.columns:
+                raise NameError('Right merge column not in right df columns: ' + right_on + ' not in ' + str(right_df.columns))            
             df_inner = pd.merge(left_df, right_df, how='inner', left_on=left_on, right_on=right_on)    
             df_outer = pd.merge(left_df, right_df, how='outer', left_on=left_on, right_on=right_on)    
             
@@ -875,9 +879,9 @@ def df_merge(left_input,
         hb.log('Finished merge. Found the following DF:\n' + str(df) +'\n which has columns ' + str(list(df.columns.values)))
         
     if left_geometry is not None:
-        df = pd.merge(left_df, left_geometry, how='left', on=left_on)
+        df = pd.merge(df, left_geometry, how='outer', on=left_on)
         
-        print('df', df)
+        # print('df', df)
         
         # Convert the df to a geodataframe
         df = gpd.GeoDataFrame(df, geometry='geometry')

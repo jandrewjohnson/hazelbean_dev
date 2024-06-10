@@ -1222,28 +1222,51 @@ def make_path_global_pyramid(
     below_ndv = False
     if verbose:
         L.info('input data_type: ' + str(data_type) + ', input ndv: ' + str(ndv))
-    if data_type == 1:
+    if data_type == 1 and ndv is not None:
         if ndv != 255:
             old_ndv = ndv
             ndv = 255
             L.critical('rewrite_array triggered because ndv was not 255 and datatype was 1.')
             rewrite_array = True
             new_ndv = True
-    elif data_type < 6:
+        else:
+            old_ndv = 255
+            ndv = 255
+            L.critical('rewrite_array triggered because ndv was not -9999.0 and datatype was > 5 (i.e. is a float).')
+            rewrite_array = True
+            new_ndv = True            
+            
+            
+    elif data_type < 6 and ndv is not None:
         if ndv != -9999:  # NOTE INT
             old_ndv = ndv
             ndv = -9999
             L.critical('rewrite_array triggered because ndv was not 9999 and datatype was of int type.')
             rewrite_array = True
             new_ndv = True
+            
+        else:
+            old_ndv = -9999
+            ndv = -9999
+            L.critical('rewrite_array triggered because ndv was not -9999.0 and datatype was > 5 (i.e. is a float).')
+            rewrite_array = True
+            new_ndv = True            
+            
+            
     else:
-        if ndv != -9999.0:
+        if ndv != -9999.0 and ndv is not None:
             old_ndv = ndv
             ndv = -9999.0
             L.critical('rewrite_array triggered because ndv was not -9999.0 and datatype was > 5 (i.e. is a float).')
             rewrite_array = True
             new_ndv = True
-
+        else:
+            old_ndv = -9999.0
+            ndv = -9999.0
+            L.critical('rewrite_array triggered because ndv was not -9999.0 and datatype was > 5 (i.e. is a float).')
+            rewrite_array = True
+            new_ndv = True
+            
     if set_ndv_below_value is not None:
         rewrite_array = True
         new_ndv = True

@@ -345,7 +345,10 @@ class  ProjectFlow(object):
             # Check if it has an extension
             if len(join_path_args) == 0:
                 # hb.path_standardize_separators(self.intermediate_dir)
-                split1 = self.cur_dir.split(self.intermediate_dir)[1]
+                if len(self.cur_dir.split(self.intermediate_dir)) > 1:
+                    split1 = self.cur_dir.split(self.intermediate_dir)[1]
+                else:
+                    split1 = self.cur_dir
                 split2 = split1.split(os.sep)
                 paths_from_cur_dir = [i for i in split2 if i]
                 
@@ -401,6 +404,9 @@ class  ProjectFlow(object):
             possible_dirs.append('input_bucket_name')
                 
         if prepend_possible_dirs is not None:
+            if type(prepend_possible_dirs) is str:
+                prepend_possible_dirs = [prepend_possible_dirs]
+
             possible_dirs = prepend_possible_dirs + possible_dirs
             
 

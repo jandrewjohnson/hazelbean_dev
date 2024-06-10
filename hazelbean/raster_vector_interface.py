@@ -573,8 +573,24 @@ def zonal_statistics(
     # Determine if we can get away with 8bit data.
         if id_min is None:
             id_min = gdf[id_column_label].min()
+            if '.' in id_min:
+                raise NameError('id_min is a float. This is not allowed. Please provide an integer.')
+            try: 
+                id_min = int(id_min)
+            except:
+                raise NameError('id_min is not an intable. This is not allowed. Please provide an integer.')
+            
+            
         if id_max is None:
             id_max = gdf[id_column_label].max()
+            if '.' in id_max:
+                raise NameError('id_max is a float. This is not allowed. Please provide an integer.')
+            try: 
+                id_max = int(id_max)
+            except:
+                raise NameError('id_max is not an intable. This is not allowed. Please provide an integer.')
+            
+            
     else:
         if id_min is None or id_max is None:
             
@@ -720,7 +736,19 @@ def zonal_statistics(
         _, sums, counts = hb.zonal_statistics_rasterized(zone_ids_raster_path, input_raster_path, zones_ndv=zones_ndv, values_ndv=values_ndv,
                                                                   unique_zone_ids=unique_zone_ids, stats_to_retrieve=stats_to_retrieve, verbose=verbose)
 
-        df = pd.DataFrame(index=unique_zone_ids, data={output_column_prefix + '_sums': sums, output_column_prefix + '_counts': counts})
+        # df = pd.DataFrame(index=unique_zone_ids, data={output_column_prefix + '_sums': sums, output_column_prefix + '_counts': counts})
+
+        # Make a df from unique_zone_ids
+        u_df = pd.DataFrame(data=unique_zone_ids)
+        # Create a DF of the exhaustive, continuous ints in unique_zone_ids, which may have lots of zeros.
+
+
+        df_sums = pd.DataFrame(data={output_column_prefix + '_sums': sums, output_column_prefix + '_counts': counts})
+        df_sums['id'] = df_sums.index
+        df = hb.df_merge(u_df, df_sums, how='outer', left_on=0, right_on='id')
+
+
+
 
 
     elif stats_to_retrieve == 'enumeration':
@@ -774,6 +802,7 @@ def zonal_statistics(
             df = df[~(df[[i for i in df.columns if i != 'id']] == 0).all(axis=1)]
             
         if csv_output_path is not None:
+            hb.create_directories(csv_output_path)
             # Save the df but make everything a float
             df = df.astype(float)
             df.to_csv(csv_output_path, index=None)
