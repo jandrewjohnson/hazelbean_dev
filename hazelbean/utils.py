@@ -816,7 +816,8 @@ def df_merge(left_input,
     
     # Check types of merge columns
     if verbose:
-        hb.log('Left merge column type: ' + str(left_df[left_on].dtype) + ' Right merge column type: ' + str(right_df[right_on].dtype))
+        pass
+        # hb.log('Left merge column type: ' + str(left_df[left_on].dtype) + ' Right merge column type: ' + str(right_df[right_on].dtype))
         
         # Also print all the columns dtypes
         # hb.log('Left columns: ' + ['    ' + k +': ' + v + '\n' for k, v in zip(str(left_df.columns), str(left_df.dtypes))] + ' Right columns: ' + ['    ' + k +': ' + v + '\n' for k, v in zip(right_df.columns, right_df.dtypes)])

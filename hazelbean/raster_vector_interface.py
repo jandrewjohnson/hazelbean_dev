@@ -729,7 +729,7 @@ def zonal_statistics(
         # df_sums = pd.DataFrame(index=unique_zone_ids, data={output_column_prefix + '_sums': sums})
         # df = pd.DataFrame(index=unique_zone_ids, data={output_column_prefix + '_sums': sums[1: ]}) # PREVIOUSLY HAD THIS LINE! PROBABLY BROKEN ELSEWHERE
 
-
+        print('df', df)
     elif stats_to_retrieve == 'sums_counts':
         L.debug('Exporting sums_counts.')
         hb.path_exists(zone_ids_raster_path, verbose=verbose)
@@ -746,6 +746,7 @@ def zonal_statistics(
         df_sums = pd.DataFrame(data={output_column_prefix + '_sums': sums, output_column_prefix + '_counts': counts})
         df_sums['id'] = df_sums.index
         df = hb.df_merge(u_df, df_sums, how='outer', left_on=0, right_on='id')
+
 
 
 
@@ -793,7 +794,7 @@ def zonal_statistics(
             
     else:
         # Make a new column that copys the index value
-        df['id'] = df.index
+        df['id_created'] = df.index
         
         # Keep only where the id is greater than zero
         if output_column_prefix + '_sums' in df.columns:
@@ -802,6 +803,9 @@ def zonal_statistics(
             df = df[~(df[[i for i in df.columns if i != 'id']] == 0).all(axis=1)]
             
         if csv_output_path is not None:
+           
+           
+            
             hb.create_directories(csv_output_path)
             # Save the df but make everything a float
             df = df.astype(float)

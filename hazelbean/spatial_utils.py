@@ -31,6 +31,17 @@ L = hb.get_logger('hb_spatial_utils')
 # import matplotlib.pyplot as plt
 
 
+def is_path_gdal_readable(input_path):
+    if not os.path.exists(input_path):
+        return False
+    try:
+        ds = gdal.Open(input_path)
+        gt = ds.GetGeoTransform() # Assume that if you can read a geotransform, that's enough to count as gdal readable.
+        return True
+    except OSError as e:
+        return False
+
+
 def assert_path_is_gdal_readable(input_path):
     if not os.path.exists(input_path):
         raise FileNotFoundError('hb.assert_path_is_gdal_readable could not find ' + str(input_path))
