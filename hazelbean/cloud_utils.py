@@ -156,8 +156,8 @@ def download_google_cloud_blob(bucket_name, source_blob_name, credentials_path, 
             hb.log('Unable to get blob ' + str(source_blob_name) + ' with exception ' + str(e))
 
     if blob is None:
-        if verbose:
-            hb.log('Unable to get blob ' + str(source_blob_name) + ' from ' + source_blob_name + ' in ' + bucket_name + '.')
+        # if verbose:
+        hb.log('Unable to get blob ' + str(source_blob_name) + ' from ' + source_blob_name + ' in ' + bucket_name + '.')
 
 
     L.info('Starting to download to ' + destination_file_name + ' from ' + source_blob_name + ' in ' + bucket_name + '. The size of the object is ' + str(blob.size))
