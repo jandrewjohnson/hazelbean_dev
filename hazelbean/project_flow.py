@@ -3,7 +3,7 @@ import os, sys, types, inspect, logging, collections, time, copy
 from collections import OrderedDict
 
 import hazelbean as hb
-from hazelbean import cloud_utils
+from hazelbean import cloud_utils, os_utils
 import multiprocessing
 
 # try:
@@ -325,7 +325,7 @@ class  ProjectFlow(object):
         self.output_dir = os.path.join(self.project_dir, 'outputs')
 
 
-    def get_path(self, relative_path, *join_path_args, possible_dirs='default', prepend_possible_dirs=None, copy_to_project=False, verbose=False):
+    def get_path(self, relative_path, *join_path_args, possible_dirs='default', prepend_possible_dirs=None, create_shortcut=False, verbose=False):
         ### NOTE: This is a PROJECT METHOD. There is currently no hb level function cause then you'd just have to pass the project.
         
         # This is tricky cause tehre are four possible cases
@@ -387,6 +387,8 @@ class  ProjectFlow(object):
 
         if possible_dirs == 'default':
             possible_dirs = [self.intermediate_dir, self.input_dir, self.base_data_dir]
+        
+        intermediate_path_override = os.path.join(self.intermediate_dir, relative_path)
             
         # if len(join_path_args) > 1:
         #     to_insert = os.path.join(self.intermediate_dir, os.sep.join([path_as_inputted] + list(join_path_args)[:-1]))
@@ -414,11 +416,12 @@ class  ProjectFlow(object):
         # It is releative, so search the possible dirs
         for possible_dir in possible_dirs:
             if type(possible_dir) is str:
+                destination_file_name = os.path.join(self.base_data_dir, relative_path)
                 if possible_dir == 'input_bucket_name':
                     source_blob_name =  relative_path.replace('\\', '/')
                     
                     # Interesting undefined choice here, if it was only found in the bucket, it should go in base data yeah? or in the project input dir? or in the cur_dir?
-                    destination_file_name = os.path.join(self.base_data_dir, relative_path)
+                    
                     # destination_file_name = os.path.join(self.cur_dir, relative_path)
 
                     if verbose:
@@ -434,6 +437,8 @@ class  ProjectFlow(object):
                                 if verbose:
                                     hb.log('Downloading ' + str(source_blob_name) + ' from ' + str(self.input_bucket_name) + ' to ' + str(destination_file_name) + ' in ' + str(self.cur_dir))
                                 cloud_utils.download_google_cloud_blob(self.input_bucket_name, source_blob_name, self.data_credentials_path, destination_file_name, chunk_size=262144*5,)
+                                if create_shortcut:
+                                    os_utils.create_shortcut(destination_file_name, intermediate_path_override)
                                 return path
                             except: # If it wasn't there, assume it is a local file that needs to be created.
                                 pass 
@@ -441,6 +446,9 @@ class  ProjectFlow(object):
                             try:
                                 url = "https://storage.googleapis.com" + '/' + self.input_bucket_name + '/' + source_blob_name
                                 cloud_utils.download_google_cloud_blob(self.input_bucket_name, source_blob_name, self.data_credentials_path, destination_file_name, chunk_size=262144*5,)
+                                if create_shortcut:
+                                    os_utils.create_shortcut(destination_file_name, intermediate_path_override)                            
+                                
                                 return path
                             except:  # If it wasn't there, assume it is a local file that needs to be created.
                                 pass 
@@ -449,6 +457,9 @@ class  ProjectFlow(object):
                         try:
                             url = "https://storage.googleapis.com" + '/' + self.input_bucket_name + '/' + source_blob_name
                             cloud_utils.download_google_cloud_blob(self.input_bucket_name, source_blob_name, self.data_credentials_path, destination_file_name, chunk_size=262144*5,)
+                            if create_shortcut:
+                                os_utils.create_shortcut(destination_file_name, intermediate_path_override)                            
+                            
                             return path
                         except:  # If it wasn't there, assume it is a local file that needs to be created.
                             pass                             
@@ -462,6 +473,9 @@ class  ProjectFlow(object):
                     
 
                     if hb.path_exists(path, verbose=verbose):
+                        if create_shortcut:
+                            os_utils.create_shortcut(destination_file_name, intermediate_path_override)
+
                         return path
                     
                     # HACK IUCN RUSH. Also check filepath against possible dir
@@ -474,7 +488,7 @@ class  ProjectFlow(object):
                     
 
 
-
+        # It wasnt found anywhere, so do some final checks and then use the default
         if os.path.isabs(relative_path):
             # Check that it has one of the possible_dirs already embedded in it
             found_possible_dir_in_input = False

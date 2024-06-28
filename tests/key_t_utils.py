@@ -45,7 +45,7 @@ if __name__=='__main__':
 
         
     # TEST auto downloading of files via get_path
-    test_this = 1
+    test_this = 0
     if test_this or run_all: 
         
         # Test that it does find a path that exists 
@@ -68,4 +68,20 @@ if __name__=='__main__':
         df = pd.read_csv(test_path)
         assert len(df) > 0
         hb.remove_path(test_path)        
-    
+        
+        
+
+    # TEST get_reclassification_dict_from_df
+    test_this = 1
+    if test_this or run_all: 
+        # Test that it does find a path that exists 
+        p = hb.ProjectFlow(output_dir)
+        p.base_data_dir = '../../../base_data'
+        
+        correspondence_path = p.get_path('gtap_invest', 'region_boundaries', 'ee_r50_aez18_correspondence.csv')
+        from hazelbean import utils
+        
+        # TODO This should be extended to cover classifcation dicts from correspondences but also structured and unstructured mappings.
+        r = utils.get_reclassification_dict_from_df(correspondence_path, 'gtapv7_r160_id', 'gtapv7_r50_id', 'gtapv7_r160_label', 'gtapv7_r50_label')
+        
+        hb.print_iterable(r)
