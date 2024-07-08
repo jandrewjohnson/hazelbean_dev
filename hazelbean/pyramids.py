@@ -1062,7 +1062,7 @@ def resample_via_pyramid_overviews(input_path, output_resolution, output_path, f
             old_ndv = hb.get_ndv_from_path(input_path)
             temp_path = hb.temp()
 
-            # START HERE, the binary data type wasn't working on this type of data because it was still in byte format and thus the average failed.
+            # TODOOO, the binary data type wasn't working on this type of data because it was still in byte format and thus the average failed.
             hb.raster_calculator_flex(input_path, lambda x: np.where(x == old_ndv, new_ndv, x), temp_path, datatype=overview_data_types)
             hb.set_ndv_in_raster_header(input_path, new_ndv)
             hb.swap_filenames(input_path, temp_path)

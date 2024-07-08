@@ -363,7 +363,7 @@ def zonal_statistics_rasterized(zone_ids_raster_path, values_raster_path, zones_
     if verbose:
         L.info('Starting to run zonal_statistics_rasterized using iterblocks.')
 
-    # START HERE: Figure out how to make it work if there's no vector path
+    # TODOOO: Figure out how to make it work if there's no vector path
     if unique_zone_ids is None:
         if verbose:
             L.info('Load zone_ids_raster and compute unique values in it. Could be slow (and could be pregenerated for speed if desired).')

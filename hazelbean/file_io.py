@@ -980,11 +980,11 @@ format:
 
     hb.write_to_file(revealjs_prepend + output_string, output_path)
 
-# START HERE: make it so <nonincremental> still has r-fit-text
+# TODOOO: make it so <nonincremental> still has r-fit-text
 
 def qmd_path_to_marked_qmd_path(qmd_path, marked_qmd_path):
     
-    # START HERE: Continue going through and adding additional tags like imgbg but for things like 2cols
+    # TODOOO: Continue going through and adding additional tags like imgbg but for things like 2cols
     
     output_lines = []
     # Read the qmd file but with utf8
@@ -1091,7 +1091,7 @@ format:
                 if new_slide:
                     tags.append('<list-left-images-right>')
                     
-                    # START HERE, this isn't getting added
+                    # TODOOO, this isn't getting added
                     slide_content[0] = slide_content[0] + ' <list-left-images-right>'
                 
             

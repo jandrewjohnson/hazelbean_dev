@@ -981,7 +981,7 @@ class  ProjectFlow(object):
 
         if 1:           
             if task.note is not None:
-                # START HERE, finish writing the CODE to documentation. econ_lcovercom isn't writing for some reason.
+                # TODOOO, finish writing the CODE to documentation. econ_lcovercom isn't writing for some reason.
                 # Notes are just quick text written whereas documentation also includes the full script used in the function.
                 hb.create_directories(task.task_dir)
                 hb.write_to_file(task.note, os.path.join(task.task_dir, task.name + '_note.md'))

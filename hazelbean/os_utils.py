@@ -1650,7 +1650,7 @@ def compile_exam_from_md(exam_template_path, question_bank_dir, output_filename,
 
 def compile_exam_from_md_old(exam_template_path, question_bank_path, output_filename, output_dir, number_of_variations=4, randomize=True, questions_to_include=None):
     
-    # START HERE: Make it also optionally output an unrandomized version for troubleshooting.
+    # TODOOO: Make it also optionally output an unrandomized version for troubleshooting.
     # TODOO: Idea, add boxes around questions that enable smart page breaks
     import numpy as np
     if questions_to_include is None:
@@ -1873,7 +1873,7 @@ def parse_template_dict_to_titlepage_md_string(input_dict):
 def make_exam_md_from_dicts(header_dict, question_bank_dir, random_seed, randomize, is_key=False):
     import random
     
-    # START HERE: Fubared the order. How do i do this if i have multiple filesto load?
+    # TODOOO: Fubared the order. How do i do this if i have multiple filesto load?
     print([k for k, v in header_dict.items() if isinstance(v, dict)])
     question_bank_dict = {}
     for k in [k for k, v in header_dict.items() if isinstance(v, dict)]:

@@ -467,7 +467,7 @@ def extract_global_netcdf(
         dim_names_for_this_var = nc_dict['vars'][var_name]['dimensions']
         preceding_dirs = [''] * (len(dim_names_for_this_var) - 2)
         
-        # START HERE: Note that i should not have put a year on the luh2 version ones (primf_2014)
+        # TODOOO: Note that i should not have put a year on the luh2 version ones (primf_2014)
         var_name
         packed_dims = [''] * (len(dim_names_for_this_var) - 2)
         walk_var_dims(var_name, filter_dict, preceding_dirs=preceding_dirs, packed_dims=packed_dims, output_dir=output_dir, ndv=ndv, skip_if_exists=skip_if_exists)
@@ -910,7 +910,7 @@ def combine_earthstat_tifs_to_nc_new(tif_paths, nc_path):
     target_nc.close()
 
 def read_earthstat_nc_slice(input_nc_path, crop_name):
-    # START HERE, conclusion is that ::4 slicing is 10x faster in gdal but chunk slicing in a square is 2x faster in nc.
+    # TODOOO, conclusion is that ::4 slicing is 10x faster in gdal but chunk slicing in a square is 2x faster in nc.
     start = time.time()
 
     aborted = 1    

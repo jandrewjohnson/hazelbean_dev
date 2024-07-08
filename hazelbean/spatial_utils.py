@@ -2841,7 +2841,7 @@ def reclassify_raster_hb(input_flex, rules, output_path, output_data_type=None, 
         if max_key < array_threshold and max_value < array_threshold:
             old_rules = rules
 
-            # START HERE: I think i need to switch this back to being the length of key-range and then having the option of filling in a -9999 int as key,
+            # TODOOO: I think i need to switch this back to being the length of key-range and then having the option of filling in a -9999 int as key,
             # but i know this messed something else up so build test suite.
             if max_key <= 255 and max_value <= 255:
                 # NOTE BIG CHANGE and awkward code. it doesn't matter how long it is for the OUTPUT type.
@@ -3019,7 +3019,7 @@ def reclassify_raster_hb(input_flex, rules, output_path, output_data_type=None, 
                                             calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
                 elif output_data_type == 6:
                     base_raster_path_band = [(input_flex.path, 1), (rules.astype(np.float32), 'raw')]
-                    # TODOO START HERE, fast memory efficient reclassification doen't work because raster_calculator by default casts to the output type so can't pass a different type to cython.
+                    # TODOO TODOOO, fast memory efficient reclassification doen't work because raster_calculator by default casts to the output type so can't pass a different type to cython.
                     hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int_to_float32_by_array, output_path,
                                             output_data_type, input_flex.ndv, read_datatype=5,
                                             gtiff_creation_options=hb.DEFAULT_GTIFF_CREATION_OPTIONS,
@@ -3046,7 +3046,7 @@ def reclassify_raster_hb(input_flex, rules, output_path, output_data_type=None, 
                                             calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
                 elif output_data_type == 6:
                     base_raster_path_band = [(input_flex.path, 1), (rules.astype(np.float32), 'raw')]
-                    # TODOO START HERE, fast memory efficient reclassification doen't work because raster_calculator by default casts to the output type so can't pass a different type to cython.
+                    # TODOO TODOOO, fast memory efficient reclassification doen't work because raster_calculator by default casts to the output type so can't pass a different type to cython.
                     hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int_to_float32_by_array, output_path,
                                             output_data_type, input_flex.ndv, read_datatype=6,
                                             gtiff_creation_options=hb.DEFAULT_GTIFF_CREATION_OPTIONS,
@@ -3075,7 +3075,7 @@ def reclassify_raster_hb(input_flex, rules, output_path, output_data_type=None, 
                                             calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
                 elif output_data_type == 6:
                     base_raster_path_band = [(input_flex.path, 1), (rules.astype(np.float32), 'raw')]
-                    # TODOO START HERE, fast memory efficient reclassification doen't work because raster_calculator by default casts to the output type so can't pass a different type to cython.
+                    # TODOO TODOOO, fast memory efficient reclassification doen't work because raster_calculator by default casts to the output type so can't pass a different type to cython.
                     hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int_to_float32_by_array, output_path,
                                             output_data_type, input_flex.ndv, read_datatype=7,
                                             gtiff_creation_options=hb.DEFAULT_GTIFF_CREATION_OPTIONS,
