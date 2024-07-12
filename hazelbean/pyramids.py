@@ -1235,7 +1235,8 @@ def make_path_global_pyramid(
             L.critical('rewrite_array triggered because ndv was not -9999.0 and datatype was > 5 (i.e. is a float).')
             rewrite_array = True
             new_ndv = True            
-            
+    
+    # UP NEXT: Add cases for other gdal data types. consider ditching the numbers in lieu of types? Update the dictionaries for numpy to gdal types. Describe that uints require their own handling, specifying between 0-ndv and max-value-ndv versions, useful for id_rasters vs numeric data respectively
             
     elif data_type < 6 and ndv is not None:
         if ndv != -9999:  # NOTE INT
