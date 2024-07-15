@@ -88,7 +88,7 @@ gdal_number_to_gdal_type = {
     9: gdalconst.GDT_CInt32,
     10: gdalconst.GDT_CFloat32,
     11: gdalconst.GDT_CFloat64,
-    12: gdalconst.GDT_Int64,
+    12: gdalconst.GDT_UInt64,
     13: gdalconst.GDT_Int64,
 }
 
@@ -104,7 +104,7 @@ gdal_number_to_gdal_name = {
     9: 'CInt32',
     10: 'CFloat32',
     11: 'CFloat64',
-    12: 'GDT_Int64',
+    12: 'GDT_UInt64',
     13: 'GDT_Int64',
 }
 
@@ -122,7 +122,7 @@ gdal_name_to_gdal_number = {
     'CInt32': 9,
     'CFloat32': 10,
     'CFloat64': 11,
-    'GDT_Int64': 12,
+    'GDT_UInt64': 12,
     'GDT_Int64': 13,
     'byte': 1,
     'uint16': 2,
@@ -135,7 +135,7 @@ gdal_name_to_gdal_number = {
     'cint32': 9,
     'cfloat32': 10,
     'cfloat64': 11,
-    'GDT_Int64': 12,
+    'GDT_UInt64': 12,
     'GDT_Int64': 13,
 }
 
@@ -151,11 +151,13 @@ gdal_number_to_numpy_type = {
     9: np.complex64,
     10: np.complex64,
     11: np.complex128,
-    12: np.int64,
+    12: np.uint64,
     13: np.int64,
 }
 
+
 numpy_type_to_gdal_number = {
+    np.byte: 1, # Is identical to uint8, which is preferred, but included here for convenience.
     np.uint8: 1,
     np.uint16: 2,
     np.int16: 3,
@@ -165,19 +167,11 @@ numpy_type_to_gdal_number = {
     np.float64: 7,
     np.complex64: 8,  # THe omission here is from the unexplained duplication in gdal_number_to_np_type
     np.complex128: 11,
-    np.int64: 13,  # NOTE, gdal does not support 64bit ints.
+    np.uint64: 12,
+    np.int64: 13,  # NOTE, gdal does not support 64bit ints, up until version 3.5
+}
 
-    np.dtype('uint8'): 1,
-    np.dtype('uint16'): 2,
-    np.dtype('int16'): 3,
-    np.dtype('uint32'): 4,
-    np.dtype('int32'): 5,
-    np.dtype('float32'): 6,
-    np.dtype('float64'): 7,
-    np.dtype('complex64'): 8,  # THe omission here is from the unexplained duplication in gdal_number_to_numpy_type
-    np.dtype('complex128'): 11,
-    np.dtype('int64'): 13,
-
+numpy_type_string_to_gdal_number = {
     'uint8': 1,
     'uint16': 2,
     'int16': 3,
@@ -185,27 +179,22 @@ numpy_type_to_gdal_number = {
     'int32': 5,
     'float32': 6,
     'float64': 7,
-    'complex64': 8,  # THe omission here is from the unexplained duplication in gdal_number_to_numpy_type
-    'complex128': 11,
-    'int64': 13,
-
-}
-
-numpy_name_to_gdal_number = {
-    'int8': 1,
-    'uint8': 1,
-    'uint16': 2,
-    'int16': 3,
-    'uint32': 4,
-    'int32': 5,
-    'int64': 7,  # WTF couldnt find gdal's int64 type . might not exist?
-    'uint64': 7,  # WTF couldnt find gdal's int64 type . might not exist?
-    'float32': 6,
-    'float64': 7,
-    'complex64': 8,  # THe omission here is from the unexplained duplication in gdal_number_to_numpy_type
-    'complex128': 11,
+    'uint64': 12,
     'int64': 13,
 }
+numpy_type_string_to_numpy_type = {
+    'byte': np.byte,
+    'uint8': np.uint8,
+    'uint16': np.uint16,
+    'int16': np.int16,
+    'uint32': np.uint32,
+    'int32': np.int32,
+    'float32': np.float32,
+    'float64': np.float64,
+    'uint64': np.uint64,
+    'int64': np.int64,
+}
+
 
 gdal_type_to_numpy_type = {
     gdalconst.GDT_Byte: np.uint8,
@@ -215,48 +204,10 @@ gdal_type_to_numpy_type = {
     gdalconst.GDT_Int32: np.int32,
     gdalconst.GDT_Float32: np.float32,
     gdalconst.GDT_Float64: np.float64,
-    gdalconst.GDT_CInt16: np.complex64,
-    gdalconst.GDT_CInt32: np.complex64,
-    gdalconst.GDT_CFloat32: np.complex64,
-    gdalconst.GDT_CFloat64: np.complex128,
+    gdalconst.GDT_UInt64: np.uint64,
     gdalconst.GDT_Int64: np.int64,
 }
 
-GDAL_TO_NUMPY_TYPE = {
-    gdal.GDT_Byte: np.uint8,
-    gdal.GDT_Int16: np.int16,
-    gdal.GDT_Int32: np.int32,
-    gdal.GDT_UInt16: np.uint16,
-    gdal.GDT_UInt32: np.uint32,
-    gdal.GDT_Float32: np.float32,
-    gdal.GDT_Float64: np.float64,
-    gdal.GDT_Int64: np.int64,
-}
-
-numpy_type_to_gdal_type = {
-    np.uint8: gdalconst.GDT_Byte,
-    np.uint16: gdalconst.GDT_UInt16,
-    np.int16: gdalconst.GDT_Int16,
-    np.uint32: gdalconst.GDT_UInt32,
-    np.int32: gdalconst.GDT_Int32,
-    np.float32: gdalconst.GDT_Float32,
-    np.float64: gdalconst.GDT_Float64,
-    # np.complex64: gdalconst.GDT_CInt16,
-    # np.complex64: gdalconst.GDT_CInt32,
-    # np.complex64: gdalconst.GDT_CFloat32,
-    np.complex128: gdalconst.GDT_CFloat64,
-    np.int64: gdalconst.GDT_Int64,
-
-    np.dtype('uint8'): gdalconst.GDT_Byte,
-    np.dtype('uint16'): gdalconst.GDT_UInt16,
-    np.dtype('int16'): gdalconst.GDT_Int16,
-    np.dtype('uint32'): gdalconst.GDT_UInt32,
-    np.dtype('int32'): gdalconst.GDT_Int32,
-    np.dtype('float32'): gdalconst.GDT_Float32,
-    np.dtype('float64'): gdalconst.GDT_Float64,
-    np.dtype('complex128'): gdalconst.GDT_CFloat64,
-    np.dtype('int64'): gdalconst.GDT_Int64,
-}
 
 try:
     RESAMPLE_DICT = {
@@ -288,118 +239,75 @@ except:
     }
 resampling_methods = RESAMPLE_DICT
 
+def get_correct_ndv_from_flex(input_object, is_id=False):
+    # is_id means we will be using the EE devestack approach of having 0 be the ndv for UINT types IF it is an id_layer. This
+    # allows faster lookup.
+    
+    try:
+        int(input_object)
+        intable = True
+    except:
+        intable = False
+    
+    # Test if the input is some numpy type
+    if intable:
+        current = no_data_values_by_gdal_number[int(input_object)]
+    elif input_object in no_data_values_by_numpy_type.keys():
+        current = no_data_values_by_numpy_type[input_object]
+    elif input_object in no_data_values_by_gdal_type.keys():
+        current = no_data_values_by_gdal_type[input_object]
+    else:
+        raise ValueError('Could not find a no data value for ' + str(input_object))
+    
+    if not is_id:
+        return current[0]
+    else:
+        return current[1]
 
+MAX_UINT8 = 255
+MAX_UINT16 = 65535
+MAX_UINT32 = 4294967295
+MAX_UINT64 = 18446744073709551615
+MAX_INT16 = 32767
+MAX_INT32 = 2147483647
+MAX_INT64 = 9223372036854775807
 
-default_no_data_values_by_gdal_number = {
-    1: 255,
-    2: 255,
-    3: -9999,
-    4: 9999,  # NOTE MASSIVE FLAW, because QGIS/GDAL doesnt support UInt32, had to clamp it to 0
-    5: -9999,
-    6: -9999.0,
-    7: -9999.0,
+no_data_values_by_numpy_type = {
+    np.uint8: [MAX_UINT8, 0],
+    np.byte: [MAX_UINT8, 0],
+    np.uint16: [MAX_UINT16, 0],
+    np.int16: [-9999,],
+    np.uint32: [MAX_UINT32, 0], 
+    np.int32: [-9999,], 
+    np.float32: [-9999.0],
+    np.float64: [-9999.0],
+    np.uint64: [MAX_UINT64, 0],
+    np.int64: [MAX_INT64, 0],
+}     
+
+no_data_values_by_gdal_number = {
+    1: no_data_values_by_numpy_type[gdal_number_to_numpy_type[1]],
+    2: no_data_values_by_numpy_type[gdal_number_to_numpy_type[2]],
+    3: no_data_values_by_numpy_type[gdal_number_to_numpy_type[3]],
+    4: no_data_values_by_numpy_type[gdal_number_to_numpy_type[4]],
+    5: no_data_values_by_numpy_type[gdal_number_to_numpy_type[5]],
+    6: no_data_values_by_numpy_type[gdal_number_to_numpy_type[6]],
+    7: no_data_values_by_numpy_type[gdal_number_to_numpy_type[7]],
+    12: no_data_values_by_numpy_type[gdal_number_to_numpy_type[12]],
+    13: no_data_values_by_numpy_type[gdal_number_to_numpy_type[13]],
 }
 
-default_no_data_values_by_gdal_number_in_numpy_types = {
-    1: np.uint8(255),
-    2: np.uint8(255),
-    3: np.int32(-9999),
-    4: np.int32(9999),  # NOTE MASSIVE FLAW, because QGIS/GDAL doesnt support UInt32, had to clamp it to 0
-    5: np.int32(-9999),
-    6: np.float32(-9999.0),
-    7: np.float64(-9999.0),
+no_data_values_by_gdal_type = {
+    gdalconst.GDT_Byte: no_data_values_by_numpy_type[gdal_type_to_numpy_type[1]],
+    gdalconst.GDT_UInt16: no_data_values_by_numpy_type[gdal_type_to_numpy_type[2]],
+    gdalconst.GDT_Int16: no_data_values_by_numpy_type[gdal_type_to_numpy_type[3]],
+    gdalconst.GDT_UInt32: no_data_values_by_numpy_type[gdal_type_to_numpy_type[4]],
+    gdalconst.GDT_Int32: no_data_values_by_numpy_type[gdal_type_to_numpy_type[5]],
+    gdalconst.GDT_Float32: no_data_values_by_numpy_type[gdal_type_to_numpy_type[6]],
+    gdalconst.GDT_Float64: no_data_values_by_numpy_type[gdal_type_to_numpy_type[7]],
+    gdalconst.GDT_UInt64: no_data_values_by_numpy_type[gdal_type_to_numpy_type[12]],
+    gdalconst.GDT_Int64: no_data_values_by_numpy_type[gdal_type_to_numpy_type[13]],
 }
-
-default_no_data_values_by_gdal_stringed_number = {
-    '1': 255,
-    '2': 255,
-    '3': -255,
-    '4': 9999,  # NOTE MASSIVE FLAW, because QGIS/GDAL doesnt support UInt32, had to clamp it to 0
-    '5': -9999,
-    '6': -9999.0,
-    '7': -9999.0,
-    ## The following didn't work beacuse they couldn't  be written via Band.SetNoDataValue() in gdal.
-    # '6': -3.4028235e+38,
-    # '7': -1.7976931348623157e+308
-    # '6': float(np.finfo(np.float32).min),
-    # '7': float(np.finfo(np.float64).min),
-}
-
-default_no_data_values_by_numpy_type = {
-    np.uint8: 255,
-    np.byte: 255,
-    np.uint16: 9999,
-    np.int16: -9999,
-    np.uint32: 9999,  # NOTE MASSIVE FLAW, because QGIS/GDAL doesnt support UInt32, had to clamp it to 9999
-    np.int32: -9999,
-    np.int32: -9999,
-    np.float32: -9999.0,
-    np.float64: -9999.0,
-    np.float64: -9999.0,
-}
-
-default_no_data_values_by_numpy_type_and_as_numpy_types = {
-    np.uint8: np.uint8(255),
-    np.byte: np.byte(255),
-    np.uint16: np.uint16(9999),
-    np.int16: np.int16(-9999),
-    np.uint32: np.uint32(9999),  # NOTE MASSIVE FLAW, because QGIS/GDAL doesnt support UInt32, had to clamp it to )0
-    np.int32: np.int32(-9999),
-    np.int32: np.int32(-9999),
-    np.float32: np.float32(-9999.0),
-    np.float64: np.float64(-9999.0),
-    np.float64: np.float64(-9999.0),
-
-    'uint8': np.uint8(255),
-    'byte': np.byte(255),
-    'uint16': np.uint16(9999),
-    'int16': np.int16(-9999),
-    'uint32': np.uint32(9999),  # NOTE MASSIVE FLAW, because QGIS/GDAL doesnt support UInt32, had to clamp it to )0
-    'int': np.int32(-9999),
-    'int32': np.int32(-9999),
-    'float32': np.float32(-9999.0),
-    'float': np.float64(-9999.0),
-    'float64': np.float64(-9999.0),
-}
-
-
-def gdal_to_numpy_type(band):
-    return _gdal_to_numpy_type(band)
-
-def _gdal_to_numpy_type(band):
-    """Calculate the equivalent numpy datatype from a GDAL raster band type.
-
-    Args:
-        band (gdal.Band): GDAL band
-
-    Returns:
-        numpy_datatype (numpy.dtype): equivalent of band.DataType
-    """
-
-    gdal_type_to_numpy_lookup = {
-        gdalconst.GDT_Int16: numpy.int16,
-        gdalconst.GDT_Int32: numpy.int32,
-        gdalconst.GDT_UInt16: numpy.uint16,
-        gdalconst.GDT_UInt32: numpy.uint32,
-        gdalconst.GDT_Float32: numpy.float32,
-        gdalconst.GDT_Float64: numpy.float64
-    }
-
-    if band.DataType in gdal_type_to_numpy_lookup:
-        return gdal_type_to_numpy_lookup[band.DataType]
-
-    # only class not in the lookup is a Byte but double check.
-    if band.DataType != gdalconst.GDT_Byte:
-        raise ValueError("Unknown DataType: %s" % str(band.DataType))
-
-    metadata = band.GetMetadata('IMAGE_STRUCTURE')
-    if 'PIXELTYPE' in metadata and metadata['PIXELTYPE'] == 'SIGNEDBYTE':
-        return numpy.int8
-    return numpy.uint8
-
-
-
-
 
 
 def create_gdal_virtual_raster(input_tifs_uri_list, ouput_virt_uri, srcnodata=None, shifted_extent=None):
@@ -1979,7 +1887,7 @@ def vectorize_datasets(
     dataset_blocks = [
         numpy.zeros(
             (rows_per_block, cols_per_block),
-            dtype=hb.GDAL_TO_NUMPY_TYPE[band.DataType]) for band in aligned_bands]
+            dtype=hb.gdal_type_to_numpy_type[band.DataType]) for band in aligned_bands]
 
     #If there's an AOI, mask it out
     if aoi_uri != None:
@@ -2005,7 +1913,7 @@ def vectorize_datasets(
     dataset_blocks = [
         numpy.zeros(
             (rows_per_block, cols_per_block),
-            dtype=hb.GDAL_TO_NUMPY_TYPE[band.DataType]) for band in aligned_bands]
+            dtype=hb.gdal_type_to_numpy_type[band.DataType]) for band in aligned_bands]
 
     last_time = time.time()
 
@@ -4535,7 +4443,7 @@ def load_memory_mapped_array(dataset_uri, memory_file, array_type=None):
 
     if array_type == None:
         try:
-            dtype = hb.GDAL_TO_NUMPY_TYPE[band.DataType]
+            dtype = hb.gdal_type_to_numpy_type[band.DataType]
         except KeyError:
             raise TypeError('Unknown GDAL type %s' % band.DataType)
     else:

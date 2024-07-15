@@ -2217,7 +2217,7 @@ def iterblocks(
         block_type_list = [astype] * len(band_index_list)
     else:
         block_type_list = [
-            _gdal_to_numpy_type(ds_band) for ds_band in band_index_list]
+            _gdal_type_to_numpy_type(ds_band) for ds_band in band_index_list]
 
     for row_block_index in range(n_row_blocks):
         row_offset = row_block_index * rows_per_block
@@ -2350,7 +2350,7 @@ def _invoke_timed_callback(
     return reference_time
 
 
-def _gdal_to_numpy_type(band):
+def _gdal_type_to_numpy_type(band):
     """Calculate the equivalent numpy datatype from a GDAL raster band type.
 
     This function doesn't handle complex or unknown types.  If they are
