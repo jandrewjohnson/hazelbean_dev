@@ -605,7 +605,7 @@ def set_ndv_by_mask_path(input_data_path, valid_mask_path, output_path=None, ndv
         band = ds.GetRasterBand(1)
         array = band.ReadAsArray()
 
-        if not ndv:
+        if ndv is None:
             ndv = hb.get_ndv_from_path(input_data_path)
 
         valid_array = hb.as_array(valid_mask_path)
@@ -620,7 +620,7 @@ def set_ndv_by_mask_path(input_data_path, valid_mask_path, output_path=None, ndv
         ds = gdal.OpenEx(input_data_path, gdal.GA_Update)
         band = ds.GetRasterBand(1)
         array = band.ReadAsArray()
-        if not ndv:
+        if ndv is None:
             ndv = hb.get_ndv_from_path(input_data_path)
         valid_array = hb.as_array(valid_mask_path)
         masked_array = np.where(valid_array == 1, array, ndv)

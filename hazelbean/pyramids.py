@@ -673,6 +673,7 @@ def resample_to_match_pyramid(input_path,
                       add_overviews=False,
                       pixel_size_override=None,
                       remove_intermediate_files=False,
+                      is_id_raster=False,
                       verbose=False,
                       ):
 
@@ -717,10 +718,10 @@ def resample_to_match_pyramid(input_path,
         #     L.debug('Path was pyramidal after resample. Renaming to ' + str(output_path))
         #     hb.rename_with_overwrite(temp_resample_path, output_path)
         # else:
-        hb.make_path_global_pyramid(output_path)
+        hb.make_path_global_pyramid(output_path, is_id_raster=is_id_raster)
     else:
 
-        hb.make_path_global_pyramid(input_path, output_path=output_path)
+        hb.make_path_global_pyramid(input_path, output_path=output_path, is_id_raster=is_id_raster)
 
     if verbose:
         L.setLevel(original_level)
@@ -760,19 +761,12 @@ def is_path_global_pyramid(input_path):
 
     data_type = ds.GetRasterBand(1).DataType
     ndv = ds.GetRasterBand(1).GetNoDataValue()
+    
+    correct_ndv = hb.get_correct_ndv_from_flex(data_type)
+    if ndv != correct_ndv:
+        L.critical('Not pyramid because ndv was not correct for datatype: ' + str(input_path))
+        to_return = False
 
-    if data_type == 1:
-        if ndv != 255:
-            L.critical('Not pyramid because ndv was not 255 and datatype was 1: ' + str(input_path))
-            to_return = False
-    elif data_type < 6:
-        if ndv != 9999:  # NOTE INT
-            L.critical('rNot pyramid because ndv was not 9999 and datatype was of int type: ' + str(input_path))
-            to_return = False
-    else:
-        if ndv != -9999.0:
-            L.critical('Not pyramid because ndv was not -9999.0 and datatype was > 5 (i.e. is a float): ' + str(input_path))
-            to_return = False
 
     if to_return:
         return True
@@ -1108,6 +1102,7 @@ def make_path_global_pyramid(
         set_ndv_below_value=None,
         write_unique_values_list=False,
         overview_resample_method=None,
+        is_id_raster=False,
         verbose=False
 ):
     """Throw exception if input_path is not pyramid-ready. This requires that the file be global, geographic projection, and with resolution
@@ -1206,7 +1201,7 @@ def make_path_global_pyramid(
     data_type = ds.GetRasterBand(1).DataType
     ndv = ds.GetRasterBand(1).GetNoDataValue()
 
-    if data_type >= 6:
+    if 6 <= data_type < 12:
         options = (
             'TILED=YES',
             'BIGTIFF=YES',
@@ -1222,65 +1217,23 @@ def make_path_global_pyramid(
     below_ndv = False
     if verbose:
         L.info('input data_type: ' + str(data_type) + ', input ndv: ' + str(ndv))
-    if data_type == 1 and ndv is not None:
-        if ndv != 255:
-            old_ndv = ndv
-            ndv = 255
-            L.critical('rewrite_array triggered because ndv was not 255 and datatype was 1.')
-            rewrite_array = True
-            new_ndv = True
-        else:
-            old_ndv = 255
-            ndv = 255
-            L.critical('rewrite_array triggered because ndv was not -9999.0 and datatype was > 5 (i.e. is a float).')
-            rewrite_array = True
-            new_ndv = True            
-    
-    # UP NEXT: Add cases for other gdal data types. consider ditching the numbers in lieu of types? Update the dictionaries for numpy to gdal types. Describe that uints require their own handling, specifying between 0-ndv and max-value-ndv versions, useful for id_rasters vs numeric data respectively
-            
-    elif data_type < 6 and ndv is not None:
-        if ndv != -9999:  # NOTE INT
-            old_ndv = ndv
-            ndv = -9999
-            L.critical('rewrite_array triggered because ndv was not 9999 and datatype was of int type.')
-            rewrite_array = True
-            new_ndv = True
-            
-        else:
-            old_ndv = -9999
-            ndv = -9999
-            L.critical('rewrite_array triggered because ndv was not -9999.0 and datatype was > 5 (i.e. is a float).')
-            rewrite_array = True
-            new_ndv = True            
-            
-            
+        
+    correct_ndv = hb.get_correct_ndv_from_flex(data_type, is_id=is_id_raster)
+    if float(ndv) != float(correct_ndv):
+        old_ndv = ndv
+        ndv = correct_ndv
+        L.critical('rewrite_array triggered because ndv was not 255 and datatype was 1.')
+        rewrite_array = True
+        new_ndv = True
     else:
-        if ndv != -9999.0 and ndv is not None:
-            old_ndv = ndv
-            ndv = -9999.0
-            L.critical('rewrite_array triggered because ndv was not -9999.0 and datatype was > 5 (i.e. is a float).')
-            rewrite_array = True
-            new_ndv = True
-        else:
-            old_ndv = -9999.0
-            ndv = -9999.0
-            L.critical('rewrite_array triggered because ndv was not -9999.0 and datatype was > 5 (i.e. is a float).')
-            rewrite_array = True
-            new_ndv = True
+        rewrite_array = False
+        new_ndv = False
+                
+
             
     if set_ndv_below_value is not None:
         rewrite_array = True
-        new_ndv = True
-        old_ndv = ndv
-        if data_type == 1:
-            if ndv != 255:
-                ndv = 255
-        elif data_type < 6:
-            if ndv != 9999:  # NOTE INT
-                ndv = 9999
-        else:
-            if ndv != -9999.0:
-                ndv = -9999.0
+
                 
     if changed_extent:
         L.info('Changed extent of ' + str(input_path) + ' to global extent. New extent is ' + str(ulx) + ', ' + str(uly) + ', ' + str(lrx) + ', ' + str(lry))
@@ -1299,7 +1252,7 @@ def make_path_global_pyramid(
     temp_write_path = hb.temp('.tif', filename_start='temp_write_' + str(hb.file_root(input_path)), folder=os.path.split(input_path)[0], remove_at_exit=clean_temporary_files)
 
     if rewrite_array:
-        L.info('make_path_spatially_clean triggered rewrite_array for ' + str(input_path))
+        L.info('make_path_global_pyramid triggered rewrite_array for ' + str(input_path))
         if changed_extent:
             dst_size = (n_c, n_r)
             # Create a raster with just the fill value but with a global extent
@@ -1368,7 +1321,7 @@ def make_path_global_pyramid(
     # gdal.SetConfigOption('USE_RRD', 'YES')  # FORCE EXTERNAL ,possibly as ovr? # USE_RRD is outdated (saves x.aux file). If you want external, just make sure you open the DS in read only.
 
     if overview_resample_method is None:
-        if data_type <= 5:
+        if data_type <= 5 or data_type in [12, 13]:
             overview_resample_method = 'NEAREST'
         else:
             overview_resample_method = 'AVERAGE'
@@ -1476,7 +1429,7 @@ def make_path_spatially_clean(input_path,
     ds.SetMetadataItem('last_processing_on', str(time.time()))
     # ds = None
 
-    if data_type >= 6:
+    if 6 <= data_type < 12:
         options = (
             'BIGTIFF=YES',
             'COMPRESS=' + str(compression_method).upper(),
@@ -1493,44 +1446,17 @@ def make_path_spatially_clean(input_path,
     below_ndv = False
     if verbose:
         L.info('input data_type: ' + str(data_type) + ', input ndv: ' + str(ndv))
-    if data_type == 1:
-        if ndv != 255:
-            old_ndv = ndv
-            ndv = 255
-            L.critical('rewrite_array triggered because ndv was not 255 and datatype was 1.')
-            rewrite_array = True
-            new_ndv = True
-    elif data_type < 6:
-        if ndv != 9999:  # NOTE INT
-            old_ndv = ndv
-            ndv = 9999
-            L.critical('rewrite_array triggered because ndv was not 9999 and datatype was of int type.')
-            rewrite_array = True
-            new_ndv = True
-    else:
-        if ndv != -9999.0:
-            old_ndv = ndv
-            ndv = -9999.0
-            L.critical('rewrite_array triggered because ndv was not -9999.0 and datatype was > 5 (i.e. is a float).')
-            rewrite_array = True
-            new_ndv = True
 
-    if set_ndv_below_value is not None:
-        if data_type == 1:
-            if ndv != 255:
-                ndv = 255
-                rewrite_array = True
-                new_ndv = True
-        elif data_type < 6:
-            if ndv != 9999:  # NOTE INT
-                ndv = 9999
-                rewrite_array = True
-                new_ndv = True
-        else:
-            if ndv != -9999.0:
-                ndv = -9999.0
-                rewrite_array = True
-                new_ndv = True
+    if float(ndv) != float(correct_ndv):
+        old_ndv = ndv
+        ndv = correct_ndv
+        L.critical('rewrite_array triggered because ndv was not 255 and datatype was 1.')
+        rewrite_array = True
+        new_ndv = True
+    else:
+        rewrite_array = False
+        new_ndv = False
+                
 
     L.info('output data_type: ' + str(data_type) + ', output ndv: ' + str(ndv))
 
@@ -1626,9 +1552,16 @@ def compress_path(input_path, clean_temporary_files=False):
 
 def assert_paths_same_pyramid(path_1, path_2, raise_exception=False, surpress_output=False):
 
-
-    bool_1 = hb.is_path_global_pyramid(path_1)
-    bool_2 = hb.is_path_global_pyramid(path_2)
+    if hb.path_exists(path_1):
+        bool_1 = hb.is_path_global_pyramid(path_1)
+    else:
+        hb.log('Not the same pyramid because path 1 does not exist: ' + str(path_1))
+        return False
+    if hb.path_exists(path_2):
+        bool_2 = hb.is_path_global_pyramid(path_2)
+    else:    
+        hb.log('Not the same pyramid because path 2 does not exist: ' + str(path_2))
+        return False        
     bool_3 = hb.is_path_same_geotransform(path_1, path_2, raise_exception=raise_exception, surpress_output=surpress_output)
 
     results = [bool_1, bool_2, bool_3]

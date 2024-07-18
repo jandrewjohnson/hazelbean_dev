@@ -45,7 +45,7 @@ def raster_calculator_flex(input_, op, output_path, **kwargs): #KWARGS: datatype
 
     # Check NDVs.
     ndv = kwargs.get('ndv', None)
-    if not ndv:
+    if ndv is None:
         ndvs = [hb.get_ndv_from_path(i) for i in input_ if type(i) not in [bool, float, int]]
         if len(set(ndvs)) > 1:
             L.info('NDVs used in rasters given to raster_calculator_flex() were not all the same. Defaulting to using first value.')
@@ -72,7 +72,7 @@ def raster_calculator_flex(input_, op, output_path, **kwargs): #KWARGS: datatype
 
     # CONFUSED here, why did i have it this structure?
     for c, i in enumerate(input_tuples_list):
-        if type(i[0]) in [int, float, list, bool]:
+        if type(i[0]) in [int, float, list, bool, dict]:
             input_tuples_list[c] = (i[0], 'raw')
 
 

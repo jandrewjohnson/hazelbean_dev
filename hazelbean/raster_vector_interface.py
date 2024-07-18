@@ -17,6 +17,8 @@ import pandas as pd
 import pygeoprocessing.geoprocessing as pgp
 from pygeoprocessing.geoprocessing import *
 from hazelbean.calculation_core import cython_functions
+from osgeo import gdal, ogr, osr
+
 
 
 numpy = np
@@ -24,6 +26,90 @@ L = hb.get_logger('hb_rasterstats')
 pgp_logger = logging.getLogger('geoprocessing')
 
 loggers = [logging.getLogger(name) for name in logging.root.manager.loggerDict]
+
+def raster_to_polygon(input_raster_path, output_vector_path, id_label, dissolve_on_id=True):
+    #  get raster datasource
+    src_ds = gdal.Open(input_raster_path)
+    #
+    srcband = src_ds.GetRasterBand(1)
+    dst_layername = 'layer'
+    drv = ogr.GetDriverByName("GPKG")
+    
+    # Make a ds from the gpkg driver
+    
+    dst_ds = drv.CreateDataSource(output_vector_path)
+
+    sp_ref = osr.SpatialReference()
+    sp_ref.SetFromUserInput('EPSG:4326')
+
+    dst_layer = dst_ds.CreateLayer(dst_layername, srs=sp_ref)
+
+    fld = ogr.FieldDefn(id_label, ogr.OFTInteger)
+    dst_layer.CreateField(fld)
+    dst_field = dst_layer.GetLayerDefn().GetFieldIndex(id_label)
+
+    gdal.Polygonize(srcband, None, dst_layer, dst_field, [], callback=None )
+
+    del src_ds
+    del dst_ds
+    
+    
+    
+    if dissolve_on_id:
+        
+        # rename output_vector_path to a displaced name
+        output_vector_displaced_path = hb.rsuri(output_vector_path, 'replaced_by_raster_to_polygon')
+        hb.rename_with_overwrite(output_vector_path, output_vector_displaced_path)
+        
+        gdf = gpd.read_file(output_vector_displaced_path)
+        gdf = gdf.dissolve(by=id_label)
+        gdf.to_file(output_vector_path, driver='GPKG')
+    
+    
+    # # Open the raster file
+    # raster_ds = gdal.Open(input_raster_path)
+    # if raster_ds is None:
+    #     raise FileNotFoundError(f"Unable to open raster file {input_raster_path}")
+
+    # # Get the raster band (assuming the raster data is in the first band)
+    # band = raster_ds.GetRasterBand(1)
+    # nodata_value = band.GetNoDataValue()
+
+    # # Create a memory layer to store the polygons
+    # mem_driver = ogr.GetDriverByName('Memory')
+    # mem_ds = mem_driver.CreateDataSource('memData')
+    # srs = osr.SpatialReference()
+    # srs.ImportFromWkt(raster_ds.GetProjection())
+    # mem_layer = mem_ds.CreateLayer('memLayer', srs, ogr.wkbPolygon)
+
+    # # Add a field to store the ID values
+    # id_field = ogr.FieldDefn('ID', ogr.OFTInteger)
+    # mem_layer.CreateField(id_field)
+
+    # # Perform the raster to vector conversion
+    # gdal.Polygonize(band, None, mem_layer, 0, [], callback=None)
+
+    # # Create the output GeoPackage
+    # gpkg_driver = ogr.GetDriverByName('GPKG')
+    # if os.path.exists(output_vector_path):
+    #     gpkg_driver.DeleteDataSource(output_vector_path)
+    # out_ds = gpkg_driver.CreateDataSource(output_vector_path)
+    # out_layer = out_ds.CreateLayer(layer_name, srs, ogr.wkbPolygon)
+
+    # # Add the ID field to the output layer
+    # out_layer.CreateField(id_field)
+
+    # # Copy features from the memory layer to the GeoPackage layer
+    # for feature in mem_layer:
+    #     id_value = feature.GetField('DN')
+    #     if id_value != nodata_value:
+    #         feature.SetField('ID', id_value)
+    #         out_layer.CreateFeature(feature.Clone())
+
+    # # Clean up
+    # mem_ds = None
+    # out_ds = None
+    raster_ds = None
 
 def convert_polygons_to_id_raster(input_vector_path, output_raster_path, match_raster_path,
                                   id_column_label, data_type=None, ndv=None, all_touched=None, compress=True):
@@ -59,7 +145,7 @@ def convert_polygons_to_id_raster(input_vector_path, output_raster_path, match_r
     if not data_type:
         data_type = 1
 
-    if not ndv:
+    if ndv is None:
         ndv = 255
     band_nodata_list = [ndv]
 

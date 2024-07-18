@@ -515,10 +515,12 @@ def resample_to_match(input_path,
     if ndv is None:
         dst_ndv = hb.get_ndv_from_path(match_path)
     else:
-        if output_data_type < 5:
-            dst_ndv = 255
-        else:
-            dst_ndv = -9999.0
+        dst_ndv = ndv
+        # correct_ndv = hb.get_correct_ndv_from_flex(output_data_type, is_id=True)
+        # if output_data_type < 5:
+        #     dst_ndv = 255
+        # else:
+        #     dst_ndv = -9999.0
 
     if ensure_fits:
         # This addition to the core geoprocessing code was to fix the case where the alignment moved the target tif
