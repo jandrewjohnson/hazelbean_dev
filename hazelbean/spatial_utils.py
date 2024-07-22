@@ -5606,7 +5606,37 @@ def check_chunk_sizes_from_list_of_paths(input_paths):
     return chunk_sizes 
 
 
+def simplify_polygon(input_path, output_path, tolerance, preserve_topology=True, verbose=False):
+    
+    
+    # FAILS!!!! On unary union, fails when it finds a null value. The preserve topology by itself doesn't seem to solve it. Consider first converting to a line type.
+    from shapely.geometry import Polygon
+    from shapely.ops import unary_union    
+    
+    if verbose:
+        hb.log('Reading GDF at ' + input_path)
+    gdf = gpd.read_file(input_path)
+    
 
+    # Simplify polygons
+    if verbose:
+        hb.log('Simplifing GDF at ' + input_path)    
+    gdf['geometry'] = gdf['geometry'].simplify(tolerance=tolerance, preserve_topology=preserve_topology)
+    gdf.to_file(hb.rsuri(output_path, 'simplified'))
+    
+    # Ensure shared borders using unary_union
+    if verbose:
+        hb.log('Calculating unary_union of ' + input_path) 
+    unified = unary_union(gdf['geometry'])   
+    # unified.to_file(hb.rsuri(output_path, 'simplified'))
+    
+    if verbose:
+        hb.log("split it back into individual polygons")
+    result_polygons = [poly for poly in unified]
+
+    # Create a new GeoDataFrame
+    result_gdf = gpd.GeoDataFrame({'geometry': result_polygons})
+    result_gdf.to_file(output_path)
 
 
 
