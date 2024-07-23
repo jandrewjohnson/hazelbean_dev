@@ -139,7 +139,7 @@ def convert_polygons_to_id_raster(input_vector_path, output_raster_path, match_r
 
     
     # If the target label is not in cols, generate a unique int per polygon
-    if id_column_label not in input_vector_path:
+    if id_column_label not in gdf.columns:
         gdf[id_column_label] = np.arange(1, len(gdf) + 1).astype(np.float64)
 
     if not data_type:
