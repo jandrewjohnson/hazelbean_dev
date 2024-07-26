@@ -454,74 +454,49 @@ def create_gdal_vrt(
     resampling_method='near',
     bands=[1]
 ):
+    """
+    Creates a VRT (Virtual Dataset) from a list of file paths.
 
-    """extent_shift_match_path Forces output to be wgs84 with an explicit extent. Very likely to make weird results so use at your own risk."""
-    for file_path in file_paths_list:
-        assert os.path.exists(file_path)
-
-
-
-    if extent_shift_match_path is not None:
-        shifted_extent = hb.get_raster_info_hb(extent_shift_match_path)['bounding_box']
-        # gdal_command += ' -a_srs EPSG:4326 -te ' + str(shifted_extent[0]) + ' '  + str(shifted_extent[1]) + ' ' + str(shifted_extent[2]) + ' ' + str(shifted_extent[3]) + ' '
-        outputBounds = [shifted_extent[0], shifted_extent[1], shifted_extent[2], shifted_extent[3]]
-    else:
-        outputBounds = None
-
-    if srcnodata is None:
-        srcnodata = hb.get_ndv_from_path(file_paths_list[0])
-
-    if dstnodata is None:
-        dstnodata = hb.get_ndv_from_path(file_paths_list[0])
-
-    vrt_callback = hb.make_logger_callback("BuildVRT percent complete:")
-
-
-    """ Create a BuildVRTOptions() object that can be passed to gdal.BuildVRT()
-    Keyword arguments are :
-        options --- can be be an array of strings, a string or let empty and filled from other keywords..
-        resolution --- 'highest', 'lowest', 'average', 'user'.
-        outputBounds --- output bounds as (minX, minY, maxX, maxY) in target SRS.
-        xRes, yRes --- output resolution in target SRS.
-        targetAlignedPixels --- whether to force output bounds to be multiple of output resolution.
-        separate --- whether each source file goes into a separate stacked band in the VRT band.
-        bandList --- array of band numbers (index start at 1).
-        addAlpha --- whether to add an alpha mask band to the VRT when the source raster have none.
-        resampleAlg --- resampling mode.
-        outputSRS --- assigned output SRS.
-        allowProjectionDifference --- whether to accept input datasets have not the same projection. Note: they will *not* be reprojected.
-        srcNodata --- source nodata value(s).
-        VRTNodata --- nodata values at the VRT band level.
-        hideNodata --- whether to make the VRT band not report the NoData value.
-        strict --- set to True if warnings should be failures
-        callback --- callback method.
-        callback_data --- user data for callback.
+    Parameters:
+    - file_paths_list: List of file paths to include in the VRT.
+    - vrt_path: Path to save the VRT file.
+    - extent_shift_match_path: Optional path to a file to match extent and shift.
+    - srcnodata: Source NoData value.
+    - dstnodata: Destination NoData value.
+    - resampling_method: Resampling method to use.
+    - bands: List of bands to include in the VRT.
     """
 
+    # Check if all file paths exist
+    for file_path in file_paths_list:
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"File not found: {file_path}")
 
+    # Determine output bounds if extent_shift_match_path is provided
+    outputBounds = None
+    if extent_shift_match_path:
+        shifted_extent = hb.get_raster_info_hb(extent_shift_match_path)['bounding_box']
+        outputBounds = [shifted_extent[0], shifted_extent[1], shifted_extent[2], shifted_extent[3]]
+
+    # Get NoData values if not provided
+    if srcnodata is None or dstnodata is None:
+        ndv = hb.get_ndv_from_path(file_paths_list[0])
+        srcnodata = srcnodata if srcnodata is not None else ndv
+        dstnodata = dstnodata if dstnodata is not None else ndv
+
+    # Create VRT options
     vrt_options = gdal.BuildVRTOptions(
-        options=None,
-        resolution=None,
-        outputBounds=outputBounds,
-        xRes=None,
-        yRes=None,
-        targetAlignedPixels=None,
-        separate=None,
         bandList=bands,
-        addAlpha=None,
         resampleAlg=resampling_method,
-        outputSRS=None,
-        allowProjectionDifference=None,
+        outputBounds=outputBounds,
         srcNodata=srcnodata,
         VRTNodata=dstnodata,
-        hideNodata=None,
-        strict=False,
-        callback=vrt_callback,
+        callback=hb.make_logger_callback("BuildVRT percent complete:"),
         callback_data=vrt_path,
     )
 
-    vrt = gdal.BuildVRT(vrt_path, file_paths_list, options=vrt_options)
-    vrt = None # Necessary to trigger write.
+    # Build VRT
+    gdal.BuildVRT(vrt_path, file_paths_list, options=vrt_options)
 
 
 def write_vrt_to_raster(
