@@ -242,13 +242,13 @@ resampling_methods = RESAMPLE_DICT
 def get_correct_ndv_from_flex(input_object, is_id=False):
     # is_id means we will be using the EE devestack approach of having 0 be the ndv for UINT types IF it is an id_layer. This
     # allows faster lookup.
-    
+
     try:
         int(input_object)
         intable = True
     except:
         intable = False
-    
+
     # Test if the input is some numpy type
     if intable:
         current = no_data_values_by_gdal_number[int(input_object)]
@@ -258,7 +258,7 @@ def get_correct_ndv_from_flex(input_object, is_id=False):
         current = no_data_values_by_gdal_type[input_object]
     else:
         raise ValueError('Could not find a no data value for ' + str(input_object))
-    
+
     if not is_id:
         return current[0]
     else:
@@ -277,13 +277,13 @@ no_data_values_by_numpy_type = {
     np.byte: [MAX_UINT8, 0],
     np.uint16: [MAX_UINT16, 0],
     np.int16: [-9999,],
-    np.uint32: [MAX_UINT32, 0], 
-    np.int32: [-9999,], 
+    np.uint32: [MAX_UINT32, 0],
+    np.int32: [-9999,],
     np.float32: [-9999.0],
     np.float64: [-9999.0],
     np.uint64: [MAX_UINT64, 0],
     np.int64: [MAX_INT64, 0],
-}     
+}
 
 no_data_values_by_gdal_number = {
     1: no_data_values_by_numpy_type[gdal_number_to_numpy_type[1]],
@@ -331,7 +331,7 @@ def create_gdal_virtual_raster(input_tifs_uri_list, ouput_virt_uri, srcnodata=No
 def create_gdal_virtual_raster_using_file_command_line(file_paths_list, output_tif_path, write_vrt_to_tif=True, bands='all', vrt_extent_shift_match_path=None, extent_shift_match_path=None, remove_generator_files=True,
                                           srcnodata=None, dstnodata=None, compress=True, output_pixel_size=None, s_srs=None, t_srs=None, resampling_method='near',
                                           output_datatype='Float32', output_block_size=None):
-    
+
        # DEPRECATED Because it requires the command line path being set correctly. Use python bindings below.
     """extent_shift_match_path Forces output to be wgs84 with an explicit extent. Very likely to make weird results so use at your own risk."""
     for file_path in file_paths_list:
@@ -406,11 +406,11 @@ def create_gdal_virtual_raster_using_file_command_line(file_paths_list, output_t
         hb.remove_path(temporary_virt_filename)
 
 def stitch_rasters_using_vrt(
-    file_paths_list, 
-    output_tif_path, 
-    extent_shift_match_path=None, 
-    srcnodata=None, 
-    dstnodata=None, 
+    file_paths_list,
+    output_tif_path,
+    extent_shift_match_path=None,
+    srcnodata=None,
+    dstnodata=None,
     resampling_method='near',
     compress='deflate',
     tiled=True,
@@ -419,22 +419,22 @@ def stitch_rasters_using_vrt(
     blockysize=256,
     output_data_type=None,
     ):
-    
+
     vrt_path = hb.replace_ext(output_tif_path, '.vrt')
-    
+
     # Create a vrt from the list of files. This is very fast because it is just an index file referencing the rasters in the list
     create_gdal_vrt(
-        file_paths_list, 
-        vrt_path, 
-        extent_shift_match_path=extent_shift_match_path, 
-        srcnodata=srcnodata, 
-        dstnodata=dstnodata, 
+        file_paths_list,
+        vrt_path,
+        extent_shift_match_path=extent_shift_match_path,
+        srcnodata=srcnodata,
+        dstnodata=dstnodata,
         resampling_method=resampling_method,
     )
-    
+
     # Use the newly created vrt file and write it to a raster
     write_vrt_to_raster(
-        vrt_path, 
+        vrt_path,
         output_tif_path,
         output_data_type=output_data_type,
         resampling_method=resampling_method,
@@ -446,87 +446,62 @@ def stitch_rasters_using_vrt(
         )
 
 def create_gdal_vrt(
-    file_paths_list, 
-    vrt_path, 
-    extent_shift_match_path=None, 
-    srcnodata=None, 
-    dstnodata=None, 
+    file_paths_list,
+    vrt_path,
+    extent_shift_match_path=None,
+    srcnodata=None,
+    dstnodata=None,
     resampling_method='near',
     bands=[1]
 ):
-    
-    """extent_shift_match_path Forces output to be wgs84 with an explicit extent. Very likely to make weird results so use at your own risk."""
-    for file_path in file_paths_list:
-        assert os.path.exists(file_path)
-
-
-        
-    if extent_shift_match_path is not None:
-        shifted_extent = hb.get_raster_info_hb(extent_shift_match_path)['bounding_box']
-        # gdal_command += ' -a_srs EPSG:4326 -te ' + str(shifted_extent[0]) + ' '  + str(shifted_extent[1]) + ' ' + str(shifted_extent[2]) + ' ' + str(shifted_extent[3]) + ' '
-        outputBounds = [shifted_extent[0], shifted_extent[1], shifted_extent[2], shifted_extent[3]]
-    else:
-        outputBounds = None
-
-    if srcnodata is None:
-        srcnodata = hb.get_ndv_from_path(file_paths_list[0])
-        
-    if dstnodata is None:
-        dstnodata = hb.get_ndv_from_path(file_paths_list[0])
-
-    vrt_callback = hb.make_logger_callback("BuildVRT percent complete:")
-    
-    
-    """ Create a BuildVRTOptions() object that can be passed to gdal.BuildVRT()
-    Keyword arguments are :
-        options --- can be be an array of strings, a string or let empty and filled from other keywords..
-        resolution --- 'highest', 'lowest', 'average', 'user'.
-        outputBounds --- output bounds as (minX, minY, maxX, maxY) in target SRS.
-        xRes, yRes --- output resolution in target SRS.
-        targetAlignedPixels --- whether to force output bounds to be multiple of output resolution.
-        separate --- whether each source file goes into a separate stacked band in the VRT band.
-        bandList --- array of band numbers (index start at 1).
-        addAlpha --- whether to add an alpha mask band to the VRT when the source raster have none.
-        resampleAlg --- resampling mode.
-        outputSRS --- assigned output SRS.
-        allowProjectionDifference --- whether to accept input datasets have not the same projection. Note: they will *not* be reprojected.
-        srcNodata --- source nodata value(s).
-        VRTNodata --- nodata values at the VRT band level.
-        hideNodata --- whether to make the VRT band not report the NoData value.
-        strict --- set to True if warnings should be failures
-        callback --- callback method.
-        callback_data --- user data for callback.
     """
-    
-    
+    Creates a VRT (Virtual Dataset) from a list of file paths.
+
+    Parameters:
+    - file_paths_list: List of file paths to include in the VRT.
+    - vrt_path: Path to save the VRT file.
+    - extent_shift_match_path: Optional path to a file to match extent and shift.
+    - srcnodata: Source NoData value.
+    - dstnodata: Destination NoData value.
+    - resampling_method: Resampling method to use.
+    - bands: List of bands to include in the VRT.
+    """
+
+    # Check if all file paths exist
+    for file_path in file_paths_list:
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"File not found: {file_path}")
+
+    # Determine output bounds if extent_shift_match_path is provided
+    outputBounds = None
+    if extent_shift_match_path:
+        shifted_extent = hb.get_raster_info_hb(extent_shift_match_path)['bounding_box']
+        outputBounds = [shifted_extent[0], shifted_extent[1], shifted_extent[2], shifted_extent[3]]
+
+    # Get NoData values if not provided
+    if srcnodata is None or dstnodata is None:
+        ndv = hb.get_ndv_from_path(file_paths_list[0])
+        srcnodata = srcnodata if srcnodata is not None else ndv
+        dstnodata = dstnodata if dstnodata is not None else ndv
+
+    # Create VRT options
     vrt_options = gdal.BuildVRTOptions(
-        options=None,
-        resolution=None,
-        outputBounds=outputBounds,  
-        xRes=None, 
-        yRes=None,
-        targetAlignedPixels=None,
-        separate=None,
         bandList=bands,
-        addAlpha=None,
         resampleAlg=resampling_method,
-        outputSRS=None,
-        allowProjectionDifference=None,
+        outputBounds=outputBounds,
         srcNodata=srcnodata,
         VRTNodata=dstnodata,
-        hideNodata=None,
-        strict=False,
-        callback=vrt_callback, 
+        callback=hb.make_logger_callback("BuildVRT percent complete:"),
         callback_data=vrt_path,
     )
-    
-    vrt = gdal.BuildVRT(vrt_path, file_paths_list, options=vrt_options)
-    vrt = None # Necessary to trigger write.
+
+    # Build VRT
+    gdal.BuildVRT(vrt_path, file_paths_list, options=vrt_options)
 
 
 def write_vrt_to_raster(
-    input_vrt_path, 
-    output_tif_path, 
+    input_vrt_path,
+    output_tif_path,
     output_data_type=None,
     resampling_method='near',
     compress='deflate',
@@ -535,60 +510,52 @@ def write_vrt_to_raster(
     blockxsize=256,
     blockysize=256,
     ):
-    
-    if output_data_type is not None:
-        data_type = output_data_type
-    else:
-        data_type = hb.get_datatype_from_uri(input_vrt_path)
-        
-    ndv = hb.get_ndv_from_path(input_vrt_path)
-    
-    vrt_ds = gdal.OpenEx(input_vrt_path)
-    
-    output_geotransform = hb.get_geotransform_path(input_vrt_path)
-    # output_geotransform = hb.get_dataset_projection_wkt_uri(input_vrt_path)
-    
-    options = [] # 'TILED=YES', 'BIGTIFF=YES', 'COMPRESS=DEFLATE', 'BLOCKXSIZE=256', 'BLOCKYSIZE=256'
-    if compress is True:
-        options.append('COMPRESS=DEFLATE')
-    elif isinstance(compress, str):
-        options.append('COMPRESS=' + compress.upper())
-    else:
-        pass # Just omit to not compress
-    
-    if tiled:
-        options.append('TILED=YES')
-    else:
-        options.append('TILED=NO')
-        
-    if bigtiff:
-        options.append('BIGTIFF=YES')
-    else:
-        options.append('BIGTIFF=NO')
-        
-    if blockxsize:
-        options.append('BLOCKXSIZE=' + str(blockxsize))
-    else:
-        pass
-        
-    if blockysize:
-        options.append('BLOCKYSIZE=' + str(blockysize))
-    else:
-        pass
-        
-    read_callback = hb.make_logger_callback("ReadAsArray percent complete:")
-    write_callback = hb.make_logger_callback("WriteArray percent complete:")
-    array = vrt_ds.ReadAsArray(callback=read_callback, callback_data=[input_vrt_path]).astype(hb.gdal_number_to_numpy_type[data_type])
-    
-    driver = gdal.GetDriverByName('GTiff')
-    new_ds = driver.Create(output_tif_path, vrt_ds.RasterXSize, vrt_ds.RasterYSize, 1, data_type, options=options)
-    new_ds.SetGeoTransform(output_geotransform)
-    new_ds.SetProjection(hb.wgs_84_wkt)
-    new_ds.GetRasterBand(1).SetNoDataValue(ndv)
-    new_ds.GetRasterBand(1).WriteArray(array, callback=write_callback, callback_data=[output_tif_path])
-    new_ds = None
-    vrt_ds = None
-    
+
+    try:
+        # Open the input VRT
+        vrt_ds = gdal.OpenEx(input_vrt_path, gdal.GA_ReadOnly)
+        if vrt_ds is None:
+            raise ValueError(f"Could not open input VRT: {input_vrt_path}")
+
+        # Determine output data type
+        if output_data_type is None:
+            output_data_type = vrt_ds.GetRasterBand(1).DataType
+        else:
+            output_data_type = gdal.GetDataTypeByName(output_data_type)
+
+        # Set creation options
+        creation_options = []
+        if compress:
+            creation_options.append(f'COMPRESS={compress.upper()}' if isinstance(compress, str) else 'COMPRESS=DEFLATE')
+        creation_options.extend([
+            f'TILED={"YES" if tiled else "NO"}',
+            f'BIGTIFF={"YES" if bigtiff else "NO"}',
+        ])
+        if blockxsize:
+            creation_options.append(f'BLOCKXSIZE={blockxsize}')
+        if blockysize:
+            creation_options.append(f'BLOCKYSIZE={blockysize}')
+
+        # Use GDAL Translate for efficient conversion
+        gdal.Translate(
+            output_tif_path,
+            vrt_ds,
+            format='GTiff',
+            outputType=output_data_type,
+            resampleAlg=resampling_method,
+            creationOptions=creation_options,
+            callback=gdal.TermProgress_nocb
+        )
+
+    except Exception as e:
+        print(f"An error occurred: {str(e)}")
+    finally:
+        # Ensure datasets are properly closed
+        if 'vrt_ds' in locals():
+            vrt_ds = None
+
+    print(f"Conversion complete: {output_tif_path}")
+
 
 def set_ndv_in_raster_header(input_raster_path, new_ndv):
     # DOES NOT CHANGE UNDERLYING DATA
@@ -661,29 +628,29 @@ def create_valid_mask_from_vector_path(input_vector_path, match_raster_path, out
     return hb.as_array(output_raster_path)
 
 
-def clip_raster_by_vector_simple(input_path, 
-                                 output_path, 
-                                 clip_vector_path, 
-                                 output_data_type, 
-                                 output_ndv=-9999, 
+def clip_raster_by_vector_simple(input_path,
+                                 output_path,
+                                 clip_vector_path,
+                                 output_data_type,
+                                 output_ndv=-9999,
                                  clip_vector_filter=None,
                                  gtiff_creation_options=hb.DEFAULT_GTIFF_CREATION_OPTIONS):
-    
+
     # 'clip_vector_filter': (str) an SQL WHERE string that can
     # be used to filter the geometry in the mask. Ex:
     # 'id > 10' would use all features whose field value of
-    # 'id' is > 10. 
+    # 'id' is > 10.
     # or 'iso3 = "RWA"'
-                    
-                    
+
+
     vector_mask_options = {}
     vector_mask_options['mask_vector_path'] = clip_vector_path
     if clip_vector_filter is not None:
         vector_mask_options['mask_vector_where_filter'] = clip_vector_filter
-        
+
     target_pixel_size = hb.get_cell_size_from_path(input_path)
-    
-    
+
+
     hb.warp_raster_hb(
             input_path,
             target_pixel_size,
@@ -701,7 +668,7 @@ def clip_raster_by_vector_simple(input_path,
             calc_raster_stats=False,
             add_overviews=False,
             specific_overviews_to_add=None,
-            )     
+            )
 
 
 def clip_raster_by_vector(input_path, output_path, clip_vector_path, resample_method='nearest',
@@ -1506,7 +1473,7 @@ def as_array_resampled_to_size(path, max_size=200000, return_all_parts=False, ve
         ds = gdal.Open(path)
     except:
         raise NameError('as_array_resampled_to_size failed because ' + str(path) + ' does not exist.')
-    
+
     band = ds.GetRasterBand(1)
     cols = ds.RasterXSize
     rows = ds.RasterYSize
@@ -2629,7 +2596,7 @@ def cast_to_np64(a):
             return np.int64(a)
         else:
             return np.float64(float(a))
-        
+
 
 def reclassify_raster_hb(input_flex, rules, output_path, output_data_type=None, array_threshold=10000, match_path=None, output_ndv=None, invoke_full_callback=False, verbose=False):
     """NOTE: The rules dict NEEDS to have the existing values that remain unchanged included, otherwise they get written to zero
@@ -2679,7 +2646,7 @@ def reclassify_raster_hb(input_flex, rules, output_path, output_data_type=None, 
     from hazelbean.calculation_core.cython_functions import reclassify_int_to_int_by_array
     from hazelbean.calculation_core.cython_functions import reclassify_int_to_float32_by_array
     from hazelbean.calculation_core.cython_functions import reclassify_int_to_float64_by_array
-    
+
 
     old_rules = None # For if recasting dict to array, preserve
     # # TODO Awful hack. There was some concurency memory bug here from not releasing data. This let trash collection happen in time?
@@ -2714,30 +2681,30 @@ def reclassify_raster_hb(input_flex, rules, output_path, output_data_type=None, 
 
     # Figure out the correct ndv based on the datatype
     if output_ndv is None:
-        
+
         ids_are_all_positive = True
         if ids_are_all_positive:
             output_ndv = 0
         else:
             output_ndv = hb.default_no_data_values_by_gdal_number[output_data_type]
-                    
+
         # if match_path is not None:
-            
+
         #     if ids_are_all_positive:
         #         output_ndv = 0
         #     else:
         #         output_ndv = hb.get_ndv_from_path(match_path)
-            
+
         # else:
         #     if ids_are_all_positive:
         #         output_ndv = 0
-        #     else:                
+        #     else:
         #         output_ndv = hb.default_no_data_values_by_gdal_number[output_data_type]
-            
+
     # Add the NDV to the rules
     rules[output_ndv] = output_ndv
-    
-    
+
+
     if isinstance(input_flex, hb.ArrayFrame):
         treat_input_as_arrayframe = True
     elif isinstance(input_flex, str):
@@ -2750,8 +2717,8 @@ def reclassify_raster_hb(input_flex, rules, output_path, output_data_type=None, 
         treat_input_as_array = True
     else:
         pass
-    
-    
+
+
 
     if isinstance(rules, OrderedDict):
         L.debug('Rules dict is a odict. Update python, probably.')
@@ -2791,7 +2758,7 @@ def reclassify_raster_hb(input_flex, rules, output_path, output_data_type=None, 
                 for k, v in old_rules.items():
                     if k != output_ndv:
                         rules[int(k)] = v
-                        
+
                     # try:
                     #     rules[int(k)] = v
                     # except:
@@ -5603,33 +5570,33 @@ def check_chunk_sizes_from_list_of_paths(input_paths):
         critical_string += '\n' + str(block_sizes)
         L.critical(critical_string)
     chunk_sizes = t_b
-    return chunk_sizes 
+    return chunk_sizes
 
 
 def simplify_polygon(input_path, output_path, tolerance, preserve_topology=True, verbose=False):
-    
-    
+
+
     # FAILS!!!! On unary union, fails when it finds a null value. The preserve topology by itself doesn't seem to solve it. Consider first converting to a line type.
     from shapely.geometry import Polygon
-    from shapely.ops import unary_union    
-    
+    from shapely.ops import unary_union
+
     if verbose:
         hb.log('Reading GDF at ' + input_path)
     gdf = gpd.read_file(input_path)
-    
+
 
     # Simplify polygons
     if verbose:
-        hb.log('Simplifing GDF at ' + input_path)    
+        hb.log('Simplifing GDF at ' + input_path)
     gdf['geometry'] = gdf['geometry'].simplify(tolerance=tolerance, preserve_topology=preserve_topology)
     gdf.to_file(hb.rsuri(output_path, 'simplified'))
-    
+
     # Ensure shared borders using unary_union
     if verbose:
-        hb.log('Calculating unary_union of ' + input_path) 
-    unified = unary_union(gdf['geometry'])   
+        hb.log('Calculating unary_union of ' + input_path)
+    unified = unary_union(gdf['geometry'])
     # unified.to_file(hb.rsuri(output_path, 'simplified'))
-    
+
     if verbose:
         hb.log("split it back into individual polygons")
     result_polygons = [poly for poly in unified]
