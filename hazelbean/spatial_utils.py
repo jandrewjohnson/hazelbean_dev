@@ -1228,7 +1228,12 @@ def save_array_as_geotiff(array, out_uri, geotiff_uri_to_match=None, ds_to_match
 
 def extract_features_in_shapefile_by_attribute(input_path, output_path, column_name, column_filter):
     gdf = gpd.read_file(input_path)
+    # print(gdf)
     gdf_out = gdf.loc[gdf[column_name] == column_filter]
+    
+    if len(gdf_out) == 0:
+        raise NameError('No features found in ' + str(input_path) + ' with ' + str(column_name) + ' == ' + str(column_filter))
+
     hb.create_directories(output_path)
     gdf_out.to_file(output_path)
 

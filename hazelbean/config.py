@@ -290,6 +290,7 @@ common_projection_wkts = {
 }
 
 
+# TODOO Put this in base_data repo instead
 luh_data_dir = os.path.join(BASE_DATA_DIR, 'luh2', 'raw_data')
 # Corresponds to a directory containing the latest LUH data download of states.nc and management.nc from maryland website
 luh_scenario_names = [

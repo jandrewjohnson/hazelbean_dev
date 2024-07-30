@@ -2185,4 +2185,3 @@ def create_shortcut(target_path, shortcut_path, verbose=False):
             print("winshell module not found. Creating a symbolic link instead.")
             os.symlink(target_path, shortcut_path)
             print(f'Symbolic link created at {shortcut_path} pointing to {target_path}')
-

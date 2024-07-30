@@ -15,30 +15,41 @@ import geopandas as gpd
 
 L = hb.get_logger('pyramids', logging_level='info')
 
-mollweide_compatible_resolutions = {}
-mollweide_compatible_resolutions[10.0] = 309.2208077590933 # calculated via hb.size_of_one_arcdegree_at_equator_in_meters / (60 * 6)
-mollweide_compatible_resolutions[30.0] = 309.2208077590933 * (30.0 / 10.0)
-mollweide_compatible_resolutions[300.0] = 309.2208077590933 * (300.0 / 10.0)
-mollweide_compatible_resolutions[900.0] = 309.2208077590933 * (900.0 / 10.0)
-mollweide_compatible_resolutions[1800.0] = 309.2208077590933 * (1800.0 / 10.0)
-mollweide_compatible_resolutions[3600.0] = 309.2208077590933 * (3600.0 / 10.0)
-mollweide_compatible_resolutions[7200.0] = 309.2208077590933 * (7200.0 / 10.0)
-mollweide_compatible_resolutions[14400.0] = 309.2208077590933 * (14400.0 / 10.0)
+## Consider if i should include match_paths
+# # The ha per cell paths also can be used when writing new tifs as the match path.
+# p.match_10sec_path = p.ha_per_cell_10sec_path
+# p.match_300sec_path = p.ha_per_cell_300sec_path
+# p.match_900sec_path = p.ha_per_cell_900sec_path
+# p.match_1800sec_path = p.ha_per_cell_1800sec_path
+# p.match_3600sec_path = p.ha_per_cell_3600sec_path
+
+# p.match_paths = {}
+# p.match_paths[10.0] = p.match_10sec_path
+# p.match_paths[300.0] = p.match_300sec_path
+# p.match_paths[900.0] = p.match_900sec_path
+# p.match_paths[1800.0] = p.match_1800sec_path
+# p.match_paths[3600.0] = p.match_3600sec_path
+
+
 
 # Define the resolutions compatible with pyramid calculation as key = arcseconds, value = resolution in 64 bit notation, precisely defined with the right amount of significant digits.
-pyramid_compatible_arcseconds = [10.0,
-                                                     30.0,
-                                                     300.0,
-                                                     900.0,
-                                                     1800.0,
-                                                     3600.0,
-                                                     7200.0,
-                                                     14400.0,
-                                                     36000.0,]
+pyramid_compatible_arcseconds = [
+    10.0,
+    30.0,
+    150.0,
+    300.0,
+    900.0,
+    1800.0,
+    3600.0,
+    7200.0,
+    14400.0,
+    36000.0,
+    ]
 
 pyramid_compatible_resolution_to_arcseconds = {}
 pyramid_compatible_resolution_to_arcseconds[0.002777777777777778] =    10.0
 pyramid_compatible_resolution_to_arcseconds[0.008333333333333333] =    30.0
+pyramid_compatible_resolution_to_arcseconds[0.008333333333333333 * 5] =    150.0
 pyramid_compatible_resolution_to_arcseconds[0.08333333333333333] =   300.0
 pyramid_compatible_resolution_to_arcseconds[0.25] =   900.0
 pyramid_compatible_resolution_to_arcseconds[0.5] =  1800.0
@@ -50,6 +61,7 @@ pyramid_compatible_resolution_to_arcseconds[10.0] = 36000.0
 pyramid_compatible_resolutions = {}
 pyramid_compatible_resolutions[10.0] =    0.002777777777777778
 pyramid_compatible_resolutions[30.0] =    0.008333333333333333
+pyramid_compatible_resolutions[150.0] =    0.008333333333333333 * 5
 pyramid_compatible_resolutions[300.0] =   0.08333333333333333
 pyramid_compatible_resolutions[900.0] =   0.25
 pyramid_compatible_resolutions[1800.0] =  0.5
@@ -62,6 +74,7 @@ pyramid_compatible_resolutions[36000.0] = 10.0
 pyramid_compatible_resolution_bounds = {}
 pyramid_compatible_resolution_bounds[10.0] =    (0.0027777, 0.00277778)
 pyramid_compatible_resolution_bounds[30.0] =    (0.0083333, 0.00833334)
+pyramid_compatible_resolution_bounds[150.0] =    (0.0083333*5, 0.00833334*5)
 pyramid_compatible_resolution_bounds[300.0] =   (0.08333, 0.08334)
 pyramid_compatible_resolution_bounds[900.0] =   (0.24999, 0.25001)
 pyramid_compatible_resolution_bounds[1800.0] =  (0.4999, 0.5001)
@@ -72,11 +85,8 @@ pyramid_compatible_resolution_bounds[36000.0] = (9.999, 10.001)
 
 pyramid_compatable_shapes = {}
 pyramid_compatable_shapes[10.0] = [129600, 64800]
-pyramid_compatable_shapes[20.0] = [64800, 32400]
 pyramid_compatable_shapes[30.0] = [43200, 21600]
-pyramid_compatable_shapes[60.0] = [21600, 10800]
-pyramid_compatable_shapes[120.0] = [10800, 5400]
-pyramid_compatable_shapes[240.0] = [5400, 2700]
+pyramid_compatable_shapes[150.0] = [8640, 4320]
 pyramid_compatable_shapes[300.0] = [4320, 2160]
 pyramid_compatable_shapes[600.0] = [2160, 1080]
 pyramid_compatable_shapes[900.0] = [1440, 720]
@@ -88,11 +98,8 @@ pyramid_compatable_shapes[36000.0] = [36, 18]
 
 pyramid_compatable_shapes_to_arcseconds = {}
 pyramid_compatable_shapes_to_arcseconds[(129600, 64800)] = 10.0
-pyramid_compatable_shapes_to_arcseconds[(64800, 32400)] = 20.0
 pyramid_compatable_shapes_to_arcseconds[(43200, 21600)] = 30.0
-pyramid_compatable_shapes_to_arcseconds[(21600, 10800)] = 60.0
-pyramid_compatable_shapes_to_arcseconds[(10800, 5400)] = 120.0
-pyramid_compatable_shapes_to_arcseconds[(5400, 2700)] = 240.0
+pyramid_compatable_shapes_to_arcseconds[(8640, 4320)] = 150.0
 pyramid_compatable_shapes_to_arcseconds[(4320, 2160)] = 300.0
 pyramid_compatable_shapes_to_arcseconds[(2160, 1080)] = 600.0
 pyramid_compatable_shapes_to_arcseconds[(1440, 720)] = 900.0
@@ -102,19 +109,21 @@ pyramid_compatable_shapes_to_arcseconds[(180, 90)] = 7200
 pyramid_compatable_shapes_to_arcseconds[(90, 45)] = 14400
 pyramid_compatable_shapes_to_arcseconds[(36, 18)] = 36000
 
-## DEFINED IN CONFIG:
-# geotransform_global_4deg = (-180.0, 4.0, 0.0, 90.0, 0.0, -4.0)
-# geotransform_global_2deg = (-180.0, 2.0, 0.0, 90.0, 0.0, -2.0)
-# geotransform_global_1deg = (-180.0, 1.0, 0.0, 90.0, 0.0, -1.0)
-# geotransform_global_30m = (-180.0, 0.5, 0.0, 90.0, 0.0, -0.5)
-# geotransform_global_15m = (-180.0, 0.25, 0.0, 90.0, 0.0, -0.25)
-# geotransform_global_5m = (-180.0, 0.08333333333333333, 0.0, 90.0, 0.0, -0.08333333333333333)  # NOTE, the 0.08333333333333333 is defined very precisely as the answer a 64 bit compiled python gives from the answer 1/12 (i.e. 5 arc minutes)
-# geotransform_global_30s = (-180.0, 0.008333333333333333, 0.0, 90.0, 0.0, -0.008333333333333333)  # NOTE, the 0.008333333333333333 is defined very precisely as the answer a 64 bit compiled python gives from the answer 1/120 (i.e. 30 arc seconds) Note that this has 1 more digit than 1/12 due to how floating points are stored in computers via exponents.
-# geotransform_global_10s = (-180.0, 0.002777777777777778, 0.0, 90.0, 0.0, -0.002777777777777778)  # NOTE, the 0.002777777777777778 is defined very precisely
+geotransform_global_36600sec = (-180.0, 10.0, 0.0, 90.0, 0.0, -10.0)
+geotransform_global_14400sec = (-180.0, 4.0, 0.0, 90.0, 0.0, -4.0)
+geotransform_global_7200sec = (-180.0, 2.0, 0.0, 90.0, 0.0, -2.0)
+geotransform_global_3600sec = (-180.0, 1.0, 0.0, 90.0, 0.0, -1.0)
+geotransform_global_1800sec = (-180.0, 0.5, 0.0, 90.0, 0.0, -0.5)
+geotransform_global_900sec= (-180.0, 0.25, 0.0, 90.0, 0.0, -0.25)
+geotransform_global_300sec = (-180.0, 0.08333333333333333, 0.0, 90.0, 0.0, -0.08333333333333333)  # NOTE, the 0.08333333333333333 is defined very precisely as the answer a 64 bit compiled python gives from the answer 1/12 (i.e. 5 arc minutes)
+geotransform_global_150sec = (-180.0, 0.008333333333333333 * 5, 0.0, 90.0, 0.0, -0.008333333333333333 * 5)  # NOTE, the 0.08333333333333333 is defined very precisely as the answer a 64 bit compiled python gives from the answer 1/12 (i.e. 5 arc minutes)
+geotransform_global_30sec = (-180.0, 0.008333333333333333, 0.0, 90.0, 0.0, -0.008333333333333333)  # NOTE, the 0.008333333333333333 is defined very precisely as the answer a 64 bit compiled python gives from the answer 1/120 (i.e. 30 arc seconds) Note that this has 1 more digit than 1/12 due to how floating points are stored in computers via exponents.
+geotransform_global_10ssec = (-180.0, 0.002777777777777778, 0.0, 90.0, 0.0, -0.002777777777777778)  # NOTE, the 0.002777777777777778 is defined very precisely
 
 pyramid_compatible_geotransforms = {}
 pyramid_compatible_geotransforms[10.0] = (-180.0, 0.002777777777777778, 0.0, 90.0, 0.0, -0.002777777777777778)
 pyramid_compatible_geotransforms[30.0] = (-180.0, 0.008333333333333333, 0.0, 90.0, 0.0, -0.008333333333333333)
+pyramid_compatible_geotransforms[150.0] = (-180.0, 0.008333333333333333*5, 0.0, 90.0, 0.0, -0.008333333333333333*5)
 pyramid_compatible_geotransforms[300.0] = (-180.0, 0.08333333333333333, 0.0, 90.0, 0.0, -0.08333333333333333)
 pyramid_compatible_geotransforms[900.0] = (-180.0, 0.25, 0.0, 90.0, 0.0, -0.25)
 pyramid_compatible_geotransforms[1800.0] = (-180.0, 0.5, 0.0, 90.0, 0.0, -0.5)
@@ -124,8 +133,9 @@ pyramid_compatible_geotransforms[14400.0] = (-180.0, 4.0, 0.0, 90.0, 0.0, -4.0)
 pyramid_compatible_geotransforms[36000.0] = (-180.0, 10.0, 0.0, 90.0, 0.0, -10.0)
 
 pyramid_compatible_overview_levels = {}
-pyramid_compatible_overview_levels[10.0] = [3, 30, 90]
-pyramid_compatible_overview_levels[30.0] = [10, 30]
+pyramid_compatible_overview_levels[10.0] = [3, 15, 30, 90]
+pyramid_compatible_overview_levels[30.0] = [5, 10, 30]
+pyramid_compatible_overview_levels[150.0] = [2, 6, 12]
 pyramid_compatible_overview_levels[300.0] = [3]
 pyramid_compatible_overview_levels[900.0] = []
 pyramid_compatible_overview_levels[1800.0] = []
@@ -134,6 +144,8 @@ pyramid_compatible_overview_levels[7200.0] = []
 pyramid_compatible_overview_levels[14400.0] = []
 pyramid_compatible_overview_levels[36000.0] = []
 
+
+# NOTE Not complete, but I think I don't want to use these anyhow
 pyramid_compatible_half_overview_levels = {}
 pyramid_compatible_half_overview_levels[10.0] = [2, 3, 6, 12, 24, 30, 60, 90]
 pyramid_compatible_half_overview_levels[30.0] = [2, 4, 8, 10, 20, 30, 60]
@@ -156,6 +168,35 @@ pyramid_compatible_full_overview_levels[7200.0] = [2, 4]
 pyramid_compatible_full_overview_levels[14400.0] = [2]
 pyramid_compatible_full_overview_levels[36000.0] = []
 
+
+
+ha_per_cell_10sec_ref_path = os.path.join('pyramids', "ha_per_cell_10sec.tif")
+ha_per_cell_30sec_ref_path = os.path.join('pyramids', "ha_per_cell_30sec.tif")
+ha_per_cell_150sec_ref_path = os.path.join('pyramids', "ha_per_cell_150sec.tif")
+ha_per_cell_300sec_ref_path = os.path.join('pyramids', "ha_per_cell_300sec.tif")
+ha_per_cell_900sec_ref_path = os.path.join('pyramids', "ha_per_cell_900sec.tif")
+ha_per_cell_1800sec_ref_path = os.path.join('pyramids', "ha_per_cell_1800sec.tif")
+ha_per_cell_3600sec_ref_path = os.path.join('pyramids', "ha_per_cell_3600sec.tif")
+ha_per_cell_7200sec_ref_path = os.path.join('pyramids', "ha_per_cell_7200sec.tif")
+ha_per_cell_14400sec_ref_path = os.path.join('pyramids', "ha_per_cell_14400sec.tif")
+ha_per_cell_36000sec_ref_path = os.path.join('pyramids', "ha_per_cell_3600s0ec.tif")
+
+
+ha_per_cell_ref_paths = {}
+ha_per_cell_ref_paths[10.0] = ha_per_cell_10sec_ref_path
+ha_per_cell_ref_paths[30.0] = ha_per_cell_30sec_ref_path
+ha_per_cell_ref_paths[150.0] = ha_per_cell_150sec_ref_path
+ha_per_cell_ref_paths[300.0] = ha_per_cell_300sec_ref_path
+ha_per_cell_ref_paths[900.0] = ha_per_cell_900sec_ref_path
+ha_per_cell_ref_paths[1800.0] = ha_per_cell_1800sec_ref_path
+ha_per_cell_ref_paths[3600.0] = ha_per_cell_3600sec_ref_path
+ha_per_cell_ref_paths[7200.0] = ha_per_cell_7200sec_ref_path
+ha_per_cell_ref_paths[14400.0] = ha_per_cell_14400sec_ref_path
+ha_per_cell_ref_paths[36000.0] = ha_per_cell_36000sec_ref_path
+
+
+
+# TODOO I'm moving away from having hb define path-specific info, but kept for now for backwards compatibility. Could clean this.
 pyramid_ha_per_cell = {}
 pyramid_ha_per_cell[10.0] = os.path.join(hb.config.BASE_DATA_DIR, 'pyramids', 'ha_per_cell_10sec.tif')
 pyramid_ha_per_cell[30.0] = os.path.join(hb.config.BASE_DATA_DIR, 'pyramids', 'ha_per_cell_30sec.tif')
@@ -170,6 +211,7 @@ pyramid_ha_per_cell[36000.0] = os.path.join(hb.config.BASE_DATA_DIR, 'pyramids',
 pyramid_ha_per_cell_column = {}
 pyramid_ha_per_cell_column[10.0] = os.path.join(hb.config.BASE_DATA_DIR, 'pyramids', 'ha_per_cell_column_10sec.tif')
 pyramid_ha_per_cell_column[30.0] = os.path.join(hb.config.BASE_DATA_DIR, 'pyramids', 'ha_per_cell_column_30sec.tif')
+pyramid_ha_per_cell_column[150.0] = os.path.join(hb.config.BASE_DATA_DIR, 'pyramids', 'ha_per_cell_column_150sec.tif')
 pyramid_ha_per_cell_column[300.0] = os.path.join(hb.config.BASE_DATA_DIR, 'pyramids', 'ha_per_cell_column_300sec.tif')
 pyramid_ha_per_cell_column[900.0] = os.path.join(hb.config.BASE_DATA_DIR, 'pyramids', 'ha_per_cell_column_900sec.tif')
 pyramid_ha_per_cell_column[1800.0] = os.path.join(hb.config.BASE_DATA_DIR, 'pyramids', 'ha_per_cell_column_1800sec.tif')
@@ -177,6 +219,33 @@ pyramid_ha_per_cell_column[3600.0] = os.path.join(hb.config.BASE_DATA_DIR, 'pyra
 pyramid_ha_per_cell_column[7200.0] = os.path.join(hb.config.BASE_DATA_DIR, 'pyramids', 'ha_per_cell_column_7200sec.tif')
 pyramid_ha_per_cell_column[14400.0] = os.path.join(hb.config.BASE_DATA_DIR, 'pyramids', 'ha_per_cell_column_14400sec.tif')
 pyramid_ha_per_cell_column[36000.0] = os.path.join(hb.config.BASE_DATA_DIR, 'pyramids', 'ha_per_cell_column_36000sec.tif')
+
+
+
+ha_per_cell_column_10sec_path = os.path.join('pyramids', 'ha_per_cell_column_10sec.tif')
+ha_per_cell_column_30sec_path = os.path.join('pyramids', 'ha_per_cell_column_30sec.tif')
+ha_per_cell_column_150sec_path = os.path.join('pyramids', 'ha_per_cell_column_150sec.tif')
+ha_per_cell_column_300sec_path = os.path.join('pyramids', 'ha_per_cell_column_300sec.tif')
+ha_per_cell_column_900sec_path = os.path.join('pyramids', 'ha_per_cell_column_900sec.tif')
+ha_per_cell_column_1800sec_path = os.path.join('pyramids', 'ha_per_cell_column_1800sec.tif')
+ha_per_cell_column_3600sec_path = os.path.join('pyramids', 'ha_per_cell_column_3600sec.tif')
+ha_per_cell_column_7200sec_path = os.path.join('pyramids', 'ha_per_cell_column_7200sec.tif')
+ha_per_cell_column_14400sec_path = os.path.join('pyramids', 'ha_per_cell_column_14400sec.tif')
+ha_per_cell_column_36000sec_path = os.path.join('pyramids', 'ha_per_cell_column_36000sec.tif')
+
+ha_per_cell_column_paths = {}
+ha_per_cell_column_paths[10.0] = ha_per_cell_column_10sec_path
+ha_per_cell_column_paths[30.0] = ha_per_cell_column_30sec_path
+ha_per_cell_column_paths[150.0] = ha_per_cell_column_150sec_path
+ha_per_cell_column_paths[300.0] = ha_per_cell_column_300sec_path
+ha_per_cell_column_paths[900.0] = ha_per_cell_column_900sec_path
+ha_per_cell_column_paths[1800.0] = ha_per_cell_column_1800sec_path
+ha_per_cell_column_paths[3600.0] = ha_per_cell_column_3600sec_path
+ha_per_cell_column_paths[7200.0] = ha_per_cell_column_7200sec_path
+ha_per_cell_column_paths[14400.0] = ha_per_cell_column_14400sec_path
+ha_per_cell_column_paths[36000.0] = ha_per_cell_column_36000sec_path
+
+
 
 global_esa_lulc_paths_by_year = {}
 global_esa_lulc_paths_by_year[2000] = os.path.join(hb.config.SEALS_BASE_DATA_DIR, "lulc_esa", "full", "ESACCI-LC-L4-LCCS-Map-300m-P1Y-2000-v2.0.7.tif")
@@ -191,6 +260,19 @@ global_esa_seals5_lulc_paths_by_year[2014] = os.path.join(hb.config.SEALS_BASE_D
 global_esa_seals5_lulc_paths_by_year[2015] = os.path.join(hb.config.SEALS_BASE_DATA_DIR, "lulc_esa\simplified\lulc_esa_simplified_2015.tif")
 
 global_bounding_box = [-180.0, -90.0, 180.0, 90.0]
+
+
+mollweide_compatible_resolutions = {}
+mollweide_compatible_resolutions[10.0] = 309.2208077590933 # calculated via hb.size_of_one_arcdegree_at_equator_in_meters / (60 * 6)
+mollweide_compatible_resolutions[30.0] = 309.2208077590933 * (30.0 / 10.0)
+mollweide_compatible_resolutions[300.0] = 309.2208077590933 * (300.0 / 10.0)
+mollweide_compatible_resolutions[900.0] = 309.2208077590933 * (900.0 / 10.0)
+mollweide_compatible_resolutions[1800.0] = 309.2208077590933 * (1800.0 / 10.0)
+mollweide_compatible_resolutions[3600.0] = 309.2208077590933 * (3600.0 / 10.0)
+mollweide_compatible_resolutions[7200.0] = 309.2208077590933 * (7200.0 / 10.0)
+mollweide_compatible_resolutions[14400.0] = 309.2208077590933 * (14400.0 / 10.0)
+
+
 
 def df_compare_column_labels_as_dict(left_input, right_input):
     
