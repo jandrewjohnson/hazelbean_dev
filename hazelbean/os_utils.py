@@ -1503,6 +1503,11 @@ def read_path_as_string(input_path):
         data = str(file.read())
     return data
 
+def read_path_as_list(input_path):
+    with open(input_path, 'r') as file:
+        data = file.readlines()
+    return data
+
 # def timer(msg=None, silent=False):
 #     if hb.LAST_TIME_CHECK == 0.0:
 #         hb.LAST_TIME_CHECK = time.time()
