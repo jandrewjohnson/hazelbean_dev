@@ -1342,3 +1342,32 @@ def hash_file_path(file_path):
         return "File not found."
     except Exception as e:
         return f"An error occurred: {e}"
+    
+    
+def concatenate_list_of_df_paths(input_df_paths, output_path=None, verbose=False):
+    """Concatenate a list of dataframes into a single dataframe. Return DF. Also write to output_path if given"""
+    dfs = []
+    shapes = []
+    for df_path in input_df_paths:
+        if verbose:
+            hb.log('Reading ' + str(df_path))
+        if not hb.path_exists(df_path):
+            raise NameError('Path not found: ' + str(df_path))
+        
+        df = pd.read_csv(df_path)
+        
+        # Get only the number of cols, cause we're concatentating vertically
+        shapes.append(df.shape[1])
+        
+        dfs.append(df)
+    
+    # Check if all same shape
+    if len(set(shapes)) > 1:
+        raise NameError('Dataframes are not all the same shape: ' + str(shapes))
+    
+    concatenated_df = pd.concat(dfs)
+    
+    if output_path:
+        hb.create_directories(output_path)
+        concatenated_df.to_csv(output_path, index=False)
+    return concatenated_df
