@@ -5,6 +5,7 @@ from collections import OrderedDict
 import hazelbean as hb
 from hazelbean import cloud_utils, os_utils
 import multiprocessing
+import importlib
 
 # try:
 #     import anytree
@@ -687,6 +688,44 @@ class  ProjectFlow(object):
             
         return iterator
 
+    def add_all_functions_from_script_to_task_tree(self, script_path):
+        module_name = os.path.splitext(os.path.basename(script_path))[0]
+
+        # Load the module from the given script path
+        spec = importlib.util.spec_from_file_location(module_name, script_path)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[module_name] = module
+        spec.loader.exec_module(module)
+
+        # List all functions in the module
+        functions_list = [func for func in dir(module) if inspect.isfunction(getattr(module, func))]
+
+        # Print the function names and add them to the task tree
+        print("Functions in the script:")
+        for func in functions_list:
+            print(func)
+            self.add_task(getattr(module, func))        
+            
+        
+        # # Get the current module (i.e., your script)
+        # hb.print_iterable(sys.modules)
+        # current_module = sys.modules[script_path]
+
+        # # List all functions in the current module
+        # functions_list = [func for func in dir(current_module) if inspect.isfunction(getattr(current_module, func))]
+
+        # # Print the function names
+        # print("Functions in the current script:")
+        # for func in functions_list:
+        #     print(func)
+        #     self.add_task(getattr(current_module, func))
+
+
+
+        # for name, obj in inspect.getmembers(sys.modules[self.calling_script]):
+        #     if inspect.isfunction(obj):
+        #         if name not in self.task_names_defined:
+        #             self.add_task(obj)
 
     def run_task(self, current_task):
 
