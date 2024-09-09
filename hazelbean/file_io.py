@@ -832,7 +832,7 @@ def pptx_to_markdown_slide_dict(pptx_path, output_dir=None):
         
         if slide_number == 3:
             pass
-        
+            
         actual_shape_number = 0
         for shape_number, shape in enumerate(slide.shapes):
             
@@ -943,7 +943,7 @@ def pptx_to_markdown_slide_dict(pptx_path, output_dir=None):
             
     return output_dict
 
-def markdown_slide_dict_to_qmd(markdown_slide_dict, output_path):
+def markdown_slide_dict_to_qmd(markdown_slide_dict, output_path, theme='sky'):
 
     output_string = ""
     for slide_number, slide in markdown_slide_dict.items():
@@ -964,7 +964,7 @@ def markdown_slide_dict_to_qmd(markdown_slide_dict, output_path):
         revealjs_prepend = """---
 format: 
     revealjs:
-        theme: simple
+        theme: """ + theme + """
         margin: 0       
         self-contained: false
         scrollable: true
@@ -1035,6 +1035,7 @@ format:
         
         # Iterate through content_lines
         slide_content = []
+        tags = []
         for c, line in enumerate(content_lines):
             
 
@@ -1087,7 +1088,7 @@ format:
                 if line.lstrip().startswith('!['):
                     n_images += 1
 
-            if n_images > 1:
+            if n_images >= 1:
                 if new_slide:
                     tags.append('<list-left-images-right>')
                     

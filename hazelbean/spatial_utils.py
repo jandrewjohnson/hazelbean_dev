@@ -2844,7 +2844,7 @@ def reclassify_raster_hb(input_flex, rules, output_path, output_data_type=None, 
                                             output_data_type, output_ndv, read_datatype=1,
                                             gtiff_creation_options=hb.DEFAULT_GTIFF_CREATION_OPTIONS,
                                             calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
-            elif 2 <= input_flex.data_type <= 5:
+            elif 2 <= input_flex.data_type <= 5 or 12 <= input_flex.data_type <= 13:
                 if output_data_type == 1:
                     rules = {np.int32(k): np.uint8(v) for k, v in rules.items()}
                     base_raster_path_band = [(input_flex.path, 1), (rules, 'raw')]
@@ -2914,7 +2914,7 @@ def reclassify_raster_hb(input_flex, rules, output_path, output_data_type=None, 
                                             output_data_type, output_ndv, read_datatype=1,
                                             gtiff_creation_options=hb.DEFAULT_GTIFF_CREATION_OPTIONS,
                                             calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
-            elif 2 <= input_flex.data_type <= 5:
+            elif 2 <= input_flex.data_type <= 5 or 12 <= input_flex.data_type <= 13:
                 if output_data_type == 1:
                     base_raster_path_band = [(input_flex.path, 1), (rules.astype(np.uint8), 'raw')]
                     hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int_to_uint8_by_array, output_path,
@@ -3024,7 +3024,7 @@ def reclassify_raster_hb(input_flex, rules, output_path, output_data_type=None, 
                 elif output_data_type == 7:
                     rules = {np.uint8(k): np.float64(v) for k, v in rules.items()}
                     output_array = np.asarray(reclassify_uint8_to_float64_by_dict(input_flex.data, rules))
-            elif 2 <= input_flex.data_type <= 5:
+            elif 2 <= input_flex.data_type <= 5 or 12 <= input_flex.data_type <= 13:
                 if output_data_type == 1:
                     rules = {np.int32(k): np.uint8(v) for k, v in rules.items()}
                     output_array = np.asarray(reclassify_int_to_uint8_by_dict(input_flex.data, rules))
@@ -3054,7 +3054,7 @@ def reclassify_raster_hb(input_flex, rules, output_path, output_data_type=None, 
                     output_array = np.asarray(reclassify_uint8_to_float32_by_array(input_flex.data, rules.astype(np.float32)))
                 if output_data_type == 7:
                     output_array = np.asarray(reclassify_uint8_to_float64_by_array(input_flex.data, rules.astype(np.float64)))
-            elif 2 <= input_flex.data_type <= 5:
+            elif 2 <= input_flex.data_type <= 5 or 12 <= input_flex.data_type <= 13:
                 if output_data_type == 1:
                     output_array = np.asarray(reclassify_int_to_uint8_by_array(input_flex.data, rules.astype(np.uint8)))
                 if 2 <= output_data_type <= 5:
