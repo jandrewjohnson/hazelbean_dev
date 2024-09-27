@@ -16,6 +16,8 @@ import geopandas as gpd
 import warnings
 import logging
 from hazelbean import geoprocessing
+from hazelbean import netcdf
+# .netcdf.get_cell_size_from_nc_path
 
 # # Conditional imports
 # try:
@@ -3136,7 +3138,7 @@ def create_buffered_polygon(input_uri, output_uri, buffer_cell_width):
 
 def get_cell_size_from_path(input_path):
     if os.path.splitext(input_path)[1] == '.nc':
-        return hb.netcdf.get_cell_size_from_nc_path(input_path)
+        return netcdf.get_cell_size_from_nc_path(input_path)
     else:
         hb.assert_path_is_gdal_readable(input_path)
 

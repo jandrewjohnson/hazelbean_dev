@@ -626,7 +626,8 @@ def get_size_of_list_of_file_paths(input_list):
 # TODOO Collapse this with recursive?
 def list_filtered_paths_nonrecursively(input_folder, include_strings=None, include_extensions=None, exclude_strings=None, exclude_extensions=None, return_only_filenames=False):
     # NOTE: the filter strings can be anywhere in the path, not just the filename.
-
+    if not hb.path_exists(input_folder):
+        raise FileNotFoundError('The input folder does not exist: ' + input_folder)
     # ONLY CHANGE
     depth = 1
 
