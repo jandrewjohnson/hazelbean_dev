@@ -13,7 +13,7 @@ But basically, need to install
 hazelbean_cython_directory = os.path.split(__file__)[0]
 hazelbean_working_directory = os.path.split(hazelbean_cython_directory)[0]
 CYTHON_FILES = ['compile_cython_functions.py']
-recompile_cython = 1
+recompile_cython = 0
 
 if recompile_cython == True:
     # if os.path.exists(hazelbean_working_directory):

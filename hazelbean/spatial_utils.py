@@ -2863,7 +2863,7 @@ def reclassify_raster_hb(input_flex, rules, output_path, output_data_type=None, 
                     base_raster_path_band = [(input_flex.path, 1), (rules, 'raw')]
 
                     hb.raster_calculator_hb(base_raster_path_band, reclassify_int_to_uint8_by_dict, output_path,
-                                            output_data_type, output_ndv, read_datatype=13,
+                                            output_data_type, output_ndv, read_datatype=5,
                                             gtiff_creation_options=hb.DEFAULT_GTIFF_CREATION_OPTIONS,
                                             calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
                 elif 2 <= output_data_type <= 5:
@@ -2871,7 +2871,7 @@ def reclassify_raster_hb(input_flex, rules, output_path, output_data_type=None, 
                     base_raster_path_band = [(input_flex.path, 1), (rules, 'raw')]
 
                     hb.raster_calculator_hb(base_raster_path_band, reclassify_int_to_int_by_dict, output_path,
-                                            output_data_type, output_ndv, read_datatype=13,
+                                            output_data_type, output_ndv, read_datatype=5,
                                             gtiff_creation_options=hb.DEFAULT_GTIFF_CREATION_OPTIONS,
                                             calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
                 elif output_data_type == 6:
@@ -2880,7 +2880,7 @@ def reclassify_raster_hb(input_flex, rules, output_path, output_data_type=None, 
                     base_raster_path_band = [(input_flex.path, 1), (rules, 'raw')]
 
                     hb.raster_calculator_hb(base_raster_path_band, reclassify_int_to_float32_by_dict, output_path,
-                                            output_data_type, output_ndv, read_datatype=13,
+                                            output_data_type, output_ndv, read_datatype=5,
                                             gtiff_creation_options=hb.DEFAULT_GTIFF_CREATION_OPTIONS,
                                             calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
                 elif output_data_type == 7:
@@ -2888,7 +2888,7 @@ def reclassify_raster_hb(input_flex, rules, output_path, output_data_type=None, 
                     base_raster_path_band = [(input_flex.path, 1), (rules, 'raw')]
 
                     hb.raster_calculator_hb(base_raster_path_band, reclassify_int_to_float32_by_dict, output_path,
-                                            output_data_type, output_ndv, read_datatype=13,
+                                            output_data_type, output_ndv, read_datatype=5,
                                             gtiff_creation_options=hb.DEFAULT_GTIFF_CREATION_OPTIONS,
                                             calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
             elif input_flex.data_type == 6:
