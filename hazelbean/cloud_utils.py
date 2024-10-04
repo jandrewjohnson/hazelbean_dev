@@ -163,7 +163,7 @@ def download_google_cloud_blob(bucket_name, source_blob_name, credentials_path, 
     L.info('Starting to download to ' + destination_file_name + ' from ' + source_blob_name + ' in ' + bucket_name + '. The size of the object is ' + str(blob.size))
 
     current_dir = os.path.split(destination_file_name)[0]
-    hb.create_directories(current_dir)
+    hb.create_directories(current_dir, ignore_dots_in_dirname=True)
 
 
     try:
