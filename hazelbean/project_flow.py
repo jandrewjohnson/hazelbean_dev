@@ -330,7 +330,9 @@ class  ProjectFlow(object):
         except:
             raise NotADirectoryError('A Project Flow object is based on defining a project_dir as its base, but we were unable to create the dir at the given path: ' + self.project_dir)
 
+        # BIG ASS-MISTAKE here, repeating inputs
         self.input_dir = os.path.join(self.project_dir, 'inputs')
+        self.inputs_dir = os.path.join(self.project_dir, 'inputs')
         self.intermediate_dir = os.path.join(self.project_dir, 'intermediate')
         self.output_dir = os.path.join(self.project_dir, 'outputs')
 
