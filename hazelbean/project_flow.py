@@ -401,7 +401,10 @@ class  ProjectFlow(object):
         relative_joined_path = relative_path
 
         if possible_dirs == 'default':
-            possible_dirs = [self.intermediate_dir, self.input_dir, self.base_data_dir]
+            possible_dirs = [self.cur_dir, self.input_dir, self.base_data_dir]
+            
+            # I Just changed this to be cur_dir instead of intermeiate_dir for base_data_promotion to work
+            # possible_dirs = [self.intermediate_dir, self.input_dir, self.base_data_dir]
         
         intermediate_path_override = os.path.join(self.intermediate_dir, relative_path)
             

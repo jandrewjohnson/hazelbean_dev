@@ -10,6 +10,12 @@ import hazelbean as hb
 import taskgraph
 import urllib
 import time
+import socket
+
+# Set timeout for all socket connections
+timeout_seconds = 5  # 5 seconds, for example
+socket.setdefaulttimeout(timeout_seconds)
+
 
 L = hb.get_logger('cloud_utils')
 
@@ -150,7 +156,7 @@ def download_google_cloud_blob(bucket_name, source_blob_name, credentials_path, 
 
     try:
         # source_blob_name = 'base_data/' + source_blob_name
-        blob = bucket.get_blob(source_blob_name) # LEARNING POINT, difference between bucket.blob and bucket.get_blob is the latter sets extra attributes like blob.size.
+        blob = bucket.get_blob(source_blob_name, timeout=3) # LEARNING POINT, difference between bucket.blob and bucket.get_blob is the latter sets extra attributes like blob.size.
     except Exception as e:
         if verbose:
             hb.log('Unable to get blob ' + str(source_blob_name) + ' with exception ' + str(e))
@@ -239,3 +245,30 @@ def list_files_in_google_drive_folder(input_folder_id, credentials_path):
         print('Files:')
         for item in items:
             print(u'{0} ({1})'.format(item['name'], item['id']))
+            
+            
+def promote_ref_path_to_base_data(input_path, pivot_path, base_data_dir):
+    # Moves an input path to the base_data_dir based on the pivot_path
+    # Doesn't currently upload to cloud but that could be done.
+    # NOTE A ref_path is never a full path as it excludes the prefix base_Data_dir, cur_dir, or wahtever dir it was found in. This function you
+    # explicitly define the pivot path
+    
+    # Get ref_path first
+    ref_path = hb.get_path_to_right_of_dir(input_path, pivot_path)
+    
+    # Check if the file exists
+    if not hb.path_exists(input_path):
+        raise NameError('The file ' + str(input_path) + ' does not exist.')
+    
+    # Check if the base_data_dir exists
+    if not hb.path_exists(base_data_dir):
+        raise NameError('The directory ' + str(base_data_dir) + ' does not exist.')
+    
+    # Check if the file is in the base_data_dir
+    joined_path = os.path.join(base_data_dir, ref_path)
+    if hb.path_exists(joined_path):
+        raise NameError('The file ' + str(joined_path) + ' is already in the base_data_dir.')
+    
+    # Move the file to the base_data_dir
+    os.rename(input_path, joined_path)
+    
