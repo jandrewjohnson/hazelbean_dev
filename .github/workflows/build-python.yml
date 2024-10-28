@@ -54,7 +54,7 @@ jobs:
             - name: Upload sdist
               uses: actions/upload-artifact@v4
               with:
-                  name: wheel
+                  name: Source distribution
                   path: dist/*.tar.gz
                   compression-level: 0
 
