@@ -10,30 +10,31 @@ jobs:
         name: Build wheels
         runs-on: ${{ matrix.os }}
         strategy:
+            fail-fast: false
             matrix:
                 os: [ubuntu-latest, windows-latest, macos-latest]
                 python-version: [3.9, "3.10", "3.11", "3.12", "3.13"]
-                steps:
-                    - uses: actions/checkout@v4
-                      with:
-                          fetch-depth: 0
-                    - name: Set up Python ${{ matrix.python-version }}
-                      uses: mamba-org/setup-micromamba@v1
-                      with:
-                          environment-name: env
-                          create-args: >-
-                              python=${{ matrix.python-version }}
-                              "numpy>2"
-                              cython
-                              python-build
-                    - name: Build wheel
-                      run: python -m build --wheel
-                    - name: Upload wheel
-                      uses: actions/upload-artifact@v4
-                      with:
-                          name: wheel
-                          path: dist/*.whl
-                          compression-level: 0
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+            - name: Set up Python ${{ matrix.python-version }}
+              uses: mamba-org/setup-micromamba@v1
+              with:
+                  environment-name: env
+                  create-args: >-
+                      python=${{ matrix.python-version }}
+                      "numpy>2"
+                      cython
+                      python-build
+            - name: Build wheel
+              run: python -m build --wheel
+            - name: Upload wheel
+              uses: actions/upload-artifact@v4
+              with:
+                  name: wheel
+                  path: dist/*.whl
+                  compression-level: 0
 
 
     build-sdist:
