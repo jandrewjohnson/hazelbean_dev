@@ -409,6 +409,157 @@ cpdef double[::, ::1] reclassify_int_to_float64_by_array(long[::, ::1] input_arr
 
 @cython.cdivision(True)
 @cython.embedsignature(True)
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cpdef float[::, ::1] reclassify_int64_to_float32_by_dict(long long [::, ::1] input_array, dict rules):
+    cdef long n_rows = input_array.shape[0]
+    cdef long n_cols = input_array.shape[1]
+    cdef long r, c
+    cdef float[::, ::1] output_array = np.empty([n_rows, n_cols], dtype=DTYPEFLOAT32)
+
+    for r in range(n_rows):
+        for c in range(n_cols):
+            output_array[r, c] = rules[input_array[r, c]]
+
+    return output_array
+
+@cython.cdivision(True)
+@cython.embedsignature(True)
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cpdef float[::, ::1] reclassify_int64_to_float32_by_array(long long [::, ::1] input_array, float[::1] rules_array):
+    cdef long n_rows = input_array.shape[0]
+    cdef long n_cols = input_array.shape[1]
+    cdef long r, c
+    cdef float[::, ::1] output_array = np.empty([n_rows, n_cols], dtype=DTYPEFLOAT32)
+
+    for r in range(n_rows):
+        for c in range(n_cols):
+            output_array[r, c] = rules_array[input_array[r, c]]
+
+    return output_array
+
+@cython.cdivision(True)
+@cython.embedsignature(True)
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cpdef double[::, ::1] reclassify_int64_to_float64_by_dict(long long [::, ::1] input_array, dict rules):
+    cdef long n_rows = input_array.shape[0]
+    cdef long n_cols = input_array.shape[1]
+    cdef long r, c
+    cdef double[::, ::1] output_array = np.empty([n_rows, n_cols], dtype=DTYPEFLOAT64)
+
+    for r in range(n_rows):
+        for c in range(n_cols):
+            output_array[r, c] = rules[input_array[r, c]]
+
+@cython.cdivision(True)
+@cython.embedsignature(True)
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cpdef double[::, ::1] reclassify_int64_to_float64_by_array(long long[::, ::1] input_array, double[::1] rules_array):
+    cdef long n_rows = input_array.shape[0]
+    cdef long n_cols = input_array.shape[1]
+    cdef long r, c
+    cdef double[::, ::1] output_array = np.empty([n_rows, n_cols], dtype=DTYPEFLOAT64)
+
+    for r in range(n_rows):
+        for c in range(n_cols):
+            output_array[r, c] = rules_array[input_array[r, c]]
+
+    return output_array
+
+@cython.cdivision(True)
+@cython.embedsignature(True)
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cpdef unsigned char[::, ::1] reclassify_int64_to_uint8_by_dict(long long[::, ::1] input_array, dict rules):
+    cdef long n_rows = input_array.shape[0]
+    cdef long n_cols = input_array.shape[1]
+    cdef long r, c
+    cdef unsigned char[::, ::1] output_array = np.empty([n_rows, n_cols], dtype=DTYPEUINT8)
+
+    for r in range(n_rows):
+        for c in range(n_cols):
+            output_array[r, c] = rules[input_array[r, c]]
+
+    return output_array
+
+@cython.cdivision(True)
+@cython.embedsignature(True)
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cpdef unsigned char[::, ::1] reclassify_int64_to_uint8_by_array(long long[::, ::1] input_array, unsigned char[::1] rules_array):
+    cdef long n_rows = input_array.shape[0]
+    cdef long n_cols = input_array.shape[1]
+    cdef long r, c
+    cdef unsigned char[::, ::1] output_array = np.empty([n_rows, n_cols], dtype=DTYPEUINT8)
+
+    for r in range(n_rows):
+        for c in range(n_cols):
+            output_array[r, c] = rules_array[input_array[r, c]]
+
+
+@cython.cdivision(True)
+@cython.embedsignature(True)
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cpdef unsigned char[::, ::1] reclassify_int64_to_int_by_dict(long long[::, ::1] input_array, dict rules):
+    cdef long n_rows = input_array.shape[0]
+    cdef long n_cols = input_array.shape[1]
+    cdef long r, c
+    cdef unsigned char[::, ::1] output_array = np.empty([n_rows, n_cols], dtype=DTYPEINT32)
+
+    for r in range(n_rows):
+        for c in range(n_cols):
+            output_array[r, c] = rules[input_array[r, c]]
+
+
+@cython.cdivision(True)
+@cython.embedsignature(True)
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cpdef unsigned char[::, ::1] reclassify_int64_to_int_by_array(long long[::, ::1] input_array, unsigned char[::1] rules_array):
+    cdef long n_rows = input_array.shape[0]
+    cdef long n_cols = input_array.shape[1]
+    cdef long r, c
+    cdef unsigned char[::, ::1] output_array = np.empty([n_rows, n_cols], dtype=DTYPEINT32)
+
+    for r in range(n_rows):
+        for c in range(n_cols):
+            output_array[r, c] = rules_array[input_array[r, c]]
+
+@cython.cdivision(True)
+@cython.embedsignature(True)
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cpdef unsigned char[::, ::1] reclassify_int64_to_int64_by_dict(long long[::, ::1] input_array, dict rules):
+    cdef long n_rows = input_array.shape[0]
+    cdef long n_cols = input_array.shape[1]
+    cdef long r, c
+    cdef unsigned char[::, ::1] output_array = np.empty([n_rows, n_cols], dtype=DTYPEINT64)
+
+    for r in range(n_rows):
+        for c in range(n_cols):
+            output_array[r, c] = rules[input_array[r, c]]
+
+
+@cython.cdivision(True)
+@cython.embedsignature(True)
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cpdef unsigned char[::, ::1] reclassify_int64_to_int64_by_array(long long[::, ::1] input_array, unsigned char[::1] rules_array):
+    cdef long n_rows = input_array.shape[0]
+    cdef long n_cols = input_array.shape[1]
+    cdef long r, c
+    cdef unsigned char[::, ::1] output_array = np.empty([n_rows, n_cols], dtype=DTYPEINT64)
+
+    for r in range(n_rows):
+        for c in range(n_cols):
+            output_array[r, c] = rules_array[input_array[r, c]]
+
+@cython.cdivision(True)
+@cython.embedsignature(True)
 @cython.boundscheck(True)
 @cython.wraparound(False)
 def reclassify_uint8_to_uint8_by_dict_with_dask(unsigned char[::, ::, ::1] input_array):

@@ -16,6 +16,8 @@ import geopandas as gpd
 import warnings
 import logging
 from hazelbean import geoprocessing
+from hazelbean import netcdf
+# .netcdf.get_cell_size_from_nc_path
 
 # # Conditional imports
 # try:
@@ -2653,6 +2655,17 @@ def reclassify_raster_hb(input_flex, rules, output_path, output_data_type=None, 
     from hazelbean.calculation_core.cython_functions import reclassify_int_to_int_by_array
     from hazelbean.calculation_core.cython_functions import reclassify_int_to_float32_by_array
     from hazelbean.calculation_core.cython_functions import reclassify_int_to_float64_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_float64_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_float64_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_float64_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int64_to_float32_by_dict
+    from hazelbean.calculation_core.cython_functions import reclassify_int64_to_float32_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int64_to_float64_by_dict
+    from hazelbean.calculation_core.cython_functions import reclassify_int64_to_float64_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int64_to_uint8_by_dict
+    from hazelbean.calculation_core.cython_functions import reclassify_int64_to_uint8_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int64_to_int_by_dict
+    from hazelbean.calculation_core.cython_functions import reclassify_int64_to_int64_by_dict
 
 
     old_rules = None # For if recasting dict to array, preserve
@@ -2844,13 +2857,13 @@ def reclassify_raster_hb(input_flex, rules, output_path, output_data_type=None, 
                                             output_data_type, output_ndv, read_datatype=1,
                                             gtiff_creation_options=hb.DEFAULT_GTIFF_CREATION_OPTIONS,
                                             calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
-            elif 2 <= input_flex.data_type <= 5 or 12 <= input_flex.data_type <= 13:
+            elif 2 <= input_flex.data_type <= 5:
                 if output_data_type == 1:
                     rules = {np.int32(k): np.uint8(v) for k, v in rules.items()}
                     base_raster_path_band = [(input_flex.path, 1), (rules, 'raw')]
 
                     hb.raster_calculator_hb(base_raster_path_band, reclassify_int_to_uint8_by_dict, output_path,
-                                            output_data_type, output_ndv, read_datatype=13,
+                                            output_data_type, output_ndv, read_datatype=5,
                                             gtiff_creation_options=hb.DEFAULT_GTIFF_CREATION_OPTIONS,
                                             calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
                 elif 2 <= output_data_type <= 5:
@@ -2858,7 +2871,7 @@ def reclassify_raster_hb(input_flex, rules, output_path, output_data_type=None, 
                     base_raster_path_band = [(input_flex.path, 1), (rules, 'raw')]
 
                     hb.raster_calculator_hb(base_raster_path_band, reclassify_int_to_int_by_dict, output_path,
-                                            output_data_type, output_ndv, read_datatype=13,
+                                            output_data_type, output_ndv, read_datatype=5,
                                             gtiff_creation_options=hb.DEFAULT_GTIFF_CREATION_OPTIONS,
                                             calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
                 elif output_data_type == 6:
@@ -2867,7 +2880,7 @@ def reclassify_raster_hb(input_flex, rules, output_path, output_data_type=None, 
                     base_raster_path_band = [(input_flex.path, 1), (rules, 'raw')]
 
                     hb.raster_calculator_hb(base_raster_path_band, reclassify_int_to_float32_by_dict, output_path,
-                                            output_data_type, output_ndv, read_datatype=13,
+                                            output_data_type, output_ndv, read_datatype=5,
                                             gtiff_creation_options=hb.DEFAULT_GTIFF_CREATION_OPTIONS,
                                             calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
                 elif output_data_type == 7:
@@ -2875,13 +2888,55 @@ def reclassify_raster_hb(input_flex, rules, output_path, output_data_type=None, 
                     base_raster_path_band = [(input_flex.path, 1), (rules, 'raw')]
 
                     hb.raster_calculator_hb(base_raster_path_band, reclassify_int_to_float32_by_dict, output_path,
-                                            output_data_type, output_ndv, read_datatype=13,
+                                            output_data_type, output_ndv, read_datatype=5,
                                             gtiff_creation_options=hb.DEFAULT_GTIFF_CREATION_OPTIONS,
                                             calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
             elif input_flex.data_type == 6:
                 raise NameError('reclassify unable to handle floats yet. Unimplemented. ALSO NOTE, if you attempt to fix this later, the rules as array method DOES NOT WORK FOR FLOATS BECAUSE OF THE INDICES NEED TO BE FLOATS, so have to use the dict() method.. ' + str(input_flex))
             elif input_flex.data_type == 7:
                 raise NameError('reclassify unable to handle floats yet. Unimplemented. ALSO NOTE, if you attempt to fix this later, the rules as array method DOES NOT WORK FOR FLOATS BECAUSE OF THE INDICES NEED TO BE FLOATS, so have to use the dict() method.. ' + str(input_flex))
+            elif 12 <= input_flex.data_type <= 13:
+                if output_data_type == 1:
+                    rules = {np.int64(k): np.uint8(v) for k, v in rules.items()}
+                    base_raster_path_band = [(input_flex.path, 1), (rules, 'raw')]
+
+                    hb.raster_calculator_hb(base_raster_path_band, reclassify_int64_to_uint8_by_dict, output_path,
+                                            output_data_type, output_ndv, read_datatype=13,
+                                            gtiff_creation_options=hb.DEFAULT_GTIFF_CREATION_OPTIONS,
+                                            calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+                elif 2 <= output_data_type <= 5:
+                    rules = {np.int64(k): np.int32(v) for k, v in rules.items()}
+                    base_raster_path_band = [(input_flex.path, 1), (rules, 'raw')]
+
+                    hb.raster_calculator_hb(base_raster_path_band, reclassify_int64_to_int_by_dict, output_path,
+                                            output_data_type, output_ndv, read_datatype=13,
+                                            gtiff_creation_options=hb.DEFAULT_GTIFF_CREATION_OPTIONS,
+                                            calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+                elif output_data_type == 6:
+
+                    rules = {np.int64(k): np.float32(v) for k, v in rules.items()}
+                    base_raster_path_band = [(input_flex.path, 1), (rules, 'raw')]
+
+                    hb.raster_calculator_hb(base_raster_path_band, reclassify_int64_to_float32_by_dict, output_path,
+                                            output_data_type, output_ndv, read_datatype=13,
+                                            gtiff_creation_options=hb.DEFAULT_GTIFF_CREATION_OPTIONS,
+                                            calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+                elif output_data_type == 7:
+                    rules = {np.int64(k): np.float64(v) for k, v in rules.items()}
+                    base_raster_path_band = [(input_flex.path, 1), (rules, 'raw')]
+
+                    hb.raster_calculator_hb(base_raster_path_band, reclassify_int64_to_float64_by_dict, output_path,
+                                            output_data_type, output_ndv, read_datatype=13,
+                                            gtiff_creation_options=hb.DEFAULT_GTIFF_CREATION_OPTIONS,
+                                            calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+                elif 12 <= output_data_type <= 13:
+                    rules = {np.int64(k): np.int64(v) for k, v in rules.items()}
+                    base_raster_path_band = [(input_flex.path, 1), (rules, 'raw')]
+
+                    hb.raster_calculator_hb(base_raster_path_band, reclassify_int64_to_int64_by_dict, output_path,
+                                            output_data_type, output_ndv, read_datatype=13,
+                                            gtiff_creation_options=hb.DEFAULT_GTIFF_CREATION_OPTIONS,
+                                            calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
             else:
                 raise NameError('reclassify unable to interpret input datatype: ' + str(input_flex))
             return hb.ArrayFrame(output_path)
@@ -2908,36 +2963,48 @@ def reclassify_raster_hb(input_flex, rules, output_path, output_data_type=None, 
                                             output_data_type, output_ndv, read_datatype=1,
                                             gtiff_creation_options=hb.DEFAULT_GTIFF_CREATION_OPTIONS,
                                             calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
-                if output_data_type == 6:
+                if output_data_type == 7:
                     base_raster_path_band = [(input_flex.path, 1), (rules.astype(np.float64), 'raw')]
                     hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_uint8_to_float64_by_array, output_path,
                                             output_data_type, output_ndv, read_datatype=1,
                                             gtiff_creation_options=hb.DEFAULT_GTIFF_CREATION_OPTIONS,
                                             calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
-            elif 2 <= input_flex.data_type <= 5 or 12 <= input_flex.data_type <= 13:
+                if 12 <= output_data_type <= 13:
+                    base_raster_path_band = [(input_flex.path, 1), (rules.astype(np.int64), 'raw')]
+                    hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_uint8_to_int64_by_array, output_path,
+                                            output_data_type, output_ndv, read_datatype=1,
+                                            gtiff_creation_options=hb.DEFAULT_GTIFF_CREATION_OPTIONS,
+                                            calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+            elif 2 <= input_flex.data_type <= 5:
                 if output_data_type == 1:
                     base_raster_path_band = [(input_flex.path, 1), (rules.astype(np.uint8), 'raw')]
                     hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int_to_uint8_by_array, output_path,
-                                            output_data_type, output_ndv, read_datatype=13,
+                                            output_data_type, output_ndv, read_datatype=5,
                                             gtiff_creation_options=hb.DEFAULT_GTIFF_CREATION_OPTIONS,
                                             calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
                 elif 2 <= output_data_type <= 5:
                     base_raster_path_band = [(input_flex.path, 1), (rules.astype(np.int8), 'raw')]
                     hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int_to_int_by_array, output_path,
-                                            output_data_type, output_ndv, read_datatype=13,
+                                            output_data_type, output_ndv, read_datatype=5,
                                             gtiff_creation_options=hb.DEFAULT_GTIFF_CREATION_OPTIONS,
                                             calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
                 elif output_data_type == 6:
                     base_raster_path_band = [(input_flex.path, 1), (rules.astype(np.float32), 'raw')]
                     # TODOO TODOOO, fast memory efficient reclassification doen't work because raster_calculator by default casts to the output type so can't pass a different type to cython.
                     hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int_to_float32_by_array, output_path,
-                                            output_data_type, output_ndv, read_datatype=13,
+                                            output_data_type, output_ndv, read_datatype=5,
                                             gtiff_creation_options=hb.DEFAULT_GTIFF_CREATION_OPTIONS,
                                             calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
                 elif output_data_type == 7:
                     base_raster_path_band = [(input_flex.path, 1), (rules.astype(np.float64), 'raw')]
                     hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int_to_float64_by_array, output_path,
-                                            output_data_type, output_ndv, read_datatype=13,
+                                            output_data_type, output_ndv, read_datatype=5,
+                                            gtiff_creation_options=hb.DEFAULT_GTIFF_CREATION_OPTIONS,
+                                            calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+                elif 12 <= output_data_type <= 13:
+                    base_raster_path_band = [(input_flex.path, 1), (rules.astype(np.float64), 'raw')]
+                    hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int_to_int64_by_array, output_path,
+                                            output_data_type, output_ndv, read_datatype=5,
                                             gtiff_creation_options=hb.DEFAULT_GTIFF_CREATION_OPTIONS,
                                             calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
             elif input_flex.data_type == 6:
@@ -2964,6 +3031,12 @@ def reclassify_raster_hb(input_flex, rules, output_path, output_data_type=None, 
                 elif output_data_type == 7:
                     base_raster_path_band = [(input_flex.path, 1), (rules.astype(np.float64), 'raw')]
                     hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int_to_float64_by_array, output_path,
+                                            output_data_type, output_ndv, read_datatype=6,
+                                            gtiff_creation_options=hb.DEFAULT_GTIFF_CREATION_OPTIONS,
+                                            calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+                elif 12 <= output_data_type <= 13:
+                    base_raster_path_band = [(input_flex.path, 1), (rules.astype(np.int64), 'raw')]
+                    hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int_to_int64_by_array, output_path,
                                             output_data_type, output_ndv, read_datatype=6,
                                             gtiff_creation_options=hb.DEFAULT_GTIFF_CREATION_OPTIONS,
                                             calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
@@ -2994,6 +3067,38 @@ def reclassify_raster_hb(input_flex, rules, output_path, output_data_type=None, 
                     base_raster_path_band = [(input_flex.path, 1), (rules.astype(np.float64), 'raw')]
                     hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int_to_float64_by_array, output_path,
                                             output_data_type, output_ndv, read_datatype=7,
+                                            gtiff_creation_options=hb.DEFAULT_GTIFF_CREATION_OPTIONS,
+                                            calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+            elif 12 <= input_flex.data_type <= 13:
+                if output_data_type == 1:
+                    base_raster_path_band = [(input_flex.path, 1), (rules.astype(np.uint8), 'raw')]
+                    hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int64_to_uint8_by_array, output_path,
+                                            output_data_type, output_ndv, read_datatype=13,
+                                            gtiff_creation_options=hb.DEFAULT_GTIFF_CREATION_OPTIONS,
+                                            calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+                elif 2 <= output_data_type <= 5:
+                    base_raster_path_band = [(input_flex.path, 1), (rules.astype(np.int8), 'raw')]
+                    hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int64_to_int_by_array, output_path,
+                                            output_data_type, output_ndv, read_datatype=13,
+                                            gtiff_creation_options=hb.DEFAULT_GTIFF_CREATION_OPTIONS,
+                                            calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+                elif output_data_type == 6:
+                    base_raster_path_band = [(input_flex.path, 1), (rules.astype(np.float32), 'raw')]
+                    # TODOO TODOOO, fast memory efficient reclassification doen't work because raster_calculator by default casts to the output type so can't pass a different type to cython.
+                    hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int64_to_float32_by_array, output_path,
+                                            output_data_type, output_ndv, read_datatype=13,
+                                            gtiff_creation_options=hb.DEFAULT_GTIFF_CREATION_OPTIONS,
+                                            calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+                elif output_data_type == 7:
+                    base_raster_path_band = [(input_flex.path, 1), (rules.astype(np.float64), 'raw')]
+                    hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int64_to_float64_by_array, output_path,
+                                            output_data_type, output_ndv, read_datatype=13,
+                                            gtiff_creation_options=hb.DEFAULT_GTIFF_CREATION_OPTIONS,
+                                            calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+                elif 12 <= output_data_type <= 13:
+                    base_raster_path_band = [(input_flex.path, 1), (rules.astype(np.int64), 'raw')]
+                    hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int64_to_int64_by_array, output_path,
+                                            output_data_type, output_ndv, read_datatype=13,
                                             gtiff_creation_options=hb.DEFAULT_GTIFF_CREATION_OPTIONS,
                                             calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
 
@@ -3136,7 +3241,7 @@ def create_buffered_polygon(input_uri, output_uri, buffer_cell_width):
 
 def get_cell_size_from_path(input_path):
     if os.path.splitext(input_path)[1] == '.nc':
-        return hb.netcdf.get_cell_size_from_nc_path(input_path)
+        return netcdf.get_cell_size_from_nc_path(input_path)
     else:
         hb.assert_path_is_gdal_readable(input_path)
 

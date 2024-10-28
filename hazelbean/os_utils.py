@@ -626,7 +626,8 @@ def get_size_of_list_of_file_paths(input_list):
 # TODOO Collapse this with recursive?
 def list_filtered_paths_nonrecursively(input_folder, include_strings=None, include_extensions=None, exclude_strings=None, exclude_extensions=None, return_only_filenames=False):
     # NOTE: the filter strings can be anywhere in the path, not just the filename.
-
+    if not hb.path_exists(input_folder):
+        raise FileNotFoundError('The input folder does not exist: ' + input_folder)
     # ONLY CHANGE
     depth = 1
 
@@ -1286,6 +1287,22 @@ def move_file(source_path, destination_path):
 def remove_at_exit(uri):
     hb.config.uris_to_delete_at_exit.append(uri)
 
+def get_path_to_right_of_dir(input_path, target_dir):
+    """Return the path to the right of the target_dir in the input_path. If the target_dir is not in the input_path, return None."""
+    if target_dir in input_path:
+        with_leading = input_path.split(target_dir)[1]
+        
+        # remove leading slashes
+        while with_leading[0] == '/' or with_leading[0] == '\\':
+            with_leading = with_leading[1:]
+            
+        return with_leading
+            
+    else:
+        return None
+    
+    
+    
 # TODOO clarify when have path_<function name>. Should i make it a module?
 def path_rename_change_dir(input_path, new_dir):
     """Change the directory of a file given its input path, preserving the name. NOTE does not do anything to the file"""

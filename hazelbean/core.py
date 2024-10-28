@@ -292,6 +292,11 @@ def create_directories(directory_list, ignore_dots_in_dirname=False):
     Returns:
         None
     """
+    if ignore_dots_in_dirname is False:
+        # if there are more than two dots in the directory name, raise an error
+        for dir_name in directory_list:
+            if dir_name.count('.') > 2:
+                hb.log("Directory given to create_directories has more than two dots in it: " + str(dir_name) + " but ignore_dots_in_dirname is False. Riiiiisky.")
     if isinstance(directory_list, str):
         directory_list = [directory_list]
     elif not isinstance(directory_list, list):
@@ -302,7 +307,7 @@ def create_directories(directory_list, ignore_dots_in_dirname=False):
         
         # NYI
         if ignore_dots_in_dirname:
-            has_extension = os.path.splitext(dir_name)[1]
+            has_extension = []
         else:
             has_extension = os.path.splitext(dir_name)[1]
         if len(has_extension) > 0:

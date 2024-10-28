@@ -301,6 +301,8 @@ class  ProjectFlow(object):
 
         self.task_names_defined = [] # Store a list of tasks defined somewhere in the target script. For convenience, e.g., when setting runtime conditionals based on function names existence.
 
+        # TODO FIX get rid of inputs dir, but it's used a lot, including in putting scenarios.csv files in the right place....
+        self.inputs_dir = getattr(self, 'inputs_dir', os.path.join(self.project_dir, 'inputs'))
         self.input_dir = getattr(self, 'input_dir', os.path.join(self.project_dir, 'input'))
         self.intermediate_dir = getattr(self, 'intermediate_dir', os.path.join(self.project_dir, 'intermediate'))
         self.output_dir = getattr(self, 'output_dir', os.path.join(self.project_dir, 'output'))
@@ -328,12 +330,14 @@ class  ProjectFlow(object):
         except:
             raise NotADirectoryError('A Project Flow object is based on defining a project_dir as its base, but we were unable to create the dir at the given path: ' + self.project_dir)
 
+        # BIG ASS-MISTAKE here, repeating inputs
         self.input_dir = os.path.join(self.project_dir, 'inputs')
+        self.inputs_dir = os.path.join(self.project_dir, 'inputs')
         self.intermediate_dir = os.path.join(self.project_dir, 'intermediate')
         self.output_dir = os.path.join(self.project_dir, 'outputs')
 
 
-    def get_path(self, relative_path, *join_path_args, possible_dirs='default', prepend_possible_dirs=None, create_shortcut=False, verbose=False):
+    def get_path(self, relative_path, *join_path_args, possible_dirs='default', prepend_possible_dirs=None, create_shortcut=False, download_destination_dir=None, strip_relative_paths_for_output=False, verbose=False):
         ### NOTE: This is a PROJECT METHOD. There is currently no hb level function cause then you'd just have to pass the project.
         
         # This is tricky cause tehre are four possible cases
@@ -343,6 +347,9 @@ class  ProjectFlow(object):
         # 4. relative path has directories, join path args is not empty
         
         path_as_inputted = relative_path
+        
+        if download_destination_dir is None:
+            download_destination_dir = self.base_data_dir
         
         
         # first get the length of the relative_path after splitting
@@ -394,7 +401,10 @@ class  ProjectFlow(object):
         relative_joined_path = relative_path
 
         if possible_dirs == 'default':
-            possible_dirs = [self.intermediate_dir, self.input_dir, self.base_data_dir]
+            possible_dirs = [self.cur_dir, self.input_dir, self.base_data_dir]
+            
+            # I Just changed this to be cur_dir instead of intermeiate_dir for base_data_promotion to work
+            # possible_dirs = [self.intermediate_dir, self.input_dir, self.base_data_dir]
         
         intermediate_path_override = os.path.join(self.intermediate_dir, relative_path)
             
@@ -406,6 +416,8 @@ class  ProjectFlow(object):
 
         if not hasattr(self, 'input_bucket_name'):
             self.input_bucket_name = default_bucket
+        if not hasattr(self, 'data_credentials_path'):
+            self.data_credentials_path = None
         
         if self.input_bucket_name is None:
             self.input_bucket_name = default_bucket
@@ -424,27 +436,23 @@ class  ProjectFlow(object):
         # It is releative, so search the possible dirs
         for possible_dir in possible_dirs:
             if type(possible_dir) is str:
-                destination_file_name = os.path.join(self.base_data_dir, relative_path)
+                if strip_relative_paths_for_output:
+                    destination_file_name = os.path.join(download_destination_dir, relative_path.split(os.sep)[-1])
+                else:
+                    destination_file_name = os.path.join(download_destination_dir, relative_path)
+                
                 if possible_dir == 'input_bucket_name':
                     source_blob_name =  relative_path.replace('\\', '/')
-                    
-                    # Interesting undefined choice here, if it was only found in the bucket, it should go in base data yeah? or in the project input dir? or in the cur_dir?
-                    
-                    # destination_file_name = os.path.join(self.cur_dir, relative_path)
 
                     if verbose:
                             hb.log('p.get_path looking online at: ' + str(self.input_bucket_name) + ' ' + str(source_blob_name) + ' ' + str(self.data_credentials_path) + ' ' + str(destination_file_name))
 
-                    # destination_file_name = source_blob_name
-                    
-                    
-                    
                     if hasattr(self, 'data_credentials_path'):
                         if self.data_credentials_path is not None:
                             try: # If the file is in the cload, download it.
                                 if verbose:
                                     hb.log('Downloading ' + str(source_blob_name) + ' from ' + str(self.input_bucket_name) + ' to ' + str(destination_file_name) + ' in ' + str(self.cur_dir))
-                                cloud_utils.download_google_cloud_blob(self.input_bucket_name, source_blob_name, self.data_credentials_path, destination_file_name, chunk_size=262144*5,)
+                                cloud_utils.download_google_cloud_blob(self.input_bucket_name, source_blob_name, self.data_credentials_path, destination_file_name, chunk_size=262144*5, verbose=verbose)
                                 if create_shortcut:
                                     os_utils.create_shortcut(destination_file_name, intermediate_path_override)
                                 return path
@@ -453,7 +461,7 @@ class  ProjectFlow(object):
                         else:
                             try:
                                 url = "https://storage.googleapis.com" + '/' + self.input_bucket_name + '/' + source_blob_name
-                                cloud_utils.download_google_cloud_blob(self.input_bucket_name, source_blob_name, self.data_credentials_path, destination_file_name, chunk_size=262144*5,)
+                                cloud_utils.download_google_cloud_blob(self.input_bucket_name, source_blob_name, self.data_credentials_path, destination_file_name, chunk_size=262144*5, verbose=verbose)
                                 if create_shortcut:
                                     os_utils.create_shortcut(destination_file_name, intermediate_path_override)                            
                                 
@@ -464,7 +472,7 @@ class  ProjectFlow(object):
                         self.data_credentials_path = None
                         try:
                             url = "https://storage.googleapis.com" + '/' + self.input_bucket_name + '/' + source_blob_name
-                            cloud_utils.download_google_cloud_blob(self.input_bucket_name, source_blob_name, self.data_credentials_path, destination_file_name, chunk_size=262144*5,)
+                            cloud_utils.download_google_cloud_blob(self.input_bucket_name, source_blob_name, self.data_credentials_path, destination_file_name, chunk_size=262144*5, verbose=verbose)
                             if create_shortcut:
                                 os_utils.create_shortcut(destination_file_name, intermediate_path_override)                            
                             
