@@ -47,7 +47,7 @@ jobs:
               with:
                   environment-name: env
                   create-args: >-
-                      python="3.12"
+                      python=3.12
                       python-build
             - name: Build source distribution
               run: python -m build --sdist
