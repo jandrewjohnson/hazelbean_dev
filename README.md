@@ -41,7 +41,7 @@ See the author's personal webpage, https://justinandrewjohnson.com/ for more det
 
 ## Project Flow
 
-One key component of Hazelbean is that it manages directories, base_data, etc. using a concept called ProjectFlow. ProjectFlow defines a tree of tasks that can easily be run in parallel where needed and keeping track of task-dependencies. ProjectFlow borrows heavily in concept (though not in code) from the task_graph library produced by Rich Sharp but adds a predefined file structure suited to research and exploration tasks. 
+One key component of Hazelbean is that it manages directories, base_data, etc. using a concept called ProjectFlow. ProjectFlow defines a tree of tasks that can easily be run in parallel where needed and keeping track of task-dependencies. ProjectFlow borrows heavily in concept (though not in code) from the task_graph library produced by Rich Sharp but adds a predefined file structure suited to research and exploration tasks.
 
 ### Project Flow notes
 
@@ -74,7 +74,7 @@ def example_task_function(p):
 ```
 **Important Non-Obvious Note**
 
-Importing the script will define function(s) to add "tasks", which take the ProjectFlow object as an argument and returns it after potential modification. 
+Importing the script will define function(s) to add "tasks", which take the ProjectFlow object as an argument and returns it after potential modification.
 
 ```python
 def add_all_tasks_to_task_tree(p):
@@ -82,4 +82,21 @@ def add_all_tasks_to_task_tree(p):
 ```
 
 
+## Uploading builds to PyPI via Twine
 
+To upload built packages to PyPI, you will need an API key from your PyPI
+account, and you will need a local install of the `twine` utility.  To install
+`twine`, you can use either `pip` or `mamba`.  For example:
+
+```bash
+pip install twine
+```
+
+Once you have built the package for your target platform(s), you can upload the
+file to PyPI with twine via the `twine` command.  For example, if you have all
+of your target distributions in the `dist/` directory, you can upload them all
+with:
+
+```bash
+twine upload --username=__token__ --password="$PYPI_API_TOKEN" dist/*
+```
