@@ -24,8 +24,6 @@ jobs:
                   environment-name: env
                   create-args: >-
                       python=${{ matrix.python-version }}
-                      "numpy>2"
-                      cython
                       python-build
             - name: Build wheel
               run: python -m build --wheel
@@ -50,8 +48,6 @@ jobs:
                   environment-name: env
                   create-args: >-
                       python="3.13"
-                      "numpy>2"
-                      cython
                       python-build
             - name: Build source distribution
               run: python -m build --sdist
