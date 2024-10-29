@@ -22,7 +22,7 @@ setup(
         "gdal",
         "rioxarray",
         "gdal",
-        "pptx",
+        "python-pptx",
         "pandas",
         "pillow",
         "anytree",
