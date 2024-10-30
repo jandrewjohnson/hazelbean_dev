@@ -8,7 +8,6 @@ import pandas as pd
 import geopandas as gpd
 from collections import OrderedDict
 import logging
-import fiona
 
 import hazelbean as hb
 
