@@ -658,7 +658,63 @@ def df_merge_list_of_csv_paths(csv_path_list, output_csv_path=None, on='index', 
   
         
     return merged_df
+def df_pivot_vertical_up(df, columns, values, agg_labels=None, filter_dict=None):
+    if agg_labels is None:
+        agg_labels = []
+        
+    if isinstance(df, str):
+        df = pd.read_csv(df)
+            
+    # Filter 
+    if filter_dict is not None:
+        condition = True 
+        for key, value in filter_dict.items():
+            if key in df.columns:
+                if isinstance(value, list):
+                    condition &= (df[key].isin(value))
+                else:
+                    condition &= (df[key] == value)
+        df = df.loc[condition]    
 
+    # Choose which indices. Default is everything that's not in columns or values
+    indices = [i for i in df.columns if i not in columns and i not in values and i not in agg_labels and i not in columns]
+
+    has_duplicates = False
+    correct_vals = 1
+    if agg_labels:
+        # Count the unique values in each aggregated col
+        for agg_label in agg_labels:
+            n_properly_aggregated = len(df[agg_label].unique())
+            correct_vals *= n_properly_aggregated
+            
+    df_p = df.pivot_table(index=indices, columns=columns, values=values, aggfunc=['sum', 'count'])
+    
+    # Flatten the multiindex
+    df_p.columns = ['_'.join(map(str, col[::-1])).strip() for col in df_p.columns.values]
+
+    # Check if any count cols have more than the number of entries the agg_label suggests it should have
+
+    for col in df_p.columns:
+        if 'count' in col:
+            if df_p[col].max() > correct_vals:
+                has_duplicates = True
+                
+    if not has_duplicates:
+        # Drop count cols
+        df_p = df_p[[i for i in df_p.columns if 'count' not in i]]
+        
+        # Rename sums back to just name
+        df_p.columns = [i.replace('sum_', '').replace('_sum', '') for i in df_p.columns]
+    
+    # Make all indices columns
+    df_p = df_p.reset_index()
+
+    
+    
+    return df_p
+                
+    
+    
 def df_merge(left_input, 
              right_input, 
              how=None, 

@@ -951,6 +951,26 @@ def zonal_statistics_merge(
         hb.remove_at_exit(zone_ids_raster_path)
     return df
 
+
+def replace_label_via_correspondence(input_label, correspondence_df, output='name'):
+    
+    # Get the names of the _label and output names
+    potential_input_columns = [i for i in correspondence_df.columns if i.endswith('_label')]
+    if len(potential_input_columns) != 1:
+        raise NameError('correspondence_df must have exactly one column ending in _label.')
+    input_column = potential_input_columns[0]
+    
+    potential_output_columns = [i for i in correspondence_df.columns if i.endswith('_' + output)]
+    if len(potential_output_columns) != 1:
+        raise NameError('correspondence_df must have exactly one column ending in _' + output + '.')
+    output_column = potential_output_columns[0]
+    
+    
+    # Select the row where the input_label is in the 'input' column
+    row = correspondence_df[correspondence_df[input_column] == input_label]
+    return row[output_column].values[0]
+    
+
 def extract_correspondence_and_categories_dicts_from_df_cols(input_df, broad_col, narrow_col):
     set_differences = hb.compare_sets_as_dict(input_df[broad_col], input_df[narrow_col], return_amount='all')
 
