@@ -669,6 +669,8 @@ def df_pivot_vertical_up(df, columns, values, agg_labels=None, filter_dict=None)
     if filter_dict is not None:
         condition = True 
         for key, value in filter_dict.items():
+            if value.startswith('int('):
+                value = int(value.split('int(')[1].split(')')[0])
             if key in df.columns:
                 if isinstance(value, list):
                     condition &= (df[key].isin(value))
@@ -1427,3 +1429,12 @@ def concatenate_list_of_df_paths(input_df_paths, output_path=None, verbose=False
         hb.create_directories(output_path)
         concatenated_df.to_csv(output_path, index=False)
     return concatenated_df
+
+def isnan(input_):
+    if isinstance(input_, str):
+        if input_.lower() == 'nan':
+            return True
+        else:
+            return False
+    else:
+        return np.isnan(input_)
