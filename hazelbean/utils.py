@@ -669,7 +669,7 @@ def df_pivot_vertical_up(df, columns, values, agg_labels=None, filter_dict=None)
     if filter_dict is not None:
         condition = True 
         for key, value in filter_dict.items():
-            if value.startswith('int('):
+            if str(value).startswith('int('):
                 value = int(value.split('int(')[1].split(')')[0])
             if key in df.columns:
                 if isinstance(value, list):

@@ -1474,6 +1474,12 @@ def add_lines_to_file(input_file, new_lines):
         for line in new_lines:
             file.write(line + '\n')
 
+def add_file_to_file(input_file, new_file):
+    with open(input_file, 'a') as file:
+        with open(new_file, 'r') as new_file:
+            file.write(new_file.read())
+            
+    
 
 
 def path_replace_extension(input_path, new_extension):
