@@ -658,9 +658,14 @@ def df_merge_list_of_csv_paths(csv_path_list, output_csv_path=None, on='index', 
   
         
     return merged_df
-def df_pivot_vertical_up(df, columns, values, agg_labels=None, filter_dict=None):
+def df_pivot_vertical_up(df, row_indices, column_indices, values, agg_labels=None, filter_dict=None, non_summarized_vars_to_keep='all'):
     if agg_labels is None:
-        agg_labels = []
+        agg_labels = []    
+        
+    if row_indices == 'all':
+        row_indices = [i for i in df.columns if i not in column_indices and i != values and i not in agg_labels and i not in filter_dict]
+        
+
         
     if isinstance(df, str):
         df = pd.read_csv(df)
@@ -678,9 +683,6 @@ def df_pivot_vertical_up(df, columns, values, agg_labels=None, filter_dict=None)
                     condition &= (df[key] == value)
         df = df.loc[condition]    
 
-    # Choose which indices. Default is everything that's not in columns or values
-    indices = [i for i in df.columns if i not in columns and i not in values and i not in agg_labels and i not in columns]
-
     has_duplicates = False
     correct_vals = 1
     if agg_labels:
@@ -689,10 +691,25 @@ def df_pivot_vertical_up(df, columns, values, agg_labels=None, filter_dict=None)
             n_properly_aggregated = len(df[agg_label].unique())
             correct_vals *= n_properly_aggregated
             
-    df_p = df.pivot_table(index=indices, columns=columns, values=values, aggfunc=['sum', 'count'])
+    if non_summarized_vars_to_keep == 'all':
+        non_summarized_vars_to_keep = [i for i in df.columns if i not in column_indices and i not in agg_labels and i not in filter_dict and i != values]
+    elif isinstance(non_summarized_vars_to_keep, list):
+        pass
+    else:
+        raise NameError('non_summarized_vars_to_keep must be all or a list of strings.')
+    
+    non_summarized_df = df[non_summarized_vars_to_keep]
+    
+    
+    df_p = df.pivot_table(index=row_indices, columns=column_indices, values=values, aggfunc=['sum', 'count'])
+    
     
     # Flatten the multiindex
     df_p.columns = ['_'.join(map(str, col[::-1])).strip() for col in df_p.columns.values]
+    
+    # Merge back in the non_summarized vars
+    if non_summarized_df.size > 0:
+        df_p = pd.merge(non_summarized_df, df_p, on=row_indices, how="left")
 
     # Check if any count cols have more than the number of entries the agg_label suggests it should have
 
@@ -716,7 +733,40 @@ def df_pivot_vertical_up(df, columns, values, agg_labels=None, filter_dict=None)
     return df_p
                 
     
+def df_merge_quick(
+    left_df, 
+    right_df, 
+    left_on=False,
+    right_on=False,
+    how=None,
+    check_identicality=True,
+    raise_error_if_not_identical=False, 
+    ):
     
+    """ Quick merge of two dataframe where it will drop the right columns that are identical to the left columns. This
+    Prevents the annoying proliferation of _x and _y columns when they're the same."""
+    
+    comparison = hb.df_compare_column_labels_as_dict(left_df, right_df)
+    right_df = right_df.rename(columns={i: i + '_right' for i in comparison['intersection'] if i != left_on and i != right_on})
+
+    # Merge
+    merged_df = pd.merge(left_df, right_df, how=how, left_on=left_on, right_on=right_on)
+    
+    if check_identicality:
+        keep_right = []
+        for col in comparison['intersection']:
+            right_col = col + '_right'
+            if col in merged_df.columns and right_col in merged_df.columns:
+                if not hb.arrays_equal_ignoring_order(merged_df[col].values, merged_df[right_col].values): # , ignore_values=[-9999]        
+                    if raise_error_if_not_identical:
+                        raise NameError('Column ' + col + ' is not identical between left and right dataframes. Contents: ' + str(left_df[col].values) + ' ' + str(right_df[col].values))
+                    else:
+                        print('Column ' + col + ' is not identical between left and right dataframes. Contents: ' + str(left_df[col].values) + ' ' + str(right_df[right_col].values))
+            keep_right.append(right_col)
+        merged_df = merged_df[[i for i in merged_df.columns if i[-7:-1] != '_right' or i in keep_right]]
+        
+    return merged_df
+        
 def df_merge(left_input, 
              right_input, 
              how=None, 
@@ -1363,8 +1413,8 @@ def list_find_duplicates(lst):
 
 
 def arrays_equal_ignoring_order(array1, array2, ignore_values=None):
-    unique1, counts1 = np.unique(array1, return_counts=True)
-    unique2, counts2 = np.unique(array2, return_counts=True)
+    unique1, counts1 = np.unique(array1.astype(str), return_counts=True)
+    unique2, counts2 = np.unique(array2.astype(str), return_counts=True)
     
     if ignore_values is not None:
         for ignore_value in ignore_values:
