@@ -1199,7 +1199,10 @@ def save_array_as_geotiff(array, out_uri, geotiff_uri_to_match=None, ds_to_match
 
 def extract_features_in_shapefile_by_attribute(input_path, output_path, column_name, column_filter):
     gdf = gpd.read_file(input_path)
-    # print(gdf)
+    print(gdf)
+    print('column_name: ' + str(column_name))
+    print('column_filter: ' + str(column_filter))
+    
     gdf_out = gdf.loc[gdf[column_name] == column_filter]
     
     if len(gdf_out) == 0:
