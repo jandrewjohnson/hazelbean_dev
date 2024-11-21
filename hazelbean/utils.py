@@ -683,6 +683,9 @@ def df_pivot_vertical_up(df, row_indices, column_indices, values, agg_labels=Non
                     condition &= (df[key] == value)
         df = df.loc[condition]    
 
+    if df.size == 0:
+        raise NameError(f'No data after filtering. Filter dict: {filter_dict}, original columns {df.columns}')
+    
     has_duplicates = False
     correct_vals = 1
     if agg_labels:
@@ -714,7 +717,7 @@ def df_pivot_vertical_up(df, row_indices, column_indices, values, agg_labels=Non
     # Check if any count cols have more than the number of entries the agg_label suggests it should have
 
     for col in df_p.columns:
-        if 'count' in col:
+        if col.endswith(('_count')):
             if df_p[col].max() > correct_vals:
                 has_duplicates = True
                 
