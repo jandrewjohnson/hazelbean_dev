@@ -81,8 +81,11 @@ def add_all_tasks_to_task_tree(p):
     p.generated_kernels_task = p.add_task(example_task_function)
 ```
 
+## Creating a new release
 
-## Uploading builds to PyPI via Twine
+Github Actions will now generate a new set of binaries for each release, upload them to PyPI and then trigger a condaforge build. All you need to do is make and tag the release.
+
+## Manually  builds to PyPI via Twine
 
 To upload built packages to PyPI, you will need an API key from your PyPI
 account, and you will need a local install of the `twine` utility.  To install
