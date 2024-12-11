@@ -19,6 +19,14 @@ socket.setdefaulttimeout(timeout_seconds)
 
 L = hb.get_logger('cloud_utils')
 
+def is_internet_available(timeout=1):
+    try: 
+        socket.create_connection(("8.8.8.8", 53), timeout=timeout)
+        return True
+    except:
+        return False
+        
+
 def gsutil_download_url(url, target_path, skip_if_target_exists=False):
     gsutil_path = url.replace('https://storage.cloud.google.com/', 'gs://')
     command = 'gsutil cp ' + gsutil_path + ' ' + target_path
@@ -156,14 +164,14 @@ def download_google_cloud_blob(bucket_name, source_blob_name, credentials_path, 
 
     try:
         # source_blob_name = 'base_data/' + source_blob_name
-        blob = bucket.get_blob(source_blob_name, timeout=3) # LEARNING POINT, difference between bucket.blob and bucket.get_blob is the latter sets extra attributes like blob.size.
+        blob = bucket.get_blob(source_blob_name, timeout=(1,2)) # LEARNING POINT, difference between bucket.blob and bucket.get_blob is the latter sets extra attributes like blob.size.
     except Exception as e:
         if verbose:
             hb.log('Unable to get blob ' + str(source_blob_name) + ' with exception ' + str(e))
 
     if blob is None:
-        # if verbose:
-        hb.log('Unable to get blob ' + str(source_blob_name) + ' from ' + source_blob_name + ' in ' + bucket_name + '.')
+        if verbose:
+            hb.log('Unable to get blob ' + str(source_blob_name) + ' from ' + source_blob_name + ' in ' + bucket_name + '.')
 
 
     L.info('Starting to download to ' + destination_file_name + ' from ' + source_blob_name + ' in ' + bucket_name + '. The size of the object is ' + str(blob.size))

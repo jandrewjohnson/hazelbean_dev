@@ -600,8 +600,8 @@ def zonal_statistics(
     if not zones_vector_path and not zone_ids_raster_path:
         raise NameError('Must provide either zones_vector_path or zone_ids_raster_path.')
     
-    if not zones_vector_path and not csv_output_path:
-        raise NameError('Must provide either zones_vector_path or csv_output_path.')
+    # if not zones_vector_path and not csv_output_path:
+    #     raise NameError('Must provide either zones_vector_path or csv_output_path.')
 
 
     # First just test that all files are present
@@ -679,7 +679,7 @@ def zonal_statistics(
             
     else:
         if id_min is None or id_max is None:
-            
+            # START HERE: DASK FAILS BECAUSE RIOXARRAY DOESNT SUPPORT 64bit int. wtf...
             hb.log('Finding uniques to get min and max')
             from hazelbean import parallel
             from hazelbean.parallel import unique_count_dask

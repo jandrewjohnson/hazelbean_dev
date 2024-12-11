@@ -1,27 +1,11 @@
 # TO RUN THIS in vscode, make sure to use the run in IntegratedTerminal launch setup so that you can enter your username and password.
 
-
 import os, sys, shutil, setuptools, subprocess
 sys.path.insert(0, 'c:/users/jajohns/Files/Research/hazelbean/hazelbean_dev')
 import hazelbean as hb
 
-# TODO switch testing suite to use method docced in https://www.kennethreitz.org/essays/repository-structure-and-python, ie sys.path.insert(0, os.path.abspath('..')) or as below
-"""
-To give the individual tests import context, create a tests/context.py file:
 
-import os
-import sys
-sys.path.insert(0, os.path.abspath('..'))
-
-import sample
-Then, within the individual test modules, import the module like so:
-
-from .context import sample
-"""
-
-
-
-release_name = 'hazelbean_1.5.4'
+release_name = 'hazelbean_1.6.0'
 version = release_name.split('_')[1]
 target_dir = '..'
 release_dir = os.path.join('../../', 'hazelbean_stable')
@@ -135,69 +119,6 @@ setup(
 )
 """
 
-old_setup_string = """
-from setuptools import setup, find_packages
-from distutils.extension import Extension
-from Cython.Distutils import build_ext
-from Cython.Build import cythonize
-import numpy
-import os
-
-_REQUIREMENTS = [
-    'anytree',
-    'geopandas',
-    'pygeoprocessing',
-    'natcap.invest',
-    'rtree',
-    'scipy',
-    'fiona',
-    'netCDF4',
-    'statsmodels',
-    'sklearn',
-    ]
-
-with open("README.md", "r") as fh:
-    long_description = fh.read()
-
-packages=find_packages()
-include_package_data=True
-
-setup(
-  name = 'hazelbean',
-  packages = packages,
-  version = '""" + version + """',
-  description = 'Geospatial research tools',
-  long_description = 'Geospatial research tools for economics and sustainability science.',
-  author = 'Justin Andrew Johnson',
-  url = 'https://github.com/jandrewjohnson/hazelbean',
-  download_url = 'https://github.com/jandrewjohnson/hazelbean',
-  keywords = ['geospatial', 'raster', 'shapefile', 'sustainability science'],
-  classifiers = ["Programming Language :: Python :: 3"],
-  install_requires=_REQUIREMENTS,
-  #cmdclass={'build_ext': build_ext},
-  #ext_modules=[Extension("cython_functions", ["hazelbean/calculation_core/cython_functions.c"]),
-  #             Extension("aspect_ratio_array_functions", ["hazelbean/calculation_core/aspect_ratio_array_functions.c"]),
-  #             ]
-
-  ext_modules=cythonize(
-    [Extension(
-        "hazelbean.calculation_core.cython_functions",
-        sources=["hazelbean/calculation_core/cython_functions.pyx"],
-        include_dirs=[
-            numpy.get_include(),
-            'hazelbean/calculation_core/cython_functions'],
-        language="c++",
-    ),
-     Extension(
-         "hazelbean.calculation_core.aspect_ratio_array_functions",
-         sources=[
-             "hazelbean/calculation_core/aspect_ratio_array_functions.pyx"],
-         include_dirs=[numpy.get_include()],
-         language="c++")],
-    )
-
-)
-"""
 
 setup_py_file_path = os.path.join(release_dir, 'setup.py')
 print('Writing setup to ' + setup_py_file_path)

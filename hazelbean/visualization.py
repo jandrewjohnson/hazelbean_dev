@@ -1329,8 +1329,8 @@ def plot_geodataframe_shapefile(gdf, column,
             bins = list(np.linspace(vmin, vmax, num_steps))
 
         # I deprecated this until pysal new api is finished
-        custom_cbar_categories = User_Defined(gdf[column], bins)
-        values = np.array(custom_cbar_categories.yb)
+        # custom_cbar_categories = User_Defined(gdf[column], bins)
+        # values = np.array(custom_cbar_categories.yb)
 
         fig, ax = plt.subplots(figsize=figsize)
 

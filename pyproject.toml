@@ -1,6 +1,6 @@
 [project]
 name = "hazelbean"
-description = "This should be a description."
+description = "Collection of geospatial algorithms, parallel computation utilities and project management tools."
 readme = "README.md"
 requires-python = ">=3.6"  # TODO: verify; assuming 3.6 b/c fstrings
 license = { file = "LICENSE" }
