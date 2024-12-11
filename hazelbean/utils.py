@@ -744,6 +744,7 @@ def df_merge_quick(
     how=None,
     check_identicality=True,
     raise_error_if_not_identical=False, 
+    verbose=False,
     ):
     
     """ Quick merge of two dataframe where it will drop the right columns that are identical to the left columns. This
@@ -764,7 +765,8 @@ def df_merge_quick(
                     if raise_error_if_not_identical:
                         raise NameError('Column ' + col + ' is not identical between left and right dataframes. Contents: ' + str(left_df[col].values) + ' ' + str(right_df[col].values))
                     else:
-                        print('Column ' + col + ' is not identical between left and right dataframes. Contents: ' + str(left_df[col].values) + ' ' + str(right_df[right_col].values))
+                        if verbose:
+                            print('Column ' + col + ' is not identical between left and right dataframes. Contents: ' + str(left_df[col].values) + ' ' + str(right_df[right_col].values))
             keep_right.append(right_col)
         merged_df = merged_df[[i for i in merged_df.columns if i[-7:-1] != '_right' or i in keep_right]]
         
@@ -1483,6 +1485,9 @@ def concatenate_list_of_df_paths(input_df_paths, output_path=None, verbose=False
         concatenated_df.to_csv(output_path, index=False)
     return concatenated_df
 
+def is_nan(input_):
+    return isnan(input_)
+
 def isnan(input_):
     if isinstance(input_, str):
         if input_.lower() == 'nan':
@@ -1491,3 +1496,4 @@ def isnan(input_):
             return False
     else:
         return np.isnan(input_)
+    

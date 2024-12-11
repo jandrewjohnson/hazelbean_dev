@@ -2611,6 +2611,7 @@ def cast_to_np64(a):
 
 
 def reclassify_raster_hb(input_flex, rules, output_path, output_data_type=None, array_threshold=10000, match_path=None, output_ndv=None, invoke_full_callback=False, verbose=False):
+    # BROKEN, fails on Memory View is not Initialized.  Use reclassify_raster instead until fixed
     """NOTE: The rules dict NEEDS to have the existing values that remain unchanged included, otherwise they get written to zero
     match_path required in the event that input_flex is not a path.
     array_threshold # If the max value in the rules is less than this, it will convert to an array where position indicates rules key. 10x faster at 255 length."""

@@ -1455,19 +1455,29 @@ def copy_shutil_copytree(src, dst, symlinks=False, ignore=None):
         else:
             shutil.copy2(s, d)
 
-def replace_in_file_via_dict(input_path, output_path, replace_dict):
+def replace_in_file_via_dict(input_path, replace_dict, output_path=None):
     """Replace all instances of keys in replace_dict with their values in the input_path file, writing to output_path.
     
     NOTE, that elements in replace_dict will be replaced in order, so is you need to modify something and then replace the modified
     thing, make sure the modification replacement happens first.
     
     """
+    
+    if not output_path:
+        output_path = input_path
     with open(input_path, 'r') as file:
         filedata = file.read()
     for key in replace_dict:
         filedata = filedata.replace(key, replace_dict[key])
     with open(output_path, 'w') as file:
         file.write(filedata)
+
+
+def replace_in_string_via_dict(input_string, replace_dict):
+    for key in replace_dict:
+        input_string = input_string.replace(key, replace_dict[key])
+    return input_string
+
 
 def add_lines_to_file(input_file, new_lines):
     with open(input_file, 'a') as file:

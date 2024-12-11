@@ -132,7 +132,7 @@ def path_needs_rerender(render_src_path, render_dst_path, minimum_size_check=0, 
 def path_assert_exists(path, minimum_size_check=0, verbose=False):
     path_exists(path, minimum_size_check=minimum_size_check, verbose=verbose, assert_true=True)
 
-def path_exists(path, minimum_size_check=0, verbose=False, assert_true=False):
+def path_exists(path, minimum_size_check=0, dir_must_have_content=False, verbose=False, assert_true=False):
     # os.path.exists throws an exception rather than False if given None. This version resolves None as False.
     # set minimum_size_check to None if 0 size is okay.
     # if verbose:
@@ -152,9 +152,19 @@ def path_exists(path, minimum_size_check=0, verbose=False, assert_true=False):
             raise AssertionError('Path given to hazelbean.path_exists() was None.')
         return False
     if os.path.isdir(path):
-        if verbose:
-            L.info('Path exists: ' + str(path) + ' exists but it is a directory.')
-        return True
+        if dir_must_have_content:
+            if len(os.listdir(path)) == 0:
+                if verbose:
+                    L.info('Path exists: ' + str(path) + ' exists but it is a directory with no content.')
+                return False
+            else:
+                if verbose:
+                    L.info('Path exists: ' + str(path) + ' exists and it is a directory with content.')
+                return True
+        else:
+            if verbose:
+                L.info('Path exists: ' + str(path) + ' exists but it is a directory.')
+            return True
 
     # if isinstance(path, hb.InputPath):
     #     path = path.get_path(hb.path_filename(path))
@@ -203,6 +213,9 @@ def path_exists(path, minimum_size_check=0, verbose=False, assert_true=False):
                 if assert_true:
                     raise NameError('Path does not exist: ' + str(path))
                 return False
+
+def path_has_content():
+    path_exists(path, minimum_size_check=0, verbose=False, assert_true=False)
 
 def path_all_exist(*args, verbose=False):
     for i in args:

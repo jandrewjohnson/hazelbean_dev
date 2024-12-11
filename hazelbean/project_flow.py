@@ -11,6 +11,7 @@ import os
 import importlib.util
 import sys
 import inspect
+import pandas as pd
 
 # try:
 #     import anytree
@@ -448,7 +449,7 @@ class  ProjectFlow(object):
                     if verbose:
                             hb.log('p.get_path looking online at: ' + str(self.input_bucket_name) + ' ' + str(source_blob_name) + ' ' + str(self.data_credentials_path) + ' ' + str(destination_file_name))
 
-                    if hasattr(self, 'data_credentials_path'):
+                    if hasattr(self, 'data_credentials_path') and cloud_utils.is_internet_available(1):
                         if self.data_credentials_path is not None:
                             try: # If the file is in the cload, download it.
                                 if verbose:
@@ -470,16 +471,19 @@ class  ProjectFlow(object):
                             except:  # If it wasn't there, assume it is a local file that needs to be created.
                                 pass 
                     else:
-                        self.data_credentials_path = None
-                        try:
-                            url = "https://storage.googleapis.com" + '/' + self.input_bucket_name + '/' + source_blob_name
-                            cloud_utils.download_google_cloud_blob(self.input_bucket_name, source_blob_name, self.data_credentials_path, destination_file_name, chunk_size=262144*5, verbose=verbose)
-                            if create_shortcut:
-                                os_utils.create_shortcut(destination_file_name, intermediate_path_override)                            
-                            
-                            return path
-                        except:  # If it wasn't there, assume it is a local file that needs to be created.
-                            pass                             
+                        if cloud_utils.is_internet_available(1):
+                            self.data_credentials_path = None
+                            try:
+                                url = "https://storage.googleapis.com" + '/' + self.input_bucket_name + '/' + source_blob_name
+                                cloud_utils.download_google_cloud_blob(self.input_bucket_name, source_blob_name, self.data_credentials_path, destination_file_name, chunk_size=262144*5, verbose=verbose)
+                                if create_shortcut:
+                                    os_utils.create_shortcut(destination_file_name, intermediate_path_override)                            
+                                
+                                return path
+                            except:  # If it wasn't there, assume it is a local file that needs to be created.
+                                pass   
+                        else:
+                            pass
 
                 else:
 
@@ -1300,6 +1304,15 @@ class DataRef(str):
             dirs = [dirs]
         for dir in dirs:
             self.registered_dirs.append(dir)
+
+
+
+def get_dummy_scenarios_df():
+    # Make a dataframe with a single row and a single column named scenario_type with the value 'baseline'
+    df = pd.DataFrame(data={'scenario_type': ['baseline'], 'years': [2015]})
+    return df
+
+
 
 if __name__=='__main__':
     print ('cannot run by itself.')
