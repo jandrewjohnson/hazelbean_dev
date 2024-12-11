@@ -29,6 +29,7 @@ jobs:
                   create-args: >-
                       python=${{ matrix.python-version }}
                       python-build
+                      twine
             - name: Build wheel
               run: python -m build --wheel
             - name: Upload wheel
@@ -59,6 +60,7 @@ jobs:
                   create-args: >-
                       python=3.12
                       python-build
+                      twine
             - name: Build source distribution
               run: python -m build --sdist
             - name: Upload sdist
