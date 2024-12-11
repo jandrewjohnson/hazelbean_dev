@@ -43,7 +43,7 @@ jobs:
               run: twine upload --username="__token__" --password=${{secrets.PYPI_APIKEY}} dist/*.whl
             - name: Add whls to release
               if: github.event_name == 'release'
-              run: gh release upload ${{github.head_ref}} dist/*.whl
+              run: gh release upload ${{github.ref_name}} dist/*.whl
 
 
     build-sdist:
@@ -75,5 +75,5 @@ jobs:
               run: twine upload --username="__token__" --password=${{secrets.PYPI_APIKEY}} dist/*.tar.gz
             - name: Add whls to release
               if: github.event_name == 'release'
-              run: gh release upload ${{github.head_ref}} dist/*.tar.gz
+              run: gh release upload ${{github.ref_name}} dist/*.tar.gz
 
