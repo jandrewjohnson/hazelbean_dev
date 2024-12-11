@@ -33,6 +33,8 @@ jobs:
                   name: Wheel for ${{ matrix.os }}-py${{ matrix.python-version }}
                   path: dist/*.whl
                   compression-level: 0
+            # - name: Upload to pypi
+            #   run: twine upload --username="__token__" --password=${{secrets.PYPI_APIKEY}} dist/*.whl
 
 
     build-sdist:
@@ -57,4 +59,8 @@ jobs:
                   name: Source distribution
                   path: dist/*.tar.gz
                   compression-level: 0
+
+            # - name: Upload to pypi
+            #   run: twine upload --username="__token__" --password=${{secrets.PYPI_APIKEY}} dist/*.tar.gz
+
 
