@@ -1,5 +1,9 @@
 name: Build packages
-on: [push, pull_request, release]
+on: 
+    release:
+        types: [published]
+    push:
+    pull_request:
 
 defaults:
     run:
