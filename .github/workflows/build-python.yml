@@ -38,10 +38,10 @@ jobs:
                   path: dist/*.whl
                   compression-level: 0
             - name: Upload to pypi
-              if: ${{github.event_name=="release"}}
+              if: github.event_name == 'release'
               run: twine upload --username="__token__" --password=${{secrets.PYPI_APIKEY}} dist/*.whl
             - name: Add whls to release
-              if: ${{github.event_name=="release"}}
+              if: github.event_name == 'release'
               run: gh release upload ${{github.head_ref}} dist/*.whl
 
 
@@ -69,9 +69,9 @@ jobs:
                   compression-level: 0
 
             - name: Upload to pypi
-              if: ${{github.event_name=="release"}}
+              if: github.event_name == 'release'
               run: twine upload --username="__token__" --password=${{secrets.PYPI_APIKEY}} dist/*.tar.gz
             - name: Add whls to release
-              if: ${{github.event_name=="release"}}
+              if: github.event_name == 'release'
               run: gh release upload ${{github.head_ref}} dist/*.tar.gz
 
