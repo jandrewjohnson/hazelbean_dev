@@ -1,5 +1,5 @@
 name: Build packages
-on: 
+on:
     release:
         types: [published]
     push:
@@ -8,6 +8,9 @@ on:
 defaults:
     run:
         shell: bash -l {0}
+
+env:
+    GH_TOKEN: ${{ github.token }}
 
 jobs:
     build-wheels:
