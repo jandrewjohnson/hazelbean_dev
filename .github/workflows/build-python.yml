@@ -76,9 +76,9 @@ jobs:
                   compression-level: 0
 
             - name: Upload to pypi
-              if: github.event_name == 'release' && runner.os != 'Linux'
+              if: github.event_name == 'release'
               run: twine upload --username="__token__" --password=${{secrets.PYPI_APIKEY}} dist/*.tar.gz
             - name: Add whls to release
-              if: github.event_name == 'release' && runner.os != 'Linux'
+              if: github.event_name == 'release'
               run: gh release upload ${{github.ref_name}} dist/*.tar.gz
 
