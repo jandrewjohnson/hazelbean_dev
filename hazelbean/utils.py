@@ -658,12 +658,22 @@ def df_merge_list_of_csv_paths(csv_path_list, output_csv_path=None, on='index', 
   
         
     return merged_df
-def df_pivot_vertical_up(df, row_indices, column_indices, values, agg_labels=None, filter_dict=None, non_summarized_vars_to_keep='all'):
-    if agg_labels is None:
-        agg_labels = []    
+def df_pivot_vertical_up(df, row_indices, column_indices, values, aggregation_dict=None, filter_dict=None, non_summarized_vars_to_keep='all'):
+    """This is turning out to be a very good funciton and i almost renamed it just pivot_vertical but I still need
+    to test if it works for non vertical data."""
+    if column_indices is None:
+        column_indices = []
+    
+    if aggregation_dict is None:
+        aggregation_dict = {}   
+
+    if filter_dict is None: 
+        filter_dict = {} 
+
         
+    fullydrop_filter_dict = {k: v for k, v in filter_dict.items() if type(v) != list} 
     if row_indices == 'all':
-        row_indices = [i for i in df.columns if i not in column_indices and i != values and i not in agg_labels and i not in filter_dict]
+        row_indices = [i for i in df.columns if i not in column_indices and i != values and i not in aggregation_dict and i not in fullydrop_filter_dict]
         
 
         
@@ -671,7 +681,7 @@ def df_pivot_vertical_up(df, row_indices, column_indices, values, agg_labels=Non
         df = pd.read_csv(df)
             
     # Filter 
-    if filter_dict is not None:
+    if filter_dict:
         condition = True 
         for key, value in filter_dict.items():
             if str(value).startswith('int('):
@@ -688,23 +698,25 @@ def df_pivot_vertical_up(df, row_indices, column_indices, values, agg_labels=Non
     
     has_duplicates = False
     correct_vals = 1
-    if agg_labels:
+    if aggregation_dict:
         # Count the unique values in each aggregated col
-        for agg_label in agg_labels:
+        for agg_label, operation in aggregation_dict.items():
             n_properly_aggregated = len(df[agg_label].unique())
             correct_vals *= n_properly_aggregated
             
     if non_summarized_vars_to_keep == 'all':
-        non_summarized_vars_to_keep = [i for i in df.columns if i not in column_indices and i not in agg_labels and i not in filter_dict and i != values]
+        non_summarized_vars_to_keep = [i for i in df.columns if i not in column_indices and i not in aggregation_dict and i not in fullydrop_filter_dict and i != values]
     elif isinstance(non_summarized_vars_to_keep, list):
         pass
     else:
         raise NameError('non_summarized_vars_to_keep must be all or a list of strings.')
     
     non_summarized_df = df[non_summarized_vars_to_keep]
+    non_summarized_df = non_summarized_df.set_index(row_indices)
+    # Set rwo indices to those in row_indices
     
-    
-    df_p = df.pivot_table(index=row_indices, columns=column_indices, values=values, aggfunc=['sum', 'count'])
+    all_agg_funcs = ['sum', 'count']        
+    df_p = df.pivot_table(index=row_indices, columns=column_indices, values=values, aggfunc=all_agg_funcs)
     
     
     # Flatten the multiindex
@@ -712,7 +724,7 @@ def df_pivot_vertical_up(df, row_indices, column_indices, values, agg_labels=Non
     
     # Merge back in the non_summarized vars
     if non_summarized_df.size > 0:
-        df_p = pd.merge(non_summarized_df, df_p, on=row_indices, how="left")
+        df_p = pd.merge(non_summarized_df, df_p, on=row_indices, how="inner")
 
     # Check if any count cols have more than the number of entries the agg_label suggests it should have
 
@@ -722,17 +734,43 @@ def df_pivot_vertical_up(df, row_indices, column_indices, values, agg_labels=Non
                 has_duplicates = True
                 
     if not has_duplicates:
-        # Drop count cols
-        df_p = df_p[[i for i in df_p.columns if 'count' not in i]]
         
-        # Rename sums back to just name
-        df_p.columns = [i.replace('sum_', '').replace('_sum', '') for i in df_p.columns]
-    
-    # Make all indices columns
-    df_p = df_p.reset_index()
+        # If there is 1 or less aggregations in the aggregation_dict, drop the other ones
+        if len(aggregation_dict) == 0:
+            # Then just take the sum
+            to_drop = [i for i in all_agg_funcs if i != 'sum']
+            
+        elif len(aggregation_dict) <= 1:
+            to_drop = [i for i in all_agg_funcs if i not in aggregation_dict.values()]
+        else:
+            to_drop = []
+            
+        # Drop anything not in the dict
+        for i in to_drop:
+            df_p = df_p[[j for j in df_p.columns if not j.endswith(i)]]
+        
+        if len(aggregation_dict) == 0:
+            # Then just take the sum
+            df_p = df_p.rename(columns={j: j.replace('_sum', '') for j in df_p.columns}) 
+        else:
+            to_keep = [i for i in all_agg_funcs if i in aggregation_dict.values()]
+            for i in to_keep:
+                df_p = df_p.rename(columns={j: j.replace('_' + i, '') for j in df_p.columns})
 
-    
-    
+        
+
+            # # Rename sums back to just name
+        # df_p.columns = [i.replace('sum_', '').replace('_sum', '') for i in df_p.columns]
+    # # Make all indices columns
+    # df_p = df_p.reset_inex()
+
+    # Keep only named indices
+    if df_p.index.name or isinstance(df_p.index, pd.MultiIndex):
+        df_p = df_p.reset_index()
+        df_p = df_p.loc[:, df_p.columns[df_p.columns != 'index']]
+    else:
+        df_p = df_p.reset_index(drop=True)    
+        
     return df_p
                 
     
@@ -1494,6 +1532,79 @@ def isnan(input_):
             return True
         else:
             return False
+    elif not input_:
+        return False
     else:
         return np.isnan(input_)
     
+
+def df_move_col_before_col(df, col_to_move, col_to_put_it_before):
+    cols = df.columns.tolist()
+    cols.remove(col_to_move)
+    idx = cols.index(col_to_put_it_before)
+    cols.insert(idx, col_to_move)
+    return df[cols]
+
+def df_move_col_after_col(df, col_to_move, col_to_put_it_after):
+    cols = df.columns.tolist()
+    cols.remove(col_to_move)
+    idx = cols.index(col_to_put_it_after)
+    cols.insert(idx + 1, col_to_move)
+    return df[cols]
+
+def parse_df_string_to_python_object(input_df_string, verbose=False):
+    if hb.isnan(input_df_string):
+        return None
+    elif input_df_string is None:
+        return None
+    elif input_df_string == 'None':
+        return None
+    elif input_df_string == '':
+        return None
+    
+    if ' ' in input_df_string:
+        split = input_df_string.split(' ')
+        for i in split:
+            if ':' in i:
+                output_type = 'dict'
+                to_return = {}
+            elif i.startswith('int('):
+                output_type = 'int'
+            elif i.startswith('float('):
+                output_type = 'float'
+            elif i.startswith('str('):
+                output_type = 'str'
+            else:
+                output_type = 'list'
+                to_return = []
+        
+        for i in split:
+            if output_type == 'dict':
+                if ':' in i:
+                    split2 = i.split(':')
+                    key = split2[0]
+                    value = split2[1]
+                    value = parse_df_string_to_python_object(value)
+                    to_return[key] = value
+            elif output_type == 'int':
+                to_return = int(i[4:-1])
+            elif output_type == 'float':
+                to_return = float(i[6:-1])
+            elif output_type == 'str':
+                to_return = str(i[4:-1])
+            else:
+                to_return.append(parse_df_string_to_python_object(i))
+    else:
+
+        if input_df_string.startswith('int('):
+            to_return = int(input_df_string[4:-1])
+        elif input_df_string.startswith('float('):
+            to_return = float(input_df_string[6:-1])
+        elif input_df_string.startswith('str('):
+            to_return = str(input_df_string[4:-1])
+        else:
+            to_return = input_df_string
+
+    if verbose:
+        hb.log('parse_df_string_to_python_object:\n' + input_df_string + '\nparsed to\n' + str(to_return))
+    return to_return

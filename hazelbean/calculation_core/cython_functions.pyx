@@ -16,7 +16,7 @@ from osgeo import gdal, osr, ogr
 # NOTE, both imports are required. cimport adds extra information to the pyd while the import actually defines numppy
 import numpy as np
 cimport numpy as np
-from numpy cimport ndarray
+from numpy cimport ndarray 
 
 from libc.math cimport sin
 from libc.math cimport fabs

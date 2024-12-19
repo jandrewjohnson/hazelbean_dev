@@ -34,6 +34,7 @@ L = hb.get_logger('hb_spatial_utils')
 
 
 def is_path_gdal_readable(input_path):
+    hb.path_exists(input_path, assert_true=True)
     if input_path is None:
         return False
     if not os.path.exists(input_path):

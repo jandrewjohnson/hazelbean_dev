@@ -37,7 +37,6 @@ setup(
         "netcdf4",
         "aenum",
         "descartes",
-        "mpl-toolkits",
         "google-auth-oauthlib",
         "google-auth",
         "winshell",
