@@ -18,6 +18,7 @@ import pandas as pd
 # except:
 #     'anytree is probably not needed except for project flow.'
 import anytree
+import platform
 
 L = hb.get_logger('project_flow')
 L.setLevel(logging.INFO)
@@ -977,8 +978,13 @@ class  ProjectFlow(object):
                     num_iterations = replacement_lengths[0]
 
                     # self.run_in_parallel = True # TODOO Connect to UI
+                    MAX_WINDOWS_WORKERS = 58
                     if not getattr(self, 'num_workers', None):
                         self.num_workers = multiprocessing.cpu_count() - 1
+                        #check which os
+                        if platform.system() == 'Windows' and self.num_workers > MAX_WINDOWS_WORKERS:
+                            self.num_workers = MAX_WINDOWS_WORKERS
+                            
                     results = []
 
                     if task.run_in_parallel:
