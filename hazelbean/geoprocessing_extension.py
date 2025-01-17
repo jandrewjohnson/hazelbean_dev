@@ -427,6 +427,7 @@ def warp_raster_hb(
         calc_raster_stats=False,
         add_overviews=False,
         specific_overviews_to_add=None,
+        target_aligned_pixels=True
 ):
     """Resize/resample raster to desired pixel size, bbox and projection.
 
@@ -552,7 +553,9 @@ def warp_raster_hb(
     warp_options = []
     if n_threads:
         warp_options.append('NUM_THREADS=%d' % n_threads)
-    warp_options = None # Changed to see if fix gdal warp options error
+        
+    warp_options.append('targetAlignedPik')
+    # warp_options = None # Changed to see if fix gdal warp options error
 
     mask_vector_path = None
     mask_layer_name = None
@@ -595,6 +598,7 @@ def warp_raster_hb(
         outputType=output_data_type,
         srcNodata=src_ndv,
         dstNodata=dst_ndv,
+        targetAlignedPixels=target_aligned_pixels,
     )
     # TODOO decided not to implement parallel calculation of unique values list when making pyramids, but might be a nice optional addon.
     if calc_raster_stats:

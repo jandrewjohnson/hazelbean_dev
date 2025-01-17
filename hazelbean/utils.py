@@ -3,6 +3,7 @@ import geopandas as gpd
 import pprint
 from collections import OrderedDict
 import numpy as np
+import json
 
 import hazelbean as hb
 import math
@@ -691,6 +692,9 @@ def df_pivot_vertical_up(df, row_indices, column_indices, values, aggregation_di
                     condition &= (df[key].isin(value))
                 else:
                     condition &= (df[key] == value)
+            else:
+                # condition &= (df[key] == value)
+                raise NameError(f'Filter key {key} not in dataframe columns {df.columns}')
         df = df.loc[condition]    
 
     if df.size == 0:
@@ -720,7 +724,17 @@ def df_pivot_vertical_up(df, row_indices, column_indices, values, aggregation_di
     
     
     # Flatten the multiindex
-    df_p.columns = ['_'.join(map(str, col[::-1])).strip() for col in df_p.columns.values]
+    def op(x):
+            
+        # Check if it's a flaoat and if it is, return it as an int
+        if isinstance(x, float):
+            return str(int(x))
+        else:
+            return str(x)
+    
+    a = df_p.columns.values
+    df_p.columns = ['_'.join(map(op, col[::-1])).strip() for col in df_p.columns.values]
+    
     
     # Merge back in the non_summarized vars
     if non_summarized_df.size > 0:
@@ -1535,7 +1549,10 @@ def isnan(input_):
     elif not input_:
         return False
     else:
-        return np.isnan(input_)
+        try:
+            return np.isnan(input_)
+        except:
+            False
     
 
 def df_move_col_before_col(df, col_to_move, col_to_put_it_before):
@@ -1552,59 +1569,250 @@ def df_move_col_after_col(df, col_to_move, col_to_put_it_after):
     cols.insert(idx + 1, col_to_move)
     return df[cols]
 
-def parse_df_string_to_python_object(input_df_string, verbose=False):
-    if hb.isnan(input_df_string):
+def parse_df_element_to_python_object(input_df_element, verbose=False):
+    
+    
+    # Check if it evaluates to none
+    if hb.isnan(input_df_element):
         return None
-    elif input_df_string is None:
+    elif input_df_element is None:
         return None
-    elif input_df_string == 'None':
+    elif input_df_element == 'None':
         return None
-    elif input_df_string == '':
+    elif input_df_element == '':
         return None
     
-    if ' ' in input_df_string:
-        split = input_df_string.split(' ')
-        for i in split:
-            if ':' in i:
-                output_type = 'dict'
-                to_return = {}
-            elif i.startswith('int('):
-                output_type = 'int'
-            elif i.startswith('float('):
-                output_type = 'float'
-            elif i.startswith('str('):
-                output_type = 'str'
-            else:
-                output_type = 'list'
-                to_return = []
+
+    
+    if 'int' in str(type(input_df_element)):
+        return input_df_element
+    
+    if 'float' in str(type(input_df_element)):
+        return input_df_element
+    
+    if 'str' in str(type(input_df_element)) or 'object' in str(type(input_df_element)):
         
-        for i in split:
-            if output_type == 'dict':
-                if ':' in i:
-                    split2 = i.split(':')
-                    key = split2[0]
-                    value = split2[1]
-                    value = parse_df_string_to_python_object(value)
-                    to_return[key] = value
-            elif output_type == 'int':
-                to_return = int(i[4:-1])
-            elif output_type == 'float':
-                to_return = float(i[6:-1])
-            elif output_type == 'str':
-                to_return = str(i[4:-1])
-            else:
-                to_return.append(parse_df_string_to_python_object(i))
-    else:
+        # Strip leading and trailing spaces
+        input_df_element = input_df_element.strip()    
+    
+        # Check if it's verbatim json
+        is_json = False
+        if (input_df_element.startswith('{') and input_df_element.endswith('}')) or (input_df_element.startswith('[') and input_df_element.endswith(']')):
+            try:
+                s = json.loads(input_df_element)
+                is_json = True
+                return s
+            except:
+                is_json = False
+            
+        could_be_json = False
+        if not is_json:
+            new_input_df_string = '{' + input_df_element + '}'
+            try:
+                s = json.loads(new_input_df_string)
+                could_be_json = True
+                return s
+            except:
+                could_be_json = False
+            new_input_df_string = '[' + input_df_element + ']'
+            try:
+                s = json.loads(new_input_df_string)
+                could_be_json = True
+                return s
+            except:
+                could_be_json = False
+                
+        # Then it's not jsonable
+        return input_df_element
+                
+        
+                
+                
 
-        if input_df_string.startswith('int('):
-            to_return = int(input_df_string[4:-1])
-        elif input_df_string.startswith('float('):
-            to_return = float(input_df_string[6:-1])
-        elif input_df_string.startswith('str('):
-            to_return = str(input_df_string[4:-1])
-        else:
-            to_return = input_df_string
+    
+    
+    
+    # print('input_df_string', input_df_string)
+    
+    # terminal_types = ['int(', 'float(', 'str(', 'bool(', '"', "'", '{', '[']
+    
+    # # Cast to string becasue pandas will interpret ints as ints lol!
+    # input_df_string = str(input_df_string)
+    
+    # # Check if input_df_string starts with a terminal type
+    # for terminal_type in terminal_types:
+    #     if input_df_string.startswith(terminal_type):
+    #         if terminal_type == 'int(':
+    #             return int(json.loads(input_df_string[4:-2]))
+    #         elif terminal_type == 'float(':
+    #             return float(json.loads(input_df_string[6:-2]))
+    #         elif terminal_type == 'str(':
+    #             return str(json.loads(input_df_string[4:-2]))
+    #         elif terminal_type == 'bool(':
+    #             return bool(json.loads(input_df_string[5:-2]))
+    #         elif terminal_type == '"':
+    #             return str(json.loads(input_df_string[1:-1]))
+    #         elif terminal_type == "'":
+    #             return str(json.loads(input_df_string[1:-1]))
+    #         elif terminal_type == "{":
+    #             return json.loads(input_df_string)
+    #         elif terminal_type == "[":
+    #             return json.loads(input_df_string)
+    #         else:
+    #             'not a terminal type'
+    # # Then it's a basic type
+    # try:
+    #     float(input_df_string)
+    #     floatable = True
+    # except:
+    #     floatable = False
+    
+    # try:
+    #     int(input_df_string)
+    #     intable = True  
+    # except:
+    #     intable = False
+        
+    # if '.' in input_df_string and floatable:
+    #     return float(input_df_string)
+    # elif intable:
+    #     return int(input_df_string)
+    # else:
+    #     return str(input_df_string)    
 
-    if verbose:
-        hb.log('parse_df_string_to_python_object:\n' + input_df_string + '\nparsed to\n' + str(to_return))
-    return to_return
+    # # Check if it's an iterator
+    # explicit_iterator_types = ['[', '{']    
+    # for explicit_iterator_type in explicit_iterator_types:
+    #     if input_df_string.startswith(explicit_iterator_type):
+    #         if explicit_iterator_type == '[':
+    #             input_df_string = input_df_string.replace(', ', ',').replace(' ', ',')
+    #             return [parse_df_element_to_python_object(i) for i in input_df_string[1:-2].split(',')]
+    #         elif explicit_iterator_type == '{':
+    #             input_df_string = input_df_string.replace(', ', ',').replace(' ', ',')
+    #             return {i.split(':')[0]: parse_df_element_to_python_object(i.split(':')[1]) for i in input_df_string[1:-2].split(',')}
+            
+            
+    # # Check if it's an implied iterator
+    # has_implicit_iterator = False
+    # implicit_iterator_types = [', ', ' ', ',']
+    # for implicit_iterator_type in implicit_iterator_types:
+    #     if implicit_iterator_type in input_df_string:
+    #         has_implicit_iterator = True
+            
+    # if has_implicit_iterator:
+    #     # Replace all of them with a uniform one
+    #     input_df_string = input_df_string.replace(implicit_iterator_types[0], ',').replace(implicit_iterator_types[1], ',')
+    #     split_input = input_df_string.split(implicit_iterator_types[-1])
+    #     for item in split_input:
+    #         if ':' in item:
+    #             return {item.split(':')[0]: parse_df_element_to_python_object(item.split(':')[1]) }
+    #         else:
+    #             return [parse_df_element_to_python_object(i) for i in item]
+            
+    # # Then it's a basic type
+    # try:
+    #     float(input_df_string)
+    #     floatable = True
+    # except:
+    #     floatable = False
+    
+    # try:
+    #     int(input_df_string)
+    #     intable = True  
+    # except:
+    #     intable = False
+        
+    # if '.' in input_df_string and floatable:
+    #     return float(input_df_string)
+    # elif intable:
+    #     return int(input_df_string)
+    # else:
+    #     return str(input_df_string)
+    
+    
+    
+    
+    
+    # Check if it's json
+    
+    # # Check if it is an iterable
+    # if ' ' in input_df_string or ',' in input_df_string:
+    #     split = input_df_string.split(' ').split(', ').split(',')
+    #     for i in split:
+    #         if ':' in i:
+    #             output_type = 'dict'
+    #             to_return = {}
+    #         elif i.startswith('{'):
+    #             output_type = 'dict'
+    #             to_return = {}
+    #         elif i.startswith('['):
+    #             output_type = 'list'
+    #             to_return = []
+    #         elif i.startswith('int('):
+    #             output_type = 'int'
+    #         elif i.startswith('float('):
+    #             output_type = 'float'
+    #         elif i.startswith('str('):
+    #             output_type = 'str'
+    #         else:
+    #             output_type = 'list'
+    #             to_return = []
+        
+    #     for i in split:
+    #         if output_type == 'dict':
+    #             if ':' in i:
+    #                 split2 = i.split(':')
+    #                 key = split2[0]
+    #                 value = split2[1]
+    #                 value = parse_df_element_to_python_object(value)
+    #                 to_return[key] = value
+    #         elif output_type == 'int':
+    #             to_return = int(i[4:-1])
+    #         elif output_type == 'float':
+    #             to_return = float(i[6:-1])
+    #         elif output_type == 'str':
+    #             to_return = str(i[4:-1])
+    #         else:
+    #             to_return.append(parse_df_element_to_python_object(i))
+    # else:
+        
+    #     if ':' in input_df_string:
+    #         output_type = 'dict'
+    #         to_return = {}
+    #         split = input_df_string.split(':')
+    #         to_return[split[0]] = split[1]
+    #     elif input_df_string.startswith('{'):
+    #         output_type = 'dict'
+    #         to_return = {}
+    #         removed_brackets = input_df_string[1:-1]
+    #         split = input_df_string.split(':')
+    #         to_return[split[0]] = split[1]            
+            
+    #     elif input_df_string.startswith('['):
+    #         output_type = 'list'
+    #         to_return = []
+    #         to_return.append(input_df_string(i))
+    #     elif i.startswith('int('):
+    #         output_type = 'int'
+    #     elif i.startswith('float('):
+    #         output_type = 'float'
+    #     elif i.startswith('str('):
+    #         output_type = 'str'
+    #     else:
+    #         output_type = 'list'
+    #         to_return = []        
+    
+        
+
+    #     if input_df_string.startswith('int('):
+    #         to_return = int(input_df_string[4:-1])
+    #     elif input_df_string.startswith('float('):
+    #         to_return = float(input_df_string[6:-1])
+    #     elif input_df_string.startswith('str('):
+    #         to_return = str(input_df_string[4:-1])
+    #     else:
+    #         to_return = input_df_string
+
+    # if verbose:
+    #     hb.log('parse_df_element_to_python_object:\n' + input_df_string + '\nparsed to\n' + str(to_return))
+    # return to_return

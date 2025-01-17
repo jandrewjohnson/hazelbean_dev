@@ -495,6 +495,7 @@ def resample_to_match(input_path,
                       calc_raster_stats=False,
                       add_overviews=False,
                       pixel_size_override=None,
+                      target_aligned_pixels=True,
                       verbose=False,
                       ):
     if pixel_size_override is None:
@@ -564,6 +565,7 @@ def resample_to_match(input_path,
                       dst_ndv=dst_ndv,
                       calc_raster_stats=calc_raster_stats,
                       add_overviews=add_overviews,
+                      target_aligned_pixels=target_aligned_pixels,
     )
 
 

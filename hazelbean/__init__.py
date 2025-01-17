@@ -3,6 +3,9 @@ import sys, time, os
 
 # Set hb level options
 import pandas as pd
+
+print('hazealbean __init__.py at ' + str(__file__))
+
 # Set pandas maximum width to be 1000
 pd.set_option('display.max_columns', 1000)
 pd.set_option('display.width', 1000)

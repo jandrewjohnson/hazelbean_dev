@@ -18,6 +18,7 @@ import pygeoprocessing.geoprocessing as pgp
 from pygeoprocessing.geoprocessing import *
 from hazelbean.calculation_core import cython_functions
 from osgeo import gdal, ogr, osr
+from hazelbean import cloud_utils
 
 
 
@@ -47,6 +48,10 @@ def raster_to_polygon(input_raster_path, output_vector_path, id_label, dissolve_
     fld = ogr.FieldDefn(id_label, ogr.OFTInteger)
     dst_layer.CreateField(fld)
     dst_field = dst_layer.GetLayerDefn().GetFieldIndex(id_label)
+    
+    def callback(complete, message, cb_data):
+        hb.log('Complete: ' + str(complete) + '% ' + ' from convert_id_raster_to_polygons on ' + str(input_raster_path))
+        return 1    
 
     gdal.Polygonize(srcband, None, dst_layer, dst_field, [], callback=None )
 
@@ -884,7 +889,7 @@ def zonal_statistics(
         
         # Keep only where the id is greater than zero
         if output_column_prefix + '_sums' in df.columns:
-            df = df[df[output_column_prefix + '_sums'] > 0]
+            df = df[(df[output_column_prefix + '_sums'] > 0) | (df[output_column_prefix + '_counts'] > 0)]
         else: # Then it is an enumeration
             df = df[~(df[[i for i in df.columns if i != 'id']] == 0).all(axis=1)]
             
@@ -985,6 +990,8 @@ def extract_correspondence_and_categories_dicts_from_df_cols(input_df, broad_col
 
 def convert_id_raster_to_polygons(input_raster_path, output_vector_path, dst_layer_name='id', raster_band=1):
     # TODOO THIS IS TOTALLY BROKEN. Not sure why. Would be good to include.
+    # Use raster_to_polygon isntead
+    
     # this allows GDAL to throw Python Exceptions
     gdal.UseExceptions()
     hb.path_assert_exists(input_raster_path)
@@ -1012,8 +1019,44 @@ def convert_id_raster_to_polygons(input_raster_path, output_vector_path, dst_lay
     
     
     
+def vector_super_simplify(input_vector_path, id_column_label, blur_size, output_path, remove_temp_files=True):
+    """
+    Simplify a vector file by rasterizing it on the id_column, then blurring it with mode_resampling, then vectorizing it back
+    """
+
+    gdf = gpd.read_file(input_vector_path)
+    
+    match_raster_refpath = hb.ha_per_cell_ref_paths[blur_size]
     
     
+    processing_size_arcseconds = 10.0
+    
+    
+    base_data_dir = 'data'
+    match_raster_path = os.path.join(base_data_dir, match_raster_refpath)
+    cloud_utils.download_gdrive_refpath(match_raster_path, base_data_dir)
+    
+    # Rasterize on id_column
+    output_raster_path = os.path.splitext(output_path)[0] + '_raster_ids.tif'
+    convert_polygons_to_id_raster(input_vector_path, output_raster_path, match_raster_path,
+                                  id_column_label, data_type=None, ndv=None, all_touched=None, compress=True)
+
+
+    raster_blurred_path = os.path.splitext(output_path)[0] + '_raster_blurred.tif'
+    
+
+
+
+
+    # Polygonize output_raster_path
+    output_vector_path = os.path.splitext(output_raster_path)[0] + '_vectorized.gpkg'
+    raster_to_polygon(output_raster_path, output_vector_path, id_column_label)
+    
+    smoothed_vector_path = os.path.splitext(output_raster_path)[0] + 'smoothed.gpkg'
+    input_vector_path = output_vector_path
+    gdf = gpd.read_file(input_vector_path).to_crs(epsg=3857)
+    gdf['geometry'] = gdf['geometry'].buffer(5000).buffer(-5000)
+    gdf.to_file(smoothed_vector_path, driver='GPKG')
     
     
     

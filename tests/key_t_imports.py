@@ -11,6 +11,7 @@ from  hazelbean.geoprocessing import warp_raster
 
 hb.timer('1')
 
+from hazelbean.calculation_core import aspect_ratio_array_functions
 from hazelbean.calculation_core.aspect_ratio_array_functions import cython_calc_proportion_of_coarse_res_with_valid_fine_res
 
 hb.timer('2')

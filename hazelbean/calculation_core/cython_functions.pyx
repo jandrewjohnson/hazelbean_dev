@@ -1093,7 +1093,6 @@ def allocate_among_rank_arrays(ndarray[DTYPEINT32_t, ndim=2] initial_classes not
 
         if cont_sum == 0:
             cont = 0
-
         ticks += 1
 
     return changed_cells

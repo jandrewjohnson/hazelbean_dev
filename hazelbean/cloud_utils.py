@@ -280,3 +280,40 @@ def promote_ref_path_to_base_data(input_path, pivot_path, base_data_dir):
     # Move the file to the base_data_dir
     os.rename(input_path, joined_path)
     
+    
+def download_gdrive_refpath(ref_path, base_data_dir=None, data_credentials_path=None, input_bucket_name=None, create_shortcut=False, intermediate_path_override=None, verbose=False):
+    
+    source_blob_name =  ref_path.replace('\\', '/')
+    default_bucket = 'gtap_invest_seals_2023_04_21'
+    if input_bucket_name is None:
+        input_bucket_name = default_bucket
+    
+    if base_data_dir is None:
+        base_data_dir = '.'
+        
+    destination_file_path = os.path.join(base_data_dir, ref_path)
+    
+    if hb.path_exists(destination_file_path):
+    
+        if is_internet_available(1):
+            if data_credentials_path is not None:
+                try: # If the file is in the cload, download it.
+                    if verbose:
+                        hb.log('Downloading ' + str(source_blob_name) + ' from ' + str(input_bucket_name) + ' to ' + str(destination_file_path))
+                    download_google_cloud_blob(input_bucket_name, source_blob_name, data_credentials_path, destination_file_path, chunk_size=262144*5, verbose=verbose)
+                except: # If it wasn't there, assume it is a local file that needs to be created.
+                    hb.log('The file ' + str(source_blob_name) + ' was not found in the cloud. Assuming it is a local file that needs to be created.')
+                return destination_file_path
+            else:
+                try:
+                    download_google_cloud_blob(input_bucket_name, source_blob_name, data_credentials_path, destination_file_path, chunk_size=262144*5, verbose=verbose)
+                except:  # If it wasn't there, assume it is a local file that needs to be created.
+                    hb.log('The file ' + str(source_blob_name) + ' was not found in the cloud. Assuming it is a local file that needs to be created.')
+                return destination_file_path
+        else:
+
+            hb.log('No internet connection. Assuming the file ' + str(source_blob_name) + ' is a local file that needs to be created.')
+            return destination_file_path
+    else:
+        hb.log('The file ' + str(destination_file_path) + ' already exists. Skipping download.')
+        return destination_file_path
