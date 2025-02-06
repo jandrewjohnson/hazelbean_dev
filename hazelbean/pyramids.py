@@ -15,25 +15,9 @@ import geopandas as gpd
 
 L = hb.get_logger('pyramids', logging_level='info')
 
-## Consider if i should include match_paths
-# # The ha per cell paths also can be used when writing new tifs as the match path.
-# p.match_10sec_path = p.ha_per_cell_10sec_path
-# p.match_300sec_path = p.ha_per_cell_300sec_path
-# p.match_900sec_path = p.ha_per_cell_900sec_path
-# p.match_1800sec_path = p.ha_per_cell_1800sec_path
-# p.match_3600sec_path = p.ha_per_cell_3600sec_path
-
-# p.match_paths = {}
-# p.match_paths[10.0] = p.match_10sec_path
-# p.match_paths[300.0] = p.match_300sec_path
-# p.match_paths[900.0] = p.match_900sec_path
-# p.match_paths[1800.0] = p.match_1800sec_path
-# p.match_paths[3600.0] = p.match_3600sec_path
-
-
-
 # Define the resolutions compatible with pyramid calculation as key = arcseconds, value = resolution in 64 bit notation, precisely defined with the right amount of significant digits.
 pyramid_compatible_arcseconds = [
+    1.0,
     10.0,
     30.0,
     150.0,
@@ -47,6 +31,7 @@ pyramid_compatible_arcseconds = [
     ]
 
 pyramid_compatible_resolution_to_arcseconds = {}
+pyramid_compatible_resolution_to_arcseconds[0.0002777777777777777775] =    1.0
 pyramid_compatible_resolution_to_arcseconds[0.002777777777777778] =    10.0
 pyramid_compatible_resolution_to_arcseconds[0.008333333333333333] =    30.0
 pyramid_compatible_resolution_to_arcseconds[0.008333333333333333 * 5] =    150.0
@@ -59,9 +44,10 @@ pyramid_compatible_resolution_to_arcseconds[4.0] = 14400.0
 pyramid_compatible_resolution_to_arcseconds[10.0] = 36000.0
 
 pyramid_compatible_resolutions = {}
+pyramid_compatible_resolutions[1.0] =     0.0002777777777777777775
 pyramid_compatible_resolutions[10.0] =    0.002777777777777778
 pyramid_compatible_resolutions[30.0] =    0.008333333333333333
-pyramid_compatible_resolutions[150.0] =    0.008333333333333333 * 5
+pyramid_compatible_resolutions[150.0] =   0.008333333333333333 * 5
 pyramid_compatible_resolutions[300.0] =   0.08333333333333333
 pyramid_compatible_resolutions[900.0] =   0.25
 pyramid_compatible_resolutions[1800.0] =  0.5
@@ -72,6 +58,7 @@ pyramid_compatible_resolutions[36000.0] = 10.0
 
 # Define the bounds of what should raise an assertion that the file is close but not exactly matching one of the supported resolutions.
 pyramid_compatible_resolution_bounds = {}
+pyramid_compatible_resolution_bounds[1.0] =    (0.0002777777, -0.0002777778)
 pyramid_compatible_resolution_bounds[10.0] =    (0.0027777, 0.00277778)
 pyramid_compatible_resolution_bounds[30.0] =    (0.0083333, 0.00833334)
 pyramid_compatible_resolution_bounds[150.0] =    (0.0083333*5, 0.00833334*5)
@@ -84,6 +71,7 @@ pyramid_compatible_resolution_bounds[14400.0] = (3.999, 4.001)
 pyramid_compatible_resolution_bounds[36000.0] = (9.999, 10.001)
 
 pyramid_compatable_shapes = {}
+pyramid_compatable_shapes[1.0] = [1296000, 648000]
 pyramid_compatable_shapes[10.0] = [129600, 64800]
 pyramid_compatable_shapes[30.0] = [43200, 21600]
 pyramid_compatable_shapes[150.0] = [8640, 4320]
@@ -97,6 +85,7 @@ pyramid_compatable_shapes[14400.0] = [90, 45]
 pyramid_compatable_shapes[36000.0] = [36, 18]
 
 pyramid_compatable_shapes_to_arcseconds = {}
+pyramid_compatable_shapes_to_arcseconds[(1296000, 648000)] = 1.0
 pyramid_compatable_shapes_to_arcseconds[(129600, 64800)] = 10.0
 pyramid_compatable_shapes_to_arcseconds[(43200, 21600)] = 30.0
 pyramid_compatable_shapes_to_arcseconds[(8640, 4320)] = 150.0
@@ -119,8 +108,10 @@ geotransform_global_300sec = (-180.0, 0.08333333333333333, 0.0, 90.0, 0.0, -0.08
 geotransform_global_150sec = (-180.0, 0.008333333333333333 * 5, 0.0, 90.0, 0.0, -0.008333333333333333 * 5)  # NOTE, the 0.08333333333333333 is defined very precisely as the answer a 64 bit compiled python gives from the answer 1/12 (i.e. 5 arc minutes)
 geotransform_global_30sec = (-180.0, 0.008333333333333333, 0.0, 90.0, 0.0, -0.008333333333333333)  # NOTE, the 0.008333333333333333 is defined very precisely as the answer a 64 bit compiled python gives from the answer 1/120 (i.e. 30 arc seconds) Note that this has 1 more digit than 1/12 due to how floating points are stored in computers via exponents.
 geotransform_global_10ssec = (-180.0, 0.002777777777777778, 0.0, 90.0, 0.0, -0.002777777777777778)  # NOTE, the 0.002777777777777778 is defined very precisely
+geotransform_global_1sec = (-180.0, 0.0002777777777777777775, 0.0, 90.0, 0.0, -0.0002777777777777777775)  # NOTE, the 0.0002777777777777777775 is defined very precisely, in this case from the gdal C library
 
 pyramid_compatible_geotransforms = {}
+pyramid_compatible_geotransforms[1.0] = (-180.0, 0.0002777777777777777775, 0.0, 90.0, 0.0, -0.0002777777777777777775)
 pyramid_compatible_geotransforms[10.0] = (-180.0, 0.002777777777777778, 0.0, 90.0, 0.0, -0.002777777777777778)
 pyramid_compatible_geotransforms[30.0] = (-180.0, 0.008333333333333333, 0.0, 90.0, 0.0, -0.008333333333333333)
 pyramid_compatible_geotransforms[150.0] = (-180.0, 0.008333333333333333*5, 0.0, 90.0, 0.0, -0.008333333333333333*5)
@@ -132,9 +123,13 @@ pyramid_compatible_geotransforms[7200.0] = (-180.0, 2.0, 0.0, 90.0, 0.0, -2.0)
 pyramid_compatible_geotransforms[14400.0] = (-180.0, 4.0, 0.0, 90.0, 0.0, -4.0)
 pyramid_compatible_geotransforms[36000.0] = (-180.0, 10.0, 0.0, 90.0, 0.0, -10.0)
 
+# I decided that there are two types of supported pyramid levels:
+# Main: 1, 3, 10, 300, 900, 1800 arc seconds (soon to add 333msec). All main and secondary must have overviews that represent all of the coarser set of these main levels
+# Secondary: 30, 150. Common as an input, but overviews of OTHER levels aren't generated for these.
 pyramid_compatible_overview_levels = {}
-pyramid_compatible_overview_levels[10.0] = [3, 15, 30, 90]
-pyramid_compatible_overview_levels[30.0] = [5, 10, 30]
+pyramid_compatible_overview_levels[1.0] = [3, 10, 300, 900, 1800]
+pyramid_compatible_overview_levels[10.0] = [30, 90, 180]
+pyramid_compatible_overview_levels[30.0] = [10, 30, 60] 
 pyramid_compatible_overview_levels[150.0] = [2, 6, 12]
 pyramid_compatible_overview_levels[300.0] = [3]
 pyramid_compatible_overview_levels[900.0] = []
@@ -145,7 +140,7 @@ pyramid_compatible_overview_levels[14400.0] = []
 pyramid_compatible_overview_levels[36000.0] = []
 
 
-# NOTE Not complete, but I think I don't want to use these anyhow
+# TODOOO Deprecate
 pyramid_compatible_half_overview_levels = {}
 pyramid_compatible_half_overview_levels[10.0] = [2, 3, 6, 12, 24, 30, 60, 90]
 pyramid_compatible_half_overview_levels[30.0] = [2, 4, 8, 10, 20, 30, 60]
@@ -157,6 +152,7 @@ pyramid_compatible_half_overview_levels[7200.0] = []
 pyramid_compatible_half_overview_levels[14400.0] = []
 pyramid_compatible_half_overview_levels[36000.0] = []
 
+# TODOOO Deprecate
 pyramid_compatible_full_overview_levels = {}
 pyramid_compatible_full_overview_levels[10.0] = [2, 3, 2*3, 4*3, 8*3, 10*3, 20*3, 30*3, 60*3, 120*3, 240*3, 480*3, 960*3]
 pyramid_compatible_full_overview_levels[30.0] = [2, 4, 8, 10, 20, 30, 60, 120, 240, 480, 960]
@@ -169,7 +165,8 @@ pyramid_compatible_full_overview_levels[14400.0] = [2]
 pyramid_compatible_full_overview_levels[36000.0] = []
 
 
-
+### It is it ref_path NOT refpath. These are correct
+ha_per_cell_1sec_ref_path = os.path.join('pyramids', "ha_per_cell_1sec.tif")
 ha_per_cell_10sec_ref_path = os.path.join('pyramids', "ha_per_cell_10sec.tif")
 ha_per_cell_30sec_ref_path = os.path.join('pyramids', "ha_per_cell_30sec.tif")
 ha_per_cell_150sec_ref_path = os.path.join('pyramids', "ha_per_cell_150sec.tif")
@@ -183,6 +180,7 @@ ha_per_cell_36000sec_ref_path = os.path.join('pyramids', "ha_per_cell_3600s0ec.t
 
 
 ha_per_cell_ref_paths = {}
+ha_per_cell_ref_paths[1.0] = ha_per_cell_1sec_ref_path
 ha_per_cell_ref_paths[10.0] = ha_per_cell_10sec_ref_path
 ha_per_cell_ref_paths[30.0] = ha_per_cell_30sec_ref_path
 ha_per_cell_ref_paths[150.0] = ha_per_cell_150sec_ref_path
@@ -196,7 +194,7 @@ ha_per_cell_ref_paths[36000.0] = ha_per_cell_36000sec_ref_path
 
 
 
-# TODOO I'm moving away from having hb define path-specific info, but kept for now for backwards compatibility. Could clean this.
+# TODOO Deprecate. I'm moving away from having hb define path-specific info, but kept for now for backwards compatibility. Could clean this.
 pyramid_ha_per_cell = {}
 pyramid_ha_per_cell[10.0] = os.path.join(hb.config.BASE_DATA_DIR, 'pyramids', 'ha_per_cell_10sec.tif')
 pyramid_ha_per_cell[30.0] = os.path.join(hb.config.BASE_DATA_DIR, 'pyramids', 'ha_per_cell_30sec.tif')
@@ -222,6 +220,19 @@ pyramid_ha_per_cell_column[36000.0] = os.path.join(hb.config.BASE_DATA_DIR, 'pyr
 
 
 
+ha_per_cell_column_1sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_1sec.tif')
+ha_per_cell_column_10sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_10sec.tif')
+ha_per_cell_column_30sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_30sec.tif')
+ha_per_cell_column_150sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_150sec.tif')
+ha_per_cell_column_300sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_300sec.tif')
+ha_per_cell_column_900sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_900sec.tif')
+ha_per_cell_column_1800sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_1800sec.tif')
+ha_per_cell_column_3600sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_3600sec.tif')
+ha_per_cell_column_7200sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_7200sec.tif')
+ha_per_cell_column_14400sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_14400sec.tif')
+ha_per_cell_column_36000sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_36000sec.tif')
+
+
 ha_per_cell_column_10sec_path = os.path.join('pyramids', 'ha_per_cell_column_10sec.tif')
 ha_per_cell_column_30sec_path = os.path.join('pyramids', 'ha_per_cell_column_30sec.tif')
 ha_per_cell_column_150sec_path = os.path.join('pyramids', 'ha_per_cell_column_150sec.tif')
@@ -233,6 +244,19 @@ ha_per_cell_column_7200sec_path = os.path.join('pyramids', 'ha_per_cell_column_7
 ha_per_cell_column_14400sec_path = os.path.join('pyramids', 'ha_per_cell_column_14400sec.tif')
 ha_per_cell_column_36000sec_path = os.path.join('pyramids', 'ha_per_cell_column_36000sec.tif')
 
+ha_per_cell_column_ref_paths = {}
+ha_per_cell_column_ref_paths[10.0] = ha_per_cell_column_10sec_ref_path
+ha_per_cell_column_ref_paths[30.0] = ha_per_cell_column_30sec_ref_path
+ha_per_cell_column_ref_paths[150.0] = ha_per_cell_column_150sec_ref_path
+ha_per_cell_column_ref_paths[300.0] = ha_per_cell_column_300sec_ref_path
+ha_per_cell_column_ref_paths[900.0] = ha_per_cell_column_900sec_ref_path
+ha_per_cell_column_ref_paths[1800.0] = ha_per_cell_column_1800sec_ref_path
+ha_per_cell_column_ref_paths[3600.0] = ha_per_cell_column_3600sec_ref_path
+ha_per_cell_column_ref_paths[7200.0] = ha_per_cell_column_7200sec_ref_path
+ha_per_cell_column_ref_paths[14400.0] = ha_per_cell_column_14400sec_ref_path
+ha_per_cell_column_ref_paths[36000.0] = ha_per_cell_column_36000sec_ref_path
+
+# TODOO DEPRECATE in favor of ref_path
 ha_per_cell_column_paths = {}
 ha_per_cell_column_paths[10.0] = ha_per_cell_column_10sec_path
 ha_per_cell_column_paths[30.0] = ha_per_cell_column_30sec_path
@@ -246,13 +270,14 @@ ha_per_cell_column_paths[14400.0] = ha_per_cell_column_14400sec_path
 ha_per_cell_column_paths[36000.0] = ha_per_cell_column_36000sec_path
 
 
-
+# TODOO DEPRECATE because references hazelbean paths
 global_esa_lulc_paths_by_year = {}
 global_esa_lulc_paths_by_year[2000] = os.path.join(hb.config.SEALS_BASE_DATA_DIR, "lulc_esa", "full", "ESACCI-LC-L4-LCCS-Map-300m-P1Y-2000-v2.0.7.tif")
 global_esa_lulc_paths_by_year[2010] = os.path.join(hb.config.SEALS_BASE_DATA_DIR, "lulc_esa", "full", "ESACCI-LC-L4-LCCS-Map-300m-P1Y-2010-v2.0.7.tif")
 global_esa_lulc_paths_by_year[2014] = os.path.join(hb.config.SEALS_BASE_DATA_DIR, "lulc_esa", "full", "ESACCI-LC-L4-LCCS-Map-300m-P1Y-2014-v2.0.7.tif")
 global_esa_lulc_paths_by_year[2015] = os.path.join(hb.config.SEALS_BASE_DATA_DIR, "lulc_esa", "full", "ESACCI-LC-L4-LCCS-Map-300m-P1Y-2015-v2.0.7.tif")
 
+# TODOO DEPRECATE because references hazelbean paths
 global_esa_seals5_lulc_paths_by_year = {}
 global_esa_seals5_lulc_paths_by_year[2000] = os.path.join(hb.config.SEALS_BASE_DATA_DIR, "lulc_esa\simplified\lulc_esa_simplified_2000.tif")
 global_esa_seals5_lulc_paths_by_year[2010] = os.path.join(hb.config.SEALS_BASE_DATA_DIR, "lulc_esa\simplified\lulc_esa_simplified_2010.tif")
@@ -1681,7 +1706,7 @@ def set_geotransform_to_tuple(input_path, desired_geotransform, output_path=None
         gt = ds.GetGeoTransform()
         ds = None
                 
-        ## LEARNING POINT: FASTER OPTION WAS JUST TO COPY AND THEN RESET THE GEOTRANSFORM
+        ## LEARNING POINT: INITIALLY TRIED BELOW BUT ABOVE WAS A FASTER OPTION WAS JUST TO COPY AND THEN RESET THE GEOTRANSFORM
         # ds = gdal.OpenEx(input_path)
         # driver = gdal.GetDriverByName('GTiff')
         # new_ds = driver.Create(output_path, ds.RasterXSize, ds.RasterYSize, 1, ds.GetRasterBand(1).DataType, options=hb.DEFAULT_GTIFF_CREATION_OPTIONS)
@@ -2260,3 +2285,118 @@ def snap_bb_points_to_outer_pyramid(input_bb, pyramidal_raster_path):
     returned_bb = [float(i) for i in snapped_bb]
     return returned_bb
 
+
+def convert_raster_path_to_cog(input_path, output_path=None, remove_original=False):
+    5
+
+
+
+def is_cog(raster_path, verbose=False):
+    """
+    FAILING BECAUSE CURRENTLY DOESNT WRITE TILES TO METADATA EVEN THO IT IS TILED
+    
+    Checks if a given raster file is a Cloud Optimized GeoTIFF (COG).
+
+    Args:
+        raster_path (str): Path to the raster file.
+
+    Returns:
+        bool: True if the file is a COG, False otherwise.
+    """
+    # Open the raster with GDAL
+    dataset = gdal.Open(raster_path, gdal.GA_ReadOnly)
+    if not dataset:
+        return False  # File could not be opened
+    
+    # Check for tiled structure
+    metadata = dataset.GetMetadata("IMAGE_STRUCTURE")
+    # is_tiled = metadata.get("TILED", "NO") == "YES"
+    is_tiled = dataset.GetMetadataItem("TILED", "IMAGE_STRUCTURE")
+
+    # Check for overviews (COGs typically have overviews)
+    has_overviews = dataset.GetRasterBand(1).GetOverviewCount() > 0
+
+    # Check if the file is internally accessible via HTTP-style range requests
+    subdatasets = dataset.GetSubDatasets()
+    is_byte_accessible = "/vsicurl/" in raster_path or len(subdatasets) == 0
+
+    dataset = None  # Close dataset
+    
+    if verbose:
+        hb.log('Called is_cog on ' + raster_path + ' with results: is_tiled: ' + str(is_tiled) + ' has_overviews: ' + str(has_overviews) + ' is_byte_accessible: ' + str(is_byte_accessible))
+
+    return is_tiled and has_overviews and is_byte_accessible
+
+def convert_to_cog(input_raster, output_raster, output_data_type, overview_resampling_method, ndv, compression="LZW", blocksize=512, verbose=False):
+    """
+    Converts a raster file to a Cloud Optimized GeoTIFF (COG).
+    
+    Args:
+        input_raster (str): Path to the input raster file.
+        output_raster (str): Path to the output COG file.
+        compression (str, optional): Compression type (default: "LZW").
+        blocksize (int, optional): Tile size (default: 512x512).
+    
+    Returns:
+        str: Path to the created COG file.
+    """
+    if is_cog(input_raster) and verbose:
+            hb.log(f"Raster is already a COG: {input_raster}")
+            
+    # Ensure output directory exists
+    os.makedirs(os.path.dirname(output_raster), exist_ok=True)
+
+    # Open the source raster
+    src_ds = gdal.Open(input_raster, gdal.GA_ReadOnly)
+    if not src_ds:
+        raise ValueError(f"Unable to open raster: {input_raster}")
+
+    # Define creation options for COG
+    creation_options = [
+        f"COMPRESS={compression}",  # Compression
+        "TILED=YES",  # Enable tiling
+        f"BLOCKXSIZE={blocksize}",  # Set tile size
+        f"BLOCKYSIZE={blocksize}",  
+        "BIGTIFF=IF_SAFER",  # Allow BigTIFF if needed
+        # "COPY_SRC_OVERVIEWS=YES",  # Preserve existing overviews
+        # f"a_nodata={str(ndv)}",
+        # f"OVERVIEW_RESAMPLING={overview_resampling_method}",  # Resample overviews using Nearest Neighbor
+        
+    ]
+    
+    # if not any(
+    #         ['TILED' in option for option in local_gtiff_creation_options]):
+    #     # TILED not set, so lets try to set it to a reasonable value
+    #     if block_size[0] != n_cols:
+    #         # if x block is not the width of the raster it *must* be tiled
+    #         # otherwise okay if it's striped or tiled
+    #         local_gtiff_creation_options.append('TILED=YES')
+
+    # if not any(
+    #         ['BLOCK' in option for option in local_gtiff_creation_options]):
+    #     # not defined, so lets copy what we know from the current raster
+    #     local_gtiff_creation_options.extend([
+    #         'BLOCKXSIZE=%d' % block_size[0],
+    #         'BLOCKYSIZE=%d' % block_size[1]])
+    
+    gdal.SetConfigOption("GDAL_NUM_THREADS", "ALL_CPUS")
+    gdal.SetConfigOption("GDAL_CACHEMAX", "4096")    
+
+    # Perform the translation
+    gdal.Translate(
+        output_raster, src_ds, format="GTiff", options=gdal.TranslateOptions(creationOptions=creation_options, outputType=output_data_type), noData=ndv, callback=hb.make_logger_callback("Converting to COG %.1f%% complete %s")
+    )
+
+    # Build overviews if they don’t exist
+    hb.pyramid_compatible_full_overview_levels
+    print('WARNING! This wasnt generalized to pyramids for different resolutions')
+    gdaladdo_cmd = ["gdaladdo", "-r", overview_resampling_method.upper(), output_raster, "3", "10", "300", "900", "1800"]
+    os.system(" ".join(gdaladdo_cmd))  # Generate overviews
+
+    src_ds = None  # Close dataset
+    
+    # test if output is a cog
+    if not is_cog(output_raster, verbose) and verbose:
+        hb.log(f"Failed to create COG: {output_raster}")
+            
+    return output_raster

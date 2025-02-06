@@ -495,6 +495,7 @@ def resample_to_match(input_path,
                       calc_raster_stats=False,
                       add_overviews=False,
                       pixel_size_override=None,
+                      bb_override=None,
                       verbose=False,
                       ):
     if pixel_size_override is None:
@@ -504,8 +505,11 @@ def resample_to_match(input_path,
 
     target_sr_wkt = hb.get_raster_info_hb(match_path)['projection']
 
-    target_bb = hb.get_raster_info_hb(match_path)['bounding_box']
-
+    if bb_override is None:
+        target_bb = hb.get_raster_info_hb(match_path)['bounding_box']
+    else:
+        target_bb = bb_override
+        
     if output_data_type is None:
         output_data_type = hb.get_datatype_from_uri(match_path)
 
@@ -540,13 +544,21 @@ def resample_to_match(input_path,
 
         target_bb[2] += target_pixel_size[0]
         target_bb[3] += target_pixel_size[1]
-    if compress is True:
+    if compress is True or compress == 'LZW':
         gtiff_creation_options = (
             'TILED=YES',
             'BIGTIFF=YES',
-            'COMPRESS=DEFLATE',
+            'COMPRESS=LZW',
             'BLOCKXSIZE=256',
             'BLOCKYSIZE=256',
+        )
+    elif compress:
+        gtiff_creation_options = (
+            'TILED=YES',
+            'BIGTIFF=YES',
+            'BLOCKXSIZE=256',
+            'BLOCKYSIZE=256',
+            compress.upper(),
         )
     else:
         gtiff_creation_options = (

@@ -139,19 +139,27 @@ plate_carree_wkt = """PROJCS["WGS 84 / Plate Carree (deprecated)",
 # Not used in WGS84 standard
 more_precise_degree_measurement = 0.01745329251994328
 
-common_geotransforms = {
-    'global_5m': (-180.0, 0.08333333333333333, 0.0, 90.0, 0.0, -0.08333333333333333),  # NOTE, the 0.08333333333333333 is defined very precisely as the answer a 64 bit compiled python gives from the answer 1/12 (i.e. 5 arc minutes)
-    'global_30s': (-180.0, 0.008333333333333333, 0.0, 90.0, 0.0, -0.008333333333333333),  # NOTE, the 0.008333333333333333 is defined very precisely as the answer a 64 bit compiled python gives from the answer 1/120 (i.e. 30 arc seconds) Note that this has 1 more digit than 1/12 due to how floating points are stored in computers via exponents.
-}
-
+#### DEPRECATED BY PYRAMIDS.py data but kept for compatibility. TODOOO clean.
 geotransform_global_4deg = (-180.0, 2, 0.0, 90.0, 0.0, -4)
 geotransform_global_2deg = (-180.0, 2, 0.0, 90.0, 0.0, -2)
 geotransform_global_1deg = (-180.0, 1, 0.0, 90.0, 0.0, -1)
-geotransform_global_30m = (-180.0, 0.5, 0.0, 90.0, 0.0, -0.5)
+geotransform_global_30m = (-180.0, 0.5, 0.0, 90.0, 0.0, -0.5) # DEPRECATED
+geotransform_global_30min = (-180.0, 0.5, 0.0, 90.0, 0.0, -0.5)
 geotransform_global_15m = (-180.0, 0.25, 0.0, 90.0, 0.0, -0.25)
+geotransform_global_15min = (-180.0, 0.25, 0.0, 90.0, 0.0, -0.25)
 geotransform_global_5m = (-180.0, 0.08333333333333333, 0.0, 90.0, 0.0, -0.08333333333333333)  # NOTE, the 0.08333333333333333 is defined very precisely as the answer a 64 bit compiled python gives from the answer 1/12 (i.e. 5 arc minutes)
+geotransform_global_5min = (-180.0, 0.08333333333333333, 0.0, 90.0, 0.0, -0.08333333333333333)  # NOTE, the 0.08333333333333333 is defined very precisely as the answer a 64 bit compiled python gives from the answer 1/12 (i.e. 5 arc minutes)
 geotransform_global_30s = (-180.0, 0.008333333333333333, 0.0, 90.0, 0.0, -0.008333333333333333)  # NOTE, the 0.008333333333333333 is defined very precisely as the answer a 64 bit compiled python gives from the answer 1/120 (i.e. 30 arc seconds) Note that this has 1 more digit than 1/12 due to how floating points are stored in computers via exponents.
+geotransform_global_30sec = (-180.0, 0.008333333333333333, 0.0, 90.0, 0.0, -0.008333333333333333)  # NOTE, the 0.008333333333333333 is defined very precisely as the answer a 64 bit compiled python gives from the answer 1/120 (i.e. 30 arc seconds) Note that this has 1 more digit than 1/12 due to how floating points are stored in computers via exponents.
 geotransform_global_10s = (-180.0, 0.002777777777777778, 0.0, 90.0, 0.0, -0.002777777777777778)  # NOTE, the 0.002777777777777778 is defined very precisely
+geotransform_global_10sec = (-180.0, 0.002777777777777778, 0.0, 90.0, 0.0, -0.002777777777777778)  # NOTE, the 0.002777777777777778 is defined very precisely
+geotransform_global_1sec = (-180.0, 0.0002777777777777777775, 0.0, 90.0, 0.0, -0.0002777777777777777775)  # WTF, the 77775 comes from QGIS after gdal, but this number in python goes down in precision to 7778 NOTE, the 0.0002777777777777777775 is defined very precisely, in this case from the gdal C library
+
+#### DEPRECATED BY PYRAMIDS.py data but kept for compatibility. TODOOO clean.
+common_geotransforms = {
+    'global_5m': geotransform_global_5min,
+    'global_30s': geotransform_global_30sec, 
+} # Maybe deprecate?
 
 
 size_of_one_arcdegree_at_equator_in_meters = 111319.49079327358  # Based on (2 * math.pi * 6378.137*1000) / 360  # old 111319

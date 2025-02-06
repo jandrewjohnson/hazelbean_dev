@@ -11,6 +11,8 @@ import taskgraph
 import urllib
 import time
 import socket
+import requests
+import os
 
 # Set timeout for all socket connections
 timeout_seconds = 5  # 5 seconds, for example
@@ -280,3 +282,47 @@ def promote_ref_path_to_base_data(input_path, pivot_path, base_data_dir):
     # Move the file to the base_data_dir
     os.rename(input_path, joined_path)
     
+    
+
+def download_file(url, target_path, chunk_size=1024 * 1024, retries=3):
+    """
+    Downloads a file from a URL to a specified target path with retries.
+
+    Args:
+        url (str): The URL of the file to download.
+        target_path (str): The local file path where the file will be saved.
+        chunk_size (int, optional): Size of chunks to download at a time (default: 1MB).
+        retries (int, optional): Number of times to retry on failure (default: 3).
+
+    Returns:
+        str: The path to the downloaded file.
+    """
+    attempt = 0
+    while attempt < retries:
+        try:
+            with requests.get(url, stream=True, timeout=30) as response:
+                response.raise_for_status()  # Raise an error for HTTP errors
+
+                # Ensure target directory exists
+                os.makedirs(os.path.dirname(target_path), exist_ok=True)
+
+                total_size = int(response.headers.get("content-length", 0))
+                downloaded = 0
+
+                with open(target_path, "wb") as file:
+                    for chunk in response.iter_content(chunk_size=chunk_size):
+                        if chunk:
+                            file.write(chunk)
+                            downloaded += len(chunk)
+                            if total_size:
+                                percent_done = (downloaded / total_size) * 100
+                                print(f"\rDownloading: {percent_done:.2f}%", end="", flush=True)
+
+            print("\nDownload complete.")
+            return target_path  # Return the saved file path
+        
+        except requests.RequestException as e:
+            attempt += 1
+            print(f"\nDownload failed (attempt {attempt}/{retries}): {e}")
+            if attempt == retries:
+                raise  # Re-raise the last exception if all retries fail
