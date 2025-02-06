@@ -1429,27 +1429,73 @@ def make_path_global_pyramid(
     return True
 
 
-def warp_add_padding(input_path, output_path, dst_geotransform, dst_size, fill_value):
+def warp_add_padding(input_path, output_path, dst_geotransform, dst_columns_rows_tuple, fill_value, resample_method='near'):
+    # dst_size is in number of pixels
+    
     dataset = gdal.Open(input_path)
     geotransform = dataset.GetGeoTransform()
     
     dataset.SetGeoTransform(dst_geotransform)
-    width = dst_size[0] * dst_geotransform[1]
-    height = dst_size[1] * dst_geotransform[1]
+    width = dst_columns_rows_tuple[0] * dst_geotransform[1]
+    height = dst_columns_rows_tuple[1] * dst_geotransform[1]
 
     # Calculate new bounds based on the padding
     xmin = dst_geotransform[0]
     ymax = dst_geotransform[3]
     xmax = xmin + width
     ymin = ymax - height 
-        
+
+
+    # def progress_callback(complete, message, user_data):
+    #     """ Reports progress more frequently during a GDAL operation. """
+    #     global last_reported
+    #     fine_grained_progress = int(complete * 10000)  # Scale up to report 100x more
+
+    #     if fine_grained_progress > last_reported:  # Only report new progress values
+    #         last_reported = fine_grained_progress
+    #         print(f"\rProgress: {complete*100:.3f}% completed.", end="", flush=True)
+
+    #     return 1          
     def progress_callback(complete, message, user_data):
         """ Reports progress of a GDAL operation. """
-        print(f"Progress: {complete*100:.2f}% completed.", end="")
+        print(f"Progress: {complete*100:.3f}% completed.", end="")
         return 1  # Returning 1 continues, 0 would cancel the operation
 
     # Execute gdalwarp with the new bounds
-    warp_options = gdal.WarpOptions(format='GTiff', outputBounds=[xmin, ymin, xmax, ymax], creationOptions=hb.DEFAULT_GTIFF_CREATION_OPTIONS, dstNodata=fill_value, callback=progress_callback)
+    make_it_cog = True
+    if make_it_cog:
+        
+        # warp_options = gdal.WarpOptions(
+        #     format="COG",  # Directly create a Cloud Optimized GeoTIFF
+        #     outputBounds=[xmin, ymin, xmax, ymax],
+        #     creationOptions=[
+        #         "COMPRESS=DEFLATE",  # Efficient compression
+        #         "PREDICTOR=2",       # Optimized for floating point data
+        #         "BIGTIFF=YES"        # Ensure large file support
+        #     ],
+        #     dstNodata=fill_value,
+        #     callback=progress_callback
+        # )
+
+        warp_options = gdal.WarpOptions(
+            format='GTiff',
+            outputBounds=[xmin, ymin, xmax, ymax],
+            resampleAlg=resample_method,
+            creationOptions=[
+                "TILED=YES",
+                "COMPRESS=DEFLATE",
+                "PREDICTOR=2",
+                "BIGTIFF=YES",
+                "NUM_THREADS=ALL_CPUS",
+                # "COPY_SRC_OVERVIEWS=NO"
+            ],
+            dstNodata=fill_value,
+            callback=progress_callback
+        )
+
+    else:
+        warp_options = gdal.WarpOptions(format='GTiff', outputBounds=[xmin, ymin, xmax, ymax], creationOptions=hb.DEFAULT_GTIFF_CREATION_OPTIONS, dstNodata=fill_value, callback=progress_callback)
+
 
     gdal.Warp(output_path, dataset, options=warp_options)
 

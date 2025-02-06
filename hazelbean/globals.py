@@ -152,7 +152,9 @@ geotransform_global_15m = (-180.0, 0.25, 0.0, 90.0, 0.0, -0.25)
 geotransform_global_5m = (-180.0, 0.08333333333333333, 0.0, 90.0, 0.0, -0.08333333333333333)  # NOTE, the 0.08333333333333333 is defined very precisely as the answer a 64 bit compiled python gives from the answer 1/12 (i.e. 5 arc minutes)
 geotransform_global_30s = (-180.0, 0.008333333333333333, 0.0, 90.0, 0.0, -0.008333333333333333)  # NOTE, the 0.008333333333333333 is defined very precisely as the answer a 64 bit compiled python gives from the answer 1/120 (i.e. 30 arc seconds) Note that this has 1 more digit than 1/12 due to how floating points are stored in computers via exponents.
 geotransform_global_10s = (-180.0, 0.002777777777777778, 0.0, 90.0, 0.0, -0.002777777777777778)  # NOTE, the 0.002777777777777778 is defined very precisely
+geotransform_global_1s = (-180.0, 0.0002777777777777777775, 0.0, 90.0, 0.0, -0.0002777777777777777775)  # NOTE, the 0.0002777777777777777775 is defined very precisely
 
+global_cr_1sec = (1296000, 648000)
 
 size_of_one_arcdegree_at_equator_in_meters = 111319.49079327358  # Based on (2 * math.pi * 6378.137*1000) / 360  # old 111319
 

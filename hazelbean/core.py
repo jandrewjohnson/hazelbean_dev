@@ -177,18 +177,24 @@ def path_exists(path, minimum_size_check=0, dir_must_have_content=False, verbose
     else:
         if minimum_size_check is not None:
             try:
-                if os.path.getsize(path) > minimum_size_check:
-                    abs_path = os.path.abspath(path)
-                    if verbose:
-                        
-                        L.info('Path exists: ' + str(path))
-                    return True
+                if os.path.exists(path):
+                    if os.path.getsize(path) > minimum_size_check:
+                        abs_path = os.path.abspath(path)
+                        if verbose:
+                            
+                            L.info('Path exists: ' + str(path))
+                        return True
+                    else:
+                        if verbose:
+                            L.info('Path DOES NOT exist: ' + str(path) + ' and abs path is: ' + str(os.path.abspath(path)))
+                        if assert_true:
+                            raise NameError('Path does not exist: ' + str(path))
+                        return False     
                 else:
-                    if verbose:
-                        L.info('Path DOES NOT exist: ' + str(path) + ' and abs path is: ' + str(os.path.abspath(path)))
-                    if assert_true:
-                        raise NameError('Path does not exist: ' + str(path))
-                    return False
+                    return False                
+                
+                
+                
             except:
                 if verbose:
                     L.info('Path DOES NOT exist: ' + str(path) + ' and abs path is: ' + str(os.path.abspath(path)))

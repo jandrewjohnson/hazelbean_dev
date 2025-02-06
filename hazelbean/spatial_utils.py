@@ -317,7 +317,7 @@ no_data_values_by_gdal_type = {
 
 def create_gdal_virtual_raster(input_tifs_uri_list, ouput_virt_uri, srcnodata=None, shifted_extent=None):
     # DEPRECATED
-    warnings.warn('Deprecated. use create_gdal_virtual_raster_using_file')
+    warnings.warn('Deprecated. use create_gdal_virtual_raster_using_file or create_gdal_vrt')
     gdal_command = 'gdalbuildvrt '
     if srcnodata:
         gdal_command += '-srcnodata ' + str(srcnodata) + ' '
@@ -509,38 +509,114 @@ def write_vrt_to_raster(
     output_tif_path,
     output_data_type=None,
     resampling_method='near',
+    overview_resampling_method='near',
     compress='deflate',
     tiled=True,
     bigtiff=True,
     blockxsize=256,
     blockysize=256,
+    write_as_cog=True
     ):
+    
+    """ FULLY DEPRECATED. Makes funny results when expanding BB. Use hb.resample_to_match instead. Faster AND more reliable. """
+    """ POSSIBLY SUPERCEDED by the COG-compliant write_vrt_to_raster_cog function below. """
 
-    try:
-        # Open the input VRT
-        vrt_ds = gdal.OpenEx(input_vrt_path, gdal.GA_ReadOnly)
-        if vrt_ds is None:
-            raise ValueError(f"Could not open input VRT: {input_vrt_path}")
+    # Open the input VRT
+    vrt_ds = gdal.OpenEx(input_vrt_path, gdal.GA_ReadOnly)
+    if vrt_ds is None:
+        raise ValueError(f"Could not open input VRT: {input_vrt_path}")
 
-        # Determine output data type
-        if output_data_type is None:
-            output_data_type = vrt_ds.GetRasterBand(1).DataType
-        else:
-            output_data_type = gdal.GetDataTypeByName(output_data_type)
+    # Determine output data type
+    if output_data_type is None:
+        output_data_type = vrt_ds.GetRasterBand(1).DataType
+    # else:
+    #     output_data_type = gdal.GetDataTypeByName(output_data_type)
 
-        # Set creation options
-        creation_options = []
-        if compress:
-            creation_options.append(f'COMPRESS={compress.upper()}' if isinstance(compress, str) else 'COMPRESS=DEFLATE')
-        creation_options.extend([
-            f'TILED={"YES" if tiled else "NO"}',
-            f'BIGTIFF={"YES" if bigtiff else "NO"}',
-        ])
-        if blockxsize:
-            creation_options.append(f'BLOCKXSIZE={blockxsize}')
-        if blockysize:
-            creation_options.append(f'BLOCKYSIZE={blockysize}')
+    # Set creation options
+    creation_options = []
+    if compress:
+        creation_options.append(f'COMPRESS={compress.upper()}' if isinstance(compress, str) else 'COMPRESS=DEFLATE')
+    creation_options.extend([
+        f'TILED={"YES" if tiled else "NO"}',
+        f'BIGTIFF={"YES" if bigtiff else "NO"}',
+    ])
+    if blockxsize:
+        creation_options.append(f'BLOCKXSIZE={blockxsize}')
+    if blockysize:
+        creation_options.append(f'BLOCKYSIZE={blockysize}')
+        
+        
+        
+    # NYI ADD OVERVIEW LEVELS TO BE PYRAMIDAL 
+    # ADD_OVERVIEWS=LEVELS={','.join(map(str, overview_levels))}"  # Specific overview levels
 
+    creation_options.extend(['NUM_THREADS=ALL_CPUS'])
+    # Translate options for creating a COG
+    
+    
+    
+    translate_options = gdal.TranslateOptions(
+        format="COG",
+        creationOptions=creation_options,
+            # "TILED=YES",             # Enable tiling
+            # "COMPRESS=DEFLATE",      # Use DEFLATE compression
+            # "BIGTIFF=IF_SAFER",      # Allow BigTIFF if necessary
+            # "RESAMPLING=NEAREST",    # Resampling method for overviews
+            # "BLOCKSIZE=256"          # Tile size
+        # ]
+    )
+
+    overview_levels = [2, 4, 8, 16]
+    # But wait, COGs don't specify many of these cause they're optimized
+    translate_options = gdal.TranslateOptions(
+        format="COG",
+        creationOptions=[
+            f"OVERVIEWS=AUTO",
+            'NUM_THREADS=ALL_CPUS',
+            'SPARSE_OK=TRUE',
+            # f"OVERVIEWS=LEVELS={','.join(map(str, overview_levels))}", #FAILED
+            "COMPRESS=DEFLATE",
+            "RESAMPLING=NEAREST",                
+            "BIGTIFF=IF_SAFER",
+            "OVERVIEWS=IGNORE",
+]
+)        
+    
+    
+    
+    # Perform the translation
+    # gdal.Translate(output_path, input_path, options=translate_options)
+    def progress_callback(complete, message, user_data=None):
+        # `complete` is a float between 0 and 1
+        print(f"Progress: {complete * 100:.2f}% - {message}")
+        return 1  # Return 1 to indicate that the process should continue
+
+
+
+
+    if write_as_cog:
+        # Use GDAL Translate for efficient conversion
+        gdal.Translate(
+            output_tif_path,
+            vrt_ds,
+            format='GTiff',
+            outputType=output_data_type,
+            resampleAlg=resampling_method,
+            options=translate_options,
+            callback=progress_callback
+        )
+        # Step 2: Build overviews with the desired resampling algorithm
+        dataset = gdal.Open(output_tif_path, gdal.GA_Update)  # Open COG in update mode
+        if dataset:
+            
+            # ds.BuildOverviews(overview_resample_method, pyramid_compatible_overview_levels[arcseconds], callback, [input_path])  # Based on commonly used data shapes
+
+            custom_overview_levels = [2, 4, 8, 16]  # Define your custom overview levels
+            dataset.BuildOverviews(overview_resampling_method.upper(), custom_overview_levels, progress_callback, [output_tif_path])  # Use 'AVERAGE' resampling
+            dataset.FlushCache()  # Ensure all data is written to disk
+            dataset = None  # Close the dataset
+
+    else:
         # Use GDAL Translate for efficient conversion
         gdal.Translate(
             output_tif_path,
@@ -549,18 +625,81 @@ def write_vrt_to_raster(
             outputType=output_data_type,
             resampleAlg=resampling_method,
             creationOptions=creation_options,
-            callback=gdal.TermProgress_nocb
+            callback=progress_callback,
+            callback_data=[output_tif_path],
         )
 
-    except Exception as e:
-        print(f"An error occurred: {str(e)}")
-    finally:
-        # Ensure datasets are properly closed
-        if 'vrt_ds' in locals():
-            vrt_ds = None
+
 
     print(f"Conversion complete: {output_tif_path}")
 
+
+def write_vrt_to_raster_cog(
+    input_vrt_path,
+    output_tif_path,
+    output_data_type=None,
+    resampling_method='near',
+    overview_resampling_method='near',
+    compress='deflate',
+    ):
+    ### NOT FINISHED. doing it this way is not memory safe.
+    
+    # Open the input VRT
+    vrt_ds = gdal.OpenEx(input_vrt_path, gdal.GA_ReadOnly)
+    if vrt_ds is None:
+        raise ValueError(f"Could not open input VRT: {input_vrt_path}")
+    
+    # Determine output data type
+    if output_data_type is None:
+        output_data_type = vrt_ds.GetRasterBand(1).DataType
+        
+    # Set width and height from vrt
+    width = vrt_ds.RasterXSize
+    height = vrt_ds.RasterYSize
+    
+    driver = gdal.GetDriverByName("GTiff")
+    
+    dataset = driver.Create(
+        output_tif_path,
+        width,
+        height,
+        bands=1,  # Number of bands
+        eType=output_data_type,  # Data type
+        # eType=gdal.GDT_Byte,  # Data type
+        options=[
+            "TILED=YES",  # Enable tiling
+            "COMPRESS=DEFLATE",  # Compression
+            "BIGTIFF=IF_SAFER",  # Use BigTIFF if necessary
+            "BLOCKXSIZE=256",  # Tile size in X
+            "BLOCKYSIZE=256",  # Tile size in Y
+        ],
+    )
+    
+    # Get src projection
+    src_proj = vrt_ds.GetProjection()
+    dataset.SetProjection(src_proj)
+    
+    # get src geotransform
+    src_gt = vrt_ds.GetGeoTransform()
+    dataset.SetGeoTransform(src_gt)
+
+    # # Define spatial reference (e.g., WGS84) and geotransform
+    # dataset.SetProjection("EPSG:4326")  # WGS84
+    # dataset.SetGeoTransform([-180, 0.1, 0, 90, 0, -0.1])  # Example geotransform
+
+    # Write data to the raster band
+    band = dataset.GetRasterBand(1)
+    band.WriteArray(data)
+
+    # Step 2: Build custom overviews
+    custom_overview_levels = [2, 4, 8, 16]  # Define overview levels
+    dataset.BuildOverviews("NEAREST", custom_overview_levels)  # Use nearest resampling
+
+    # Step 3: Close the dataset to finalize the COG
+    dataset.FlushCache()  # Ensure data is written to disk
+    dataset = None  # Close the file    
+    
+    
 
 def set_ndv_in_raster_header(input_raster_path, new_ndv):
     # DOES NOT CHANGE UNDERLYING DATA
