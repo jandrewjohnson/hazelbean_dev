@@ -1,17 +1,32 @@
 import hazelbean as hb
 import os
 import numpy as np
+from hazelbean import cloud_utils
 
 
 delete_on_finish = True
 
 global_1deg_raster_path = 'data/global_1deg_floats.tif'
 zones_vector_path = "data/countries_iso3.gpkg"
-zone_ids_raster_path = "data/country_ids_300sec.tif"
 zone_values_path = "data/ha_per_cell_300sec.tif"
-change_in_carbon_path = "data/change_in_carbon_300sec.tif"
+
 
 output_dir = 'data'
+bucket_url_base = 'https://storage.googleapis.com/gtap_invest_seals_2023_04_21/hazelbean/hazelbean_dev/test/'
+url = bucket_url_base + global_1deg_raster_path
+if not hb.path_exists(global_1deg_raster_path):
+    cloud_utils.download_file(url, global_1deg_raster_path)
+
+url = bucket_url_base + zones_vector_path
+if not hb.path_exists(zones_vector_path):
+    cloud_utils.download_file(url, zones_vector_path)
+
+url = bucket_url_base + zone_values_path
+if not hb.path_exists(zone_values_path):
+    cloud_utils.download_file(url, zone_values_path)
+    
+
+
 
 
 hb.load_geotiff_chunk_by_cr_size(global_1deg_raster_path, (1, 2, 5, 5))
@@ -74,7 +89,7 @@ hb.fill_to_match_extent(temp_path, global_1deg_raster_path, temp2_path)
 
 
 
-        # hb.make_path_global_pyramid(r"C:\Files\Research\hazelbean\hazelbean_dev\tests\data\crop_harvested_area_fraction.tif", verbose=False)
+        # hb.make_path_global_pyramid(r"C:/Files/Research/hazelbean/hazelbean_dev/tests/data/crop_harvested_area_fraction.tif", verbose=False)
 hb.make_path_global_pyramid(global_1deg_raster_path, verbose=False)
 
 
@@ -84,6 +99,23 @@ hb.remove_path(zone_values_path + '.ovr')
 # Remove auxiliary files so that we can test regenerating them.
 hb.remove_path(global_1deg_raster_path + '.aux.xml')
 hb.remove_path(global_1deg_raster_path + '.ovr')
+
+# hb.is_cog("D:/Users/jajohns/Files/base_data/lulc/esa/seals7/lulc_esa_seals7_2015.tif", verbose=True)
+
+# hb.is_cog("C:/Users/jajohns/Files/base_data/pyramids/ha_per_cell_10sec.tif", verbose=True)
+# hb.is_cog("C:/Users/jajohns/Downloads/nature_access_for_people.tif", verbose=True)
+# hb.is_cog(zone_values_path, verbose=True)
+# a = hb.path_abs(zone_values_path)
+# print(a)
+# temp_path = hb.temp('.tif', 'os', False, output_dir)
+# cmd = f"gdal_translate -of GTiff -co \"TILED=YES\" {zone_values_path} {temp_path}"
+# hb.is_cog(temp_path, verbose=True)
+
+
+temp_path = hb.temp('.tif', 'cogged', False, output_dir)
+hb.convert_to_cog(zone_values_path, temp_path, 6, 'near', -9999, compression="LZW", blocksize=512, verbose=True)
+
+
 
 print('Test complete.')
 
