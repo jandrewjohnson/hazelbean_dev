@@ -11,6 +11,8 @@ from osgeo import gdal, osr, ogr
 import numpy as np
 import pandas as pd
 import geopandas as gpd
+import tempfile
+import subprocess
 
 
 L = hb.get_logger('pyramids', logging_level='info')
@@ -131,13 +133,13 @@ pyramid_compatible_overview_levels[1.0] = [3, 10, 300, 900, 1800]
 pyramid_compatible_overview_levels[10.0] = [30, 90, 180]
 pyramid_compatible_overview_levels[30.0] = [10, 30, 60] 
 pyramid_compatible_overview_levels[150.0] = [2, 6, 12]
-pyramid_compatible_overview_levels[300.0] = [3]
-pyramid_compatible_overview_levels[900.0] = []
-pyramid_compatible_overview_levels[1800.0] = []
-pyramid_compatible_overview_levels[3600.0] = []
-pyramid_compatible_overview_levels[7200.0] = []
-pyramid_compatible_overview_levels[14400.0] = []
-pyramid_compatible_overview_levels[36000.0] = []
+pyramid_compatible_overview_levels[300.0] = [3, 6]
+pyramid_compatible_overview_levels[900.0] = [2]
+pyramid_compatible_overview_levels[1800.0] = [2]
+pyramid_compatible_overview_levels[3600.0] = [2]
+pyramid_compatible_overview_levels[7200.0] = [2]
+pyramid_compatible_overview_levels[14400.0] = [2]
+pyramid_compatible_overview_levels[36000.0] = [2]
 
 
 # TODOOO Deprecate
@@ -2446,3 +2448,404 @@ def convert_to_cog(input_raster, output_raster, output_data_type, overview_resam
         hb.log(f"Failed to create COG: {output_raster}")
             
     return output_raster
+
+
+def numpy_dtype_to_gdal(dtype):
+    """
+    Map a NumPy data type to a corresponding GDAL data type.
+    """
+    if np.issubdtype(dtype, np.uint8):
+        return gdal.GDT_Byte
+    elif np.issubdtype(dtype, np.uint16):
+        return gdal.GDT_UInt16
+    elif np.issubdtype(dtype, np.int16):
+        return gdal.GDT_Int16
+    elif np.issubdtype(dtype, np.uint32):
+        return gdal.GDT_UInt32
+    elif np.issubdtype(dtype, np.int32):
+        return gdal.GDT_Int32
+    elif np.issubdtype(dtype, np.float32):
+        return gdal.GDT_Float32
+    elif np.issubdtype(dtype, np.float64):
+        return gdal.GDT_Int64
+    elif np.issubdtype(dtype, np.uint64):
+        return gdal.GDT_UInt64
+    else:
+        raise ValueError("Unsupported NumPy data type: {}".format(dtype))
+
+def write_geotiff_as_cog(input_path, output_path, match_path, verbose=False):
+    """
+    Write a NumPy array to a Cloud Optimized GeoTIFF (COG) using GDAL.
+    
+    This function follows a two‑step process:
+      1. It creates a temporary GTiff file with recommended COG creation options
+         (tiled, compressed, with a fixed block size) and builds internal overviews.
+      2. It then reprojects that file into a final COG using gdal.Translate with the 
+         COPY_SRC_OVERVIEWS option so that the IFD and tile offsets are arranged properly.
+    
+    Parameters:
+      output_path (str): Path to the final output COG file.
+      array (np.ndarray): Data array to be written. Use shape (rows, cols) for a single
+                          band or (bands, rows, cols) for multiband data.
+      geotransform (tuple): A 6‑element tuple defining the geotransform.
+      projection (str): The projection in WKT format.
+      nodata (optional): No-data value to assign to each band.
+    
+    Raises:
+      RuntimeError: If dataset creation or translation fails.
+    
+    Example:
+    
+        # For a single‑band array:
+        arr = np.random.randint(0, 255, size=(1024, 1024)).astype(np.uint8)
+        geotrans = (444720, 30, 0, 3751320, 0, -30)
+        proj = osr.SRS_WKT_WGS84  # or load from a proper SRS object
+        write_cog("output_cog.tif", arr, geotrans, proj, nodata=0)
+    """
+    # Determine dimensions and number of bands.
+    if array.ndim == 2:
+        nbands = 1
+        rows, cols = array.shape
+    elif array.ndim == 3:
+        nbands, rows, cols = array.shape
+    else:
+        raise ValueError("Array must be 2D (rows, cols) or 3D (bands, rows, cols).")
+    
+    # Map the NumPy dtype to a GDAL type.
+    gdal_dtype = numpy_dtype_to_gdal(array.dtype)
+    
+    # Get the GTiff driver.
+    driver = gdal.GetDriverByName('GTiff')
+    
+    # Create a temporary file for the intermediate dataset.
+    tmp_fd, tmp_path = tempfile.mkstemp(suffix='.tif')
+    os.close(tmp_fd)  # We let GDAL handle the file.
+    
+    # Creation options for the temporary file.
+    tmp_creation_options = [
+        'TILED=YES',
+        'BLOCKXSIZE=512',
+        'BLOCKYSIZE=512',
+        'COMPRESS=ZSTD',
+        'PREDICTOR=2',
+        'BIGTIFF=IF_SAFER',
+        'NUM_THREADS=ALL_CPUS',
+    ]
+    
+    # Create the temporary dataset.
+    dataset = driver.Create(tmp_path, cols, rows, nbands, gdal_dtype, options=tmp_creation_options)
+    if dataset is None:
+        raise RuntimeError("Failed to create temporary dataset.")
+    
+    # Set georeferencing.
+    dataset.SetGeoTransform(geotransform)
+    dataset.SetProjection(projection)
+    
+    # Write the array data.
+    if nbands == 1:
+        band = dataset.GetRasterBand(1)
+        if nodata is not None:
+            band.SetNoDataValue(nodata)
+        band.WriteArray(array)
+    else:
+        for i in range(nbands):
+            band = dataset.GetRasterBand(i+1)
+            if nodata is not None:
+                band.SetNoDataValue(nodata)
+            band.WriteArray(array[i, :, :])
+    
+    # Ensure data is written.
+    dataset.FlushCache()
+    
+    # Build overviews.
+    # Choose overview levels until the reduced size is less than ~256 pixels.
+    overview_levels = []
+    factor = 2
+    while (rows // factor >= 256) and (cols // factor >= 256):
+        overview_levels.append(factor)
+        factor *= 2
+    if overview_levels:
+        # Use a resampling method; "AVERAGE" is often appropriate for continuous data.
+        dataset.BuildOverviews("AVERAGE", overview_levels)
+        dataset.FlushCache()
+    
+    # Close the temporary dataset.
+    dataset = None
+    
+    # Now translate the temporary file into the final COG.
+    # The COPY_SRC_OVERVIEWS option ensures that overviews are copied and that the file
+    # is reorganized so that the primary IFD and tile offsets are optimized.
+    final_creation_options = [
+        'TILED=YES',
+        'COPY_SRC_OVERVIEWS=YES',
+        'COMPRESS=DEFLATE',
+        'PREDICTOR=2',
+        'BIGTIFF=IF_SAFER'
+    ]
+    
+    translate_options = gdal.TranslateOptions(creationOptions=final_creation_options)
+    final_ds = gdal.Translate(output_path, tmp_path, options=translate_options)
+    if final_ds is None:
+        os.remove(tmp_path)
+        raise RuntimeError("Failed to translate to final COG.")
+    final_ds = None
+    
+    # Remove the temporary file.
+    os.remove(tmp_path)
+    print("COG successfully saved to '{}'.".format(output_path))
+    
+    
+    
+    
+    
+def write_geotiff_as_cog(input_path, output_path, match_path, verbose=False):
+    """
+    Reads an input GeoTIFF, gets georeference parameters from a matching GeoTIFF,
+    and writes out a Cloud Optimized GeoTIFF (COG) at output_path.
+    
+    Parameters:
+      input_path (str): Path to the input (source) GeoTIFF file.
+      output_path (str): Path for the final output COG.
+      match_path (str): Path to a GeoTIFF file from which to copy required georeference 
+                        and projection parameters.
+      verbose (bool): If True, prints additional diagnostic messages.
+    
+    The function performs the following steps:
+      1. Reads the data from input_path as a NumPy array.
+      2. Reads geotransform and projection from match_path.
+      3. Creates a temporary GeoTIFF using recommended COG creation options,
+         writes the data, and builds internal overviews.
+      4. Uses gdal.Translate with the COPY_SRC_OVERVIEWS option to produce the final file.
+    """
+    # 1. Open the input dataset.
+    in_ds = gdal.Open(input_path, gdal.GA_ReadOnly)
+    if in_ds is None:
+        raise RuntimeError("Unable to open input file: {}".format(input_path))
+    if verbose:
+        print("Opened input file: {}".format(input_path))
+    
+    # Read the input data as a NumPy array.
+    data = in_ds.ReadAsArray()
+    if data is None:
+        in_ds = None
+        raise RuntimeError("Failed to read data from input file.")
+    
+    # Determine the number of bands and image dimensions.
+    if data.ndim == 2:
+        nbands = 1
+        rows, cols = data.shape
+    elif data.ndim == 3:
+        nbands, rows, cols = data.shape
+    else:
+        in_ds = None
+        raise ValueError("Input data must be 2D (rows, cols) or 3D (bands, rows, cols).")
+    
+    if verbose:
+        print("Input data dimensions: {} x {} with {} band(s)".format(cols, rows, nbands))
+    
+    # Determine the GDAL data type from the NumPy dtype.
+    gdal_dtype = numpy_dtype_to_gdal(data.dtype)
+    
+    # Get nodata value from the first band of the input.
+    in_band = in_ds.GetRasterBand(1)
+    nodata = in_band.GetNoDataValue()
+    if verbose:
+        print("Input nodata value: {}".format(nodata))
+    
+    # 2. Open the match dataset to obtain georeferencing information.
+    match_ds = gdal.Open(match_path, gdal.GA_ReadOnly)
+    if match_ds is None:
+        in_ds = None
+        raise RuntimeError("Unable to open match file: {}".format(match_path))
+    geotransform = match_ds.GetGeoTransform()
+    projection = match_ds.GetProjection()
+    if verbose:
+        print("Using geotransform from match file: {}".format(geotransform))
+        print("Using projection from match file.")
+    match_ds = None  # No longer needed.
+    
+    # 3. Create a temporary file for the intermediate COG dataset.
+    driver = gdal.GetDriverByName('GTiff')
+    tmp_fd, tmp_path = tempfile.mkstemp(suffix='.tif')
+    os.close(tmp_fd)  # Let GDAL manage the file.
+    if verbose:
+        print("Creating temporary file: {}".format(tmp_path))
+    
+    tmp_creation_options = [
+        'TILED=YES',
+        'BLOCKXSIZE=512',
+        'BLOCKYSIZE=512',
+        'COMPRESS=ZSTD',
+        'PREDICTOR=2',
+        'BIGTIFF=IF_SAFER',
+        'NUM_THREADS=ALL_CPUS',      
+    ]
+    
+    tmp_ds = driver.Create(tmp_path, cols, rows, nbands, gdal_dtype, options=tmp_creation_options)
+    if tmp_ds is None:
+        in_ds = None
+        raise RuntimeError("Failed to create temporary dataset.")
+    
+    # Set georeferencing using parameters from the match file.
+    tmp_ds.SetGeoTransform(geotransform)
+    tmp_ds.SetProjection(projection)
+    
+    # 4. Write the data to the temporary dataset.
+    if nbands == 1:
+        band = tmp_ds.GetRasterBand(1)
+        if nodata is not None:
+            band.SetNoDataValue(nodata)
+        band.WriteArray(data)
+    else:
+        for i in range(nbands):
+            band = tmp_ds.GetRasterBand(i+1)
+            if nodata is not None:
+                band.SetNoDataValue(nodata)
+            # data is assumed to be in (bands, rows, cols) order.
+            band.WriteArray(data[i, :, :])
+    
+    tmp_ds.FlushCache()
+    if verbose:
+        print("Wrote data to temporary dataset.")
+    
+    # Build overviews.
+    
+    res_in_seconds = hb.pyramid_compatible_resolution_to_arcseconds[geotransform[1]]
+    overview_levels = hb.pyramid_compatible_overview_levels[res_in_seconds]
+    
+    # If the data are any form of ints, make it mode. otherwise make the resampling method be average.
+    if data.dtype in [np.int8, np.int16, np.int32, np.int64, np.uint8, np.uint16, np.uint32, np.uint64]:
+        resampling_method = 'MODE' # AVERAGE, NEAREST
+    else:
+        resampling_method = 'AVERAGE' # AVERAGE, NEAREST
+    # resampling_method = 'MODE' # AVERAGE, NEAREST
+    # overview_levels = []
+    # factor = 2
+    # while (rows // factor >= 256) and (cols // factor >= 256):
+    #     overview_levels.append(factor)
+    #     factor *= 2
+    if overview_levels:
+        if verbose:
+            print("Building overviews with levels: {}".format(overview_levels))
+        tmp_ds.BuildOverviews(resampling_method, overview_levels)
+        tmp_ds.FlushCache()
+    
+    # Close the temporary dataset.
+    tmp_ds = None
+    in_ds = None  # Close input dataset.
+    
+    # 5. Translate the temporary file into the final COG.
+    final_creation_options = [
+        'TILED=YES',
+        'COPY_SRC_OVERVIEWS=YES',
+        'BLOCKXSIZE=512',
+        'BLOCKYSIZE=512',
+        'COMPRESS=ZSTD',
+        'PREDICTOR=2',
+        'BIGTIFF=IF_SAFER'
+    ]
+    translate_options = gdal.TranslateOptions(creationOptions=final_creation_options)
+    if verbose:
+        print("Translating temporary file to final COG: {}".format(output_path))
+    final_ds = gdal.Translate(output_path, tmp_path, options=translate_options)
+    if final_ds is None:
+        os.remove(tmp_path)
+        raise RuntimeError("Failed to translate temporary file to final COG.")
+    final_ds = None
+    
+    # Remove the temporary file.
+    os.remove(tmp_path)
+    if verbose:
+        print("Final COG saved to '{}' and temporary file removed.".format(output_path))
+ 
+    
+
+def add_overviews_with_gdaladdo(dataset_path, overview_levels=None, 
+                                resampling_method="AVERAGE", verbose=False):
+    """
+    Uses gdaladdo.exe to add overviews (pyramids) to a GeoTIFF dataset.
+    
+    Parameters:
+      dataset_path (str): Path to the dataset (GeoTIFF) on which to add overviews.
+      overview_levels (list of int, optional): A list of integer factors at which
+           overviews will be created (e.g., [2, 4, 8, 16]). If None, the levels will be 
+           determined automatically based on the dataset dimensions.
+      resampling_method (str): Resampling method to use (e.g., "NEAREST", "AVERAGE",
+           "CUBIC", "MODE", etc.). Default is "AVERAGE".
+      verbose (bool): If True, prints the constructed command and any output/error messages.
+      callback (function): Optional callback function taking two parameters (progress, message).
+           Progress is a float between 0 and 1.
+    
+    Returns:
+      int: The return code from the gdaladdo.exe command.
+    
+    Raises:
+      FileNotFoundError: If the dataset file does not exist.
+      RuntimeError: If there is an error running gdaladdo.exe.
+    """
+    def callback(progress, message):
+        print("Progress: {:.0f}% - {}".format(progress * 100, message))    
+    
+    # Check if the input dataset exists.
+    if not os.path.exists(dataset_path):
+        raise FileNotFoundError("Dataset not found: {}".format(dataset_path))
+    
+    # If no overview levels are provided, compute them automatically.
+    if overview_levels is None:
+        ds = gdal.Open(dataset_path, gdal.GA_Update) # Update ensures overviews are internal
+        if ds is None:
+            raise RuntimeError("Failed to open dataset for overview level calculation.")
+        cols = ds.RasterXSize
+        rows = ds.RasterYSize
+        ds = None
+        
+        overview_levels = []
+        factor = 2
+        while (rows // factor >= 256) and (cols // factor >= 256):
+            overview_levels.append(factor)
+            factor *= 2
+        
+        if verbose:
+            print("Automatically determined overview levels: {}".format(overview_levels))
+        if callback:
+            callback(0.1, "Determined overview levels: {}".format(overview_levels))
+    
+    # Construct the gdaladdo.exe command.
+    # Example: gdaladdo.exe -r AVERAGE dataset_path 2 4 8 16
+    command = ["gdaladdo.exe", "-r", resampling_method, dataset_path] + [str(level) for level in overview_levels]
+    if verbose:
+        print("Executing command: {}".format(" ".join(command)))
+    if callback:
+        callback(0.2, "Executing gdaladdo command.")
+    
+    # Run the command.
+    try:
+        result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, 
+                                universal_newlines=True)
+    except Exception as e:
+        if callback:
+            callback(1.0, "Error executing gdaladdo: {}".format(e))
+        raise RuntimeError("Error executing gdaladdo.exe: {}".format(e))
+    
+    # Print output if verbose.
+    if verbose:
+        print("gdaladdo stdout:\n{}".format(result.stdout))
+        if result.stderr:
+            print("gdaladdo stderr:\n{}".format(result.stderr))
+    
+    if callback:
+        callback(1.0, "gdaladdo finished with return code: {}".format(result.returncode))
+    
+    return result.returncode
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
