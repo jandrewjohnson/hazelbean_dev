@@ -236,6 +236,8 @@ def path_all_exist(*args, verbose=False):
     return True
 
 def path_standardize_separators(input_path):
+    if input_path is None:
+        return None
     r1 = input_path.replace(os.sep, '/')
     r2 = r1.replace('\\', '/')
     return r2
@@ -243,7 +245,9 @@ def path_standardize_separators(input_path):
     
     
 def path_trisplit(input_path):
-
+    if input_path is None:
+        
+        return None
     clean_path = path_standardize_separators(input_path)
     split_path = clean_path.split('/')
     return split_path

@@ -348,6 +348,10 @@ class  ProjectFlow(object):
         # 3. relative path has no directories, join path args is not empty
         # 4. relative path has directories, join path args is not empty
         
+        if relative_path is None:
+            hb.log('WARNING: You gave None to hb.get_path(). This is not recommended but returning None Nonetheless, lol.')
+            return None
+        
         path_as_inputted = relative_path
         
         if download_destination_dir is None:
