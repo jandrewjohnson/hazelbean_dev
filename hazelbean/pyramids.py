@@ -648,7 +648,7 @@ def determine_pyramid_resolution(input_path):
     Return the input resolution if correct, the snapped-to resolution if close enough. Otherwise raise exception."""
     ds = gdal.OpenEx(input_path)
     if ds is None:
-        raise Exception('Could not open ' + str(input_path))
+        raise Exception('Could not open ' + str(input_path) + ' at abspath ' + str(os.path.abspath(input_path)))
     gt = ds.GetGeoTransform()
     ulx, xres, _, uly, _, yres = gt[0], gt[1], gt[2], gt[3], gt[4], gt[5]
 

@@ -19,9 +19,10 @@ if __name__=='__main__':
         # First confirm that all spam data are present in pyramids and are actually in pyramid form
         n_files_to_test = 5
 
-        zones_vector_path = "data/countries_iso3.gpkg"
-        zone_ids_raster_path = "data/country_ids_300sec.tif"
-        zone_values_path = "data/ha_per_cell_300sec.tif"
+
+        zone_ids_raster_path = "data/cartographic/ee/ee_r264_ids_300sec.tif"
+        zones_vector_path = "data/cartographic/ee/ee_r264_simplified300sec.gpkg"
+        zone_values_path = "data/pyramids/ha_per_cell_column_300sec.tif"
 
         input_paths_list = [zone_ids_raster_path, zone_values_path]
         L.info(input_paths_list)

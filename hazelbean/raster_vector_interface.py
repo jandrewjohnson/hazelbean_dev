@@ -577,7 +577,7 @@ def zonal_statistics(
         zones_vector_path=None,
         id_column_label=None,
         zone_ids_raster_path=None,
-        stats_to_retrieve='sums',
+        stats_to_retrieve='sums', # sums_counts
         enumeration_classes=None,
         enumeration_labels=None,
         multiply_raster_path=None,
