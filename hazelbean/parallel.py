@@ -1,4 +1,6 @@
 import rioxarray
+import os
+import concurrent
 import numpy as np
 import dask.array as da
 import hazelbean as hb
@@ -7,8 +9,11 @@ import xarray as xr
 import dask
 from dask.diagnostics import ProgressBar
 from dask.distributed import Client, LocalCluster, Lock
+from dask.distributed import worker_client
 import logging
-
+from osgeo import gdal
+# gdal.SetConfigOption("IGNORE_COG_LAYOUT_BREAK", "YES") 
+# gdal.PushErrorHandler('CPLQuietErrorHandler')
 import dask.distributed
 import dask.config
 dask.config.set({'logging.distributed': 'error'})
@@ -283,20 +288,49 @@ def raster_replace_value(input_raster_path, src_value, dst_value, output_path, n
         memory_limit = '8GB'
 
     threads_per_worker = 1 # Cause hyperthreading
-
+    use_cluster = False
     if use_client:
         from dask.distributed import Client, LocalCluster, Lock
         print('Launching as_array using Dask. View progress at http://localhost:8787/status')
+        
+        
+        
+        cluster = LocalCluster(n_workers=60, threads_per_worker=1)
+        client = Client(cluster, timeout="3600s", heartbeat_interval="90s")        
+        # client = Client(n_workers=n_workers)
+        def process_data():
+            xds = rioxarray.open_rasterio(input_raster_path, chunks='auto', lock=False)
 
+            delayed_computation = op(xds, src_value, dst_value)
+
+            layer_array_xr = xr.DataArray(delayed_computation, coords=xds.coords, dims=['band', 'y', 'x'], attrs=xds.attrs)
+
+            layer_array_xr.rio.to_raster(output_path, tiled=True, compress='LZW')
+        
+        future = client.submit(process_data)
+        processed = future.result() 
+
+    elif use_cluster:
         with LocalCluster(n_workers=n_workers, threads_per_worker=threads_per_worker, memory_limit=memory_limit) as cluster, Client(cluster) as client:
             if verbose:
                 hb.timer('Starting client')
 
-            xds = rioxarray.open_rasterio(input_raster_path, chunks='auto', lock=Lock("rio", client=client))
-            array = xds.to_numpy()
-            xds.close()
-            if verbose:
-                hb.timer('Ended client')
+
+            xds = rioxarray.open_rasterio(input_raster_path, chunks='auto', lock=False)
+
+            delayed_computation = op(xds, src_value, dst_value)
+
+            layer_array_xr = xr.DataArray(delayed_computation, coords=xds.coords, dims=['band', 'y', 'x'], attrs=xds.attrs)
+
+            layer_array_xr.rio.to_raster(output_path, tiled=True, compress='LZW')
+
+
+
+            # xds = rioxarray.open_rasterio(input_raster_path, chunks='auto', lock=Lock("rio", client=client))
+            # array = xds.to_numpy()
+            # xds.close()
+            # if verbose:
+            #     hb.timer('Ended client')
 
     else:
         print('Launching as_array using Dask without Client.')
@@ -309,7 +343,7 @@ def raster_replace_value(input_raster_path, src_value, dst_value, output_path, n
 
         layer_array_xr = xr.DataArray(delayed_computation, coords=xds.coords, dims=['band', 'y', 'x'], attrs=xds.attrs)
 
-        layer_array_xr.rio.to_raster(output_path, tiled=True, compress='DEFLATE')
+        layer_array_xr.rio.to_raster(output_path, tiled=True, compress='LZW')
 
 
 
@@ -910,3 +944,32 @@ def parallel_rasterstack_to_dict_compute(zones_path, values_path, output_path, n
         # delayed_computation = op(*xds_list)
         delayed_computation.rio.to_raster(output_path, tiled=True, compress='DEFLATE', lock=Lock("rio", client=client))  # NOTE!!! MUCH FASTER WITH THIS. I think it's because it coordinates with the read to start the next thing asap.
 
+
+
+import subprocess
+
+def run_command(cmd):
+    try:
+        result = subprocess.run(cmd, shell=True, capture_output=True, text=True, check=True)
+        return result.stdout  # or result.returncode if that's what you need
+    except subprocess.CalledProcessError as e:
+        # Log or handle errors as needed
+        print(f"Command failed with error: {e.stderr}")
+        raise e
+
+
+def run_commands_in_parallel(cmds, max_workers=8):
+    print("Launching workers to run commands in this list: ", cmds)
+    # Use a ThreadPoolExecutor to run os.system calls in parallel
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        # Submit each file to the executor.
+        future_to_file = {executor.submit(run_command, cmd): cmd for cmd in cmds}
+        
+        # Wait for all submitted tasks to complete.
+        for future in concurrent.futures.as_completed(future_to_file):
+            file_path = future_to_file[future]
+            try:
+                # Retrieve the return code from os.system
+                ret_code = future.result()
+            except Exception as exc:
+                print(f"{file_path} generated an exception: {exc}")

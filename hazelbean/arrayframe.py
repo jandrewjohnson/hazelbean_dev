@@ -1,5 +1,7 @@
 import os, sys, warnings, logging, shutil
-
+from osgeo import gdal
+# gdal.SetConfigOption("IGNORE_COG_LAYOUT_BREAK", "YES") 
+# gdal.PushErrorHandler('CPLQuietErrorHandler')
 from osgeo import gdal, osr, ogr
 import numpy as np
 import hazelbean as hb
@@ -38,7 +40,9 @@ class ArrayFrame(object):
 
         else:
             # If path is set, then we can get all attributes from the DS
-            self.ds = gdal.Open(path, gdal.GA_Update)
+            a = hb.path_exists(path)
+            print(a)
+            self.ds = gdal.OpenEx(path, gdal.GA_Update, open_options=["IGNORE_COG_LAYOUT_BREAK=YES"])
             self.band = self.ds.GetRasterBand(1)
             self.num_cols = self.ds.RasterXSize
             self.n_cols = self.num_cols

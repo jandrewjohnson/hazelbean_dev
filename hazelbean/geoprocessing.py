@@ -1143,9 +1143,9 @@ def rasterize(
     Returns:
         None
     """
-    gdal.PushErrorHandler('CPLQuietErrorHandler')
+    # gdal.PushErrorHandler('CPLQuietErrorHandler')
     raster = gdal.OpenEx(target_raster_path, gdal.GA_Update)
-    gdal.PopErrorHandler()
+    # gdal.PopErrorHandler()
     if raster is None:
         raise ValueError("%s doesn't exist, but needed to rasterize.")
     vector = gdal.OpenEx(vector_path)
