@@ -127,12 +127,12 @@ pyramid_compatible_geotransforms[36000.0] = (-180.0, 10.0, 0.0, 90.0, 0.0, -10.0
 # Main: 1, 3, 10, 300, 900, 1800 arc seconds (soon to add 333msec). All main and secondary must have overviews that represent all of the coarser set of these main levels
 # Secondary: 30, 150. Common as an input, but overviews of OTHER levels aren't generated for these.
 pyramid_compatible_overview_levels = {}
-pyramid_compatible_overview_levels[1.0] = [3, 10, 300, 900, 1800]
-pyramid_compatible_overview_levels[10.0] = [30, 90, 180]
-pyramid_compatible_overview_levels[30.0] = [10, 30, 60] 
+pyramid_compatible_overview_levels[1.0] = [3, 10, 30, 150, 300, 900, 1800]
+pyramid_compatible_overview_levels[10.0] = [3, 15, 30, 90, 180]
+pyramid_compatible_overview_levels[30.0] = [5, 10, 30, 60] 
 pyramid_compatible_overview_levels[150.0] = [2, 6, 12]
-pyramid_compatible_overview_levels[300.0] = [3]
-pyramid_compatible_overview_levels[900.0] = []
+pyramid_compatible_overview_levels[300.0] = [3, 6]
+pyramid_compatible_overview_levels[900.0] = [2]
 pyramid_compatible_overview_levels[1800.0] = []
 pyramid_compatible_overview_levels[3600.0] = []
 pyramid_compatible_overview_levels[7200.0] = []

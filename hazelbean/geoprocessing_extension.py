@@ -18,6 +18,11 @@ import threading
 import json
 import pygeoprocessing
 
+
+from osgeo import gdal
+# gdal.SetConfigOption("IGNORE_COG_LAYOUT_BREAK", "YES") 
+# gdal.PushErrorHandler('CPLQuietErrorHandler')
+
 # pgp takes about 1 sec to import.
 # HACK I am just not importing this because stat_worker was written in the C and I want to update pgp before I start using that stuff.
 # import pygeoprocessing.geoprocessing_core as gpc
