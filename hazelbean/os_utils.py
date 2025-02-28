@@ -2,6 +2,7 @@ import atexit
 import datetime
 import time
 import errno
+import pathlib
 import os
 import random
 import shutil
@@ -40,8 +41,9 @@ def make_run_dir(base_folder=hb.config.TEMPORARY_DIR, run_name='', just_return_s
 #     pass
 
 
-def temp(ext=None, filename_start=None, remove_at_exit=False, folder=None, suffix=''):
-    """Create a path with extension ext in a temporary dir. Can add filename prefixes or suffixes, and place in a desired folder. Can be removed at exit automatically."""
+def temp(ext=None, filename_start=None, remove_at_exit=True, folder=None, suffix=''):
+    """Create a path with extension ext in a temporary dir. Can add filename prefixes or suffixes, and place in a desired folder. Can be removed at exit automatically. 
+    Note, this just makes the path string, not the file itself."""
     if ext:
         if not ext.startswith('.'):
             ext = '.' + ext
@@ -60,7 +62,13 @@ def temp(ext=None, filename_start=None, remove_at_exit=False, folder=None, suffi
     if folder is not None:
         uri = os.path.join(folder, filename)
     else:
-        uri = os.path.join(hb.config.TEMPORARY_DIR, filename)
+        user_home = pathlib.Path.home()
+        temp_dir = user_home/'temp'
+        if not os.path.exists(temp_dir):
+            os.makedirs(temp_dir)
+            
+        # Get the user dir
+        uri = os.path.join(temp_dir, filename)
 
     if remove_at_exit:
         remove_uri_at_exit(uri)

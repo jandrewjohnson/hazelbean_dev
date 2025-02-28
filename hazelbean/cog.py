@@ -1,18 +1,4 @@
-# Drawn from https://github.com/OSGeo/gdal/blob/master/swig/python/gdal-utils/osgeo_utils/samples/validate_cloud_optimized_geotiff.py
 
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-# *****************************************************************************
-#
-#  Project:  GDAL
-#  Purpose:  Validate Cloud Optimized GeoTIFF file structure
-#  Author:   Even Rouault, <even dot rouault at spatialys dot com>
-#
-# *****************************************************************************
-#  Copyright (c) 2017, Even Rouault
-#
-# SPDX-License-Identifier: MIT
-# *****************************************************************************
 
 import os.path
 import struct
@@ -21,6 +7,9 @@ import sys
 import hazelbean as hb
 
 from osgeo import gdal
+
+def make_path_cog(path, check_tiled=True, full_check=True, raise_exceptions=False, verbose=False):
+    5
 
 def is_path_cog(path, check_tiled=True, full_check=True, raise_exceptions=False, verbose=False):
     """Check if a file is a (Geo)TIFF with cloud optimized compatible structure."""
@@ -47,24 +36,35 @@ def is_path_cog(path, check_tiled=True, full_check=True, raise_exceptions=False,
         return False
     
     result = validate(ds, check_tiled=check_tiled, full_check=full_check)
-    print(result)
-    """Check if a file is a (Geo)TIFF with cloud optimized compatible structure.
+    # print(result)
+    
+    # Check if any element of the list result is longer than 1
+    if any(len(item) > 0 for item in result[:-1]):
+        if verbose:
+            hb.log(f"Path {path} at abspath {hb.path_abs(path)} is not a valid COG. It raised the following errors: \n " + '\n'.join([str(i) for i in result]))
+        if raise_exceptions:
+            raise ValueError(f"Path {path} at abspath {hb.path_abs(path)} is not a valid COG. It raised the following errors: \n " + '\n'.join(result))
+        return False
 
-    Args:
-      ds: GDAL Dataset for the file to inspect.
-      check_tiled: Set to False to ignore missing tiling.
-      full_check: Set to TRUe to check tile/strip leader/trailer bytes. Might be slow on remote files
+    return result
 
-    Returns:
-      A tuple, whose first element is an array of error messages
-      (empty if there is no error), and the second element, a dictionary
-      with the structure of the GeoTIFF file.
 
-    Raises:
-      ValidateCloudOptimizedGeoTIFFException: Unable to open the file or the
-        file is not a Tiff.
-    """
 
+# Drawn from https://github.com/OSGeo/gdal/blob/master/swig/python/gdal-utils/osgeo_utils/samples/validate_cloud_optimized_geotiff.py
+
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# *****************************************************************************
+#
+#  Project:  GDAL
+#  Purpose:  Validate Cloud Optimized GeoTIFF file structure
+#  Author:   Even Rouault, <even dot rouault at spatialys dot com>
+#
+# *****************************************************************************
+#  Copyright (c) 2017, Even Rouault
+#
+# SPDX-License-Identifier: MIT
+# *****************************************************************************
 
 def Usage():
     print(

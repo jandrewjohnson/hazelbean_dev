@@ -3405,10 +3405,22 @@ def get_cell_size_from_path(input_path):
 
         ds = gdal.Open(input_path)
         return ds.GetGeoTransform()[1]
+    
+def get_cell_size_from_path_in_degrees(input_path):
+    degrees = get_cell_size_from_path(input_path)
+    return degrees
+
+def get_cell_size_from_path_in_arcseconds(input_path):
+    degrees = get_cell_size_from_path(input_path)
+    arcseconds = hb.pyramid_compatible_resolution_to_arcseconds[degrees]
+    return arcseconds
 
 
 def get_cell_size_from_uri(dataset_uri):
-    """Get the cell size of a dataset in units of meters.
+    """
+    DEPRECEATED FROM PYGEOPROCESSING. Use get_cell_size_from_path 
+    
+    Get the cell size of a dataset in units of meters.
 
     Raises an exception if the raster is not square since this'll break most of
     the pygeoprocessing algorithms.

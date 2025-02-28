@@ -14,6 +14,8 @@ import geopandas as gpd
 import tempfile
 import subprocess
 
+from hazelbean import cog
+
 
 L = hb.get_logger('pyramids', logging_level='info')
 
@@ -2339,44 +2341,46 @@ def convert_raster_path_to_cog(input_path, output_path=None, remove_original=Fal
 
 
 
-def is_cog(raster_path, verbose=False):
-    """
-    FAILING BECAUSE CURRENTLY DOESNT WRITE TILES TO METADATA EVEN THO IT IS TILED
+# def is_cog(raster_path, verbose=False):
+#     """
+#  BROKEN, superceeded by cog.py
+#     FAILING BECAUSE CURRENTLY DOESNT WRITE TILES TO METADATA EVEN THO IT IS TILED
     
-    Checks if a given raster file is a Cloud Optimized GeoTIFF (COG).
+#     Checks if a given raster file is a Cloud Optimized GeoTIFF (COG).
 
-    Args:
-        raster_path (str): Path to the raster file.
+#     Args:
+#         raster_path (str): Path to the raster file.
 
-    Returns:
-        bool: True if the file is a COG, False otherwise.
-    """
-    # Open the raster with GDAL
-    dataset = gdal.Open(raster_path, gdal.GA_ReadOnly)
-    if not dataset:
-        return False  # File could not be opened
+#     Returns:
+#         bool: True if the file is a COG, False otherwise.
+#     """
+#     # Open the raster with GDAL
+#     dataset = gdal.Open(raster_path, gdal.GA_ReadOnly)
+#     if not dataset:
+#         return False  # File could not be opened
     
-    # Check for tiled structure
-    metadata = dataset.GetMetadata("IMAGE_STRUCTURE")
-    # is_tiled = metadata.get("TILED", "NO") == "YES"
-    is_tiled = dataset.GetMetadataItem("TILED", "IMAGE_STRUCTURE")
+#     # Check for tiled structure
+#     metadata = dataset.GetMetadata("IMAGE_STRUCTURE")
+#     # is_tiled = metadata.get("TILED", "NO") == "YES"
+#     is_tiled = dataset.GetMetadataItem("TILED", "IMAGE_STRUCTURE")
 
-    # Check for overviews (COGs typically have overviews)
-    has_overviews = dataset.GetRasterBand(1).GetOverviewCount() > 0
+#     # Check for overviews (COGs typically have overviews)
+#     has_overviews = dataset.GetRasterBand(1).GetOverviewCount() > 0
 
-    # Check if the file is internally accessible via HTTP-style range requests
-    subdatasets = dataset.GetSubDatasets()
-    is_byte_accessible = "/vsicurl/" in raster_path or len(subdatasets) == 0
+#     # Check if the file is internally accessible via HTTP-style range requests
+#     subdatasets = dataset.GetSubDatasets()
+#     is_byte_accessible = "/vsicurl/" in raster_path or len(subdatasets) == 0
 
-    dataset = None  # Close dataset
+#     dataset = None  # Close dataset
     
-    if verbose:
-        hb.log('Called is_cog on ' + raster_path + ' with results: is_tiled: ' + str(is_tiled) + ' has_overviews: ' + str(has_overviews) + ' is_byte_accessible: ' + str(is_byte_accessible))
+#     if verbose:
+#         hb.log('Called is_cog on ' + raster_path + ' with results: is_tiled: ' + str(is_tiled) + ' has_overviews: ' + str(has_overviews) + ' is_byte_accessible: ' + str(is_byte_accessible))
 
-    return is_tiled and has_overviews and is_byte_accessible
+#     return is_tiled and has_overviews and is_byte_accessible
 
-def convert_to_cog(input_raster, output_raster, output_data_type, overview_resampling_method, ndv, compression="LZW", blocksize=512, verbose=False):
+def convert_to_cog_via_translate(input_raster, output_raster, output_data_type, overview_resampling_method, ndv, compression="ZSTD", blocksize=512, verbose=False):
     """
+    DEPRECATED. Still working on full write-to-cog functionality. This basically just translates and makes it ready for conversion, but is not fully compatible.
     Converts a raster file to a Cloud Optimized GeoTIFF (COG).
     
     Args:
@@ -2388,16 +2392,23 @@ def convert_to_cog(input_raster, output_raster, output_data_type, overview_resam
     Returns:
         str: Path to the created COG file.
     """
-    if is_cog(input_raster) and verbose:
+    if cog.is_path_cog(input_raster, verbose) and verbose:
             hb.log(f"Raster is already a COG: {input_raster}")
             
     # Ensure output directory exists
     os.makedirs(os.path.dirname(output_raster), exist_ok=True)
 
+
+    # Get the resolution from the src_ds
+    degrees = hb.get_cell_size_from_path(input_raster)
+    arcseconds = hb.get_cell_size_from_path_in_arcseconds(input_raster)
+        
     # Open the source raster
     src_ds = gdal.Open(input_raster, gdal.GA_ReadOnly)
     if not src_ds:
         raise ValueError(f"Unable to open raster: {input_raster}")
+    
+
 
     # Define creation options for COG
     creation_options = [
@@ -2412,40 +2423,56 @@ def convert_to_cog(input_raster, output_raster, output_data_type, overview_resam
         
     ]
     
-    # if not any(
-    #         ['TILED' in option for option in local_gtiff_creation_options]):
-    #     # TILED not set, so lets try to set it to a reasonable value
-    #     if block_size[0] != n_cols:
-    #         # if x block is not the width of the raster it *must* be tiled
-    #         # otherwise okay if it's striped or tiled
-    #         local_gtiff_creation_options.append('TILED=YES')
-
-    # if not any(
-    #         ['BLOCK' in option for option in local_gtiff_creation_options]):
-    #     # not defined, so lets copy what we know from the current raster
-    #     local_gtiff_creation_options.extend([
-    #         'BLOCKXSIZE=%d' % block_size[0],
-    #         'BLOCKYSIZE=%d' % block_size[1]])
     
     gdal.SetConfigOption("GDAL_NUM_THREADS", "ALL_CPUS")
     gdal.SetConfigOption("GDAL_CACHEMAX", "4096")    
-
+    temp_path = hb.temp('.tif', 'cog', True)
     # Perform the translation
     gdal.Translate(
-        output_raster, src_ds, format="GTiff", options=gdal.TranslateOptions(creationOptions=creation_options, outputType=output_data_type), noData=ndv, callback=hb.make_logger_callback("Converting to COG %.1f%% complete %s")
+        temp_path, src_ds, format="GTiff", options=gdal.TranslateOptions(creationOptions=creation_options, outputType=output_data_type), noData=ndv, callback=hb.make_logger_callback("Converting to COG %.1f%% complete %s")
     )
 
-    # Build overviews if they don’t exist
-    hb.pyramid_compatible_full_overview_levels
-    print('WARNING! This wasnt generalized to pyramids for different resolutions')
-    gdaladdo_cmd = ["gdaladdo", "-r", overview_resampling_method.upper(), output_raster, "3", "10", "300", "900", "1800"]
-    os.system(" ".join(gdaladdo_cmd))  # Generate overviews
 
     src_ds = None  # Close dataset
     
-    # test if output is a cog
-    if not is_cog(output_raster, verbose) and verbose:
-        hb.log(f"Failed to create COG: {output_raster}")
+    # Build overviews
+    gdaladdo_cmd = ["gdaladdo", "-r", overview_resampling_method.upper(), temp_path] + [str(i) for i in hb.pyramid_compatible_overview_levels[arcseconds]]
+    os.system(" ".join(gdaladdo_cmd))  # Generate overviews
+
+    
+    # Do one more translate so it puts the overviews in the right orfder.
+        # Perform the translation
+    translate_command = f'gdal_translate {temp_path} {output_raster} \
+    -co TILED=YES \
+    -co COPY_SRC_OVERVIEWS=YES \
+    -co COMPRESS=ZSTD \
+    -co BIGTIFF=IF_SAFER'
+    
+    hb.log(f"Running translate command: {translate_command}")
+    os.system(translate_command)
+
+    
+    
+    
+    cogger_dir = os.path.abspath('hazelbean/bin/cogger')
+    # C:\Users\jajohns\Files\hazelbean\hazelbean_dev\hazelbean\bin\cogger
+    # c:\Users\jajohns\Files\hazelbean\hazelbean_dev\hazelbean\bin\cogger
+    print(os.path.abspath(cogger_dir))
+    # sys.path.insert(0, cogger_dir)
+    
+    os.chdir(cogger_dir)
+    cog_temp_path = hb.temp('.tif', 'cog', True)
+    cogger_cmd = f'cogger  -output {cog_temp_path} {output_raster}'   # test if output is a cog
+    hb.log(f"Running cogger command: {cogger_cmd}")
+    os.system(cogger_cmd)
+    
+    hb.swap_filenames(output_raster, cog_temp_path)
+    
+    # cogger_cmd = f'{cogger_path} -output {output_path} {output_raster}   # test if output is a cog
+    
+    # START HERE: Writes a temp file, adds overviews, but then this returns False still.
+    if not cog.is_path_cog(cog_temp_path, verbose=verbose) and verbose:
+        hb.log(f"Failed to create COG: {cog_temp_path}")
             
     return output_raster
 
