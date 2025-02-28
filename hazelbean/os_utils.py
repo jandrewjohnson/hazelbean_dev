@@ -1411,7 +1411,7 @@ def path_abs(input_relative_path):
     try:
         return os.path.abspath(str(input_relative_path))
     except:
-        return str(input_relative_path)
+        return "Failed path_abs on " + str(input_relative_path)
 
 
 def path_copy(src, dst, copy_tree=True, displace_overwrites=False, overwrite=True, verbose=False):
