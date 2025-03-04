@@ -291,7 +291,7 @@ no_data_values_by_numpy_type = {
     np.float32: [-9999.0],
     np.float64: [-9999.0],
     np.uint64: [MAX_UINT64, 0],
-    np.int64: [MAX_INT64, 0],
+    np.int64: [-9999, 0],
 }
 
 no_data_values_by_gdal_number = {

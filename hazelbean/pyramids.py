@@ -136,12 +136,56 @@ pyramid_compatible_overview_levels[10.0] = [3, 15, 30, 90, 180]
 pyramid_compatible_overview_levels[30.0] = [5, 10, 30, 60] 
 pyramid_compatible_overview_levels[150.0] = [2, 6, 12]
 pyramid_compatible_overview_levels[300.0] = [3, 6]
-pyramid_compatible_overview_levels[900.0] = [2]
-pyramid_compatible_overview_levels[1800.0] = [2]
-pyramid_compatible_overview_levels[3600.0] = [2]
-pyramid_compatible_overview_levels[7200.0] = [2]
-pyramid_compatible_overview_levels[14400.0] = [2]
-pyramid_compatible_overview_levels[36000.0] = [2]
+pyramid_compatible_overview_levels[900.0] = [2, 4]
+pyramid_compatible_overview_levels[1800.0] = [2, 4]
+pyramid_compatible_overview_levels[3600.0] = [2, 4]
+pyramid_compatible_overview_levels[7200.0] = [2, 4]
+pyramid_compatible_overview_levels[14400.0] = [2, 4]
+pyramid_compatible_overview_levels[36000.0] = [2, 4]
+
+from osgeo import gdal, gdalconst
+
+
+pyramid_resampling_algorithms_by_data_type = {}
+pyramid_resampling_algorithms_by_data_type[1] = 'mode'
+pyramid_resampling_algorithms_by_data_type[2] = 'mode'
+pyramid_resampling_algorithms_by_data_type[3] = 'mode'
+pyramid_resampling_algorithms_by_data_type[4] = 'mode'
+pyramid_resampling_algorithms_by_data_type[5] = 'mode'
+pyramid_resampling_algorithms_by_data_type[6] = 'average'
+pyramid_resampling_algorithms_by_data_type[7] = 'average'
+pyramid_resampling_algorithms_by_data_type[12] = 'average'
+pyramid_resampling_algorithms_by_data_type[13] = 'average'
+pyramid_resampling_algorithms_by_data_type[gdalconst.GDT_Byte] = 'mode'
+pyramid_resampling_algorithms_by_data_type[gdalconst.GDT_UInt16] = 'mode'
+pyramid_resampling_algorithms_by_data_type[gdalconst.GDT_Int16] = 'mode'
+pyramid_resampling_algorithms_by_data_type[gdalconst.GDT_UInt32] = 'mode'
+pyramid_resampling_algorithms_by_data_type[gdalconst.GDT_Int32] = 'mode'
+pyramid_resampling_algorithms_by_data_type[gdalconst.GDT_Float32] = 'average'
+pyramid_resampling_algorithms_by_data_type[gdalconst.GDT_Float64] = 'average'
+pyramid_resampling_algorithms_by_data_type[gdalconst.GDT_UInt64] = 'average'
+pyramid_resampling_algorithms_by_data_type[gdalconst.GDT_Int64] = 'average'
+pyramid_resampling_algorithms_by_data_type[np.uint8] = 'mode'
+pyramid_resampling_algorithms_by_data_type[np.uint16] = 'mode'
+pyramid_resampling_algorithms_by_data_type[np.int16] = 'mode'
+pyramid_resampling_algorithms_by_data_type[np.uint32] = 'mode'
+pyramid_resampling_algorithms_by_data_type[np.int32] = 'mode'
+pyramid_resampling_algorithms_by_data_type[np.float32] = 'average'
+pyramid_resampling_algorithms_by_data_type[np.float64] = 'average'
+pyramid_resampling_algorithms_by_data_type[np.uint64] = 'average'
+pyramid_resampling_algorithms_by_data_type[np.int64] = 'average'
+
+
+
+def numpy_dtype_to_gdal(dtype):
+    """
+    Map a NumPy data type to a corresponding GDAL data type.
+    """
+    if dtype in numpy_to_gdal_type:
+        return numpy_to_gdal_type[dtype]
+    else:
+        raise ValueError("Unsupported NumPy data type: {}".format(dtype))
+
 
 
 # TODOOO Deprecate
@@ -866,7 +910,7 @@ def is_path_global_pyramid(input_path):
     compression = image_structure.get('COMPRESSION', None)
 
     # Check if compressed (pyramidal file standards require compression)
-    if str(compression).lower() not in ['deflate']:
+    if str(compression).lower() not in ['zstd']:
         L.critical('Not a global pyramid because compression was not deflate: ' + str(input_path))
         to_return = False
 
@@ -2334,147 +2378,6 @@ def snap_bb_points_to_outer_pyramid(input_bb, pyramidal_raster_path):
 
     returned_bb = [float(i) for i in snapped_bb]
     return returned_bb
-
-
-def convert_raster_path_to_cog(input_path, output_path=None, remove_original=False):
-    5
-
-
-
-# def is_cog(raster_path, verbose=False):
-#     """
-#  BROKEN, superceeded by cog.py
-#     FAILING BECAUSE CURRENTLY DOESNT WRITE TILES TO METADATA EVEN THO IT IS TILED
-    
-#     Checks if a given raster file is a Cloud Optimized GeoTIFF (COG).
-
-#     Args:
-#         raster_path (str): Path to the raster file.
-
-#     Returns:
-#         bool: True if the file is a COG, False otherwise.
-#     """
-#     # Open the raster with GDAL
-#     dataset = gdal.Open(raster_path, gdal.GA_ReadOnly)
-#     if not dataset:
-#         return False  # File could not be opened
-    
-#     # Check for tiled structure
-#     metadata = dataset.GetMetadata("IMAGE_STRUCTURE")
-#     # is_tiled = metadata.get("TILED", "NO") == "YES"
-#     is_tiled = dataset.GetMetadataItem("TILED", "IMAGE_STRUCTURE")
-
-#     # Check for overviews (COGs typically have overviews)
-#     has_overviews = dataset.GetRasterBand(1).GetOverviewCount() > 0
-
-#     # Check if the file is internally accessible via HTTP-style range requests
-#     subdatasets = dataset.GetSubDatasets()
-#     is_byte_accessible = "/vsicurl/" in raster_path or len(subdatasets) == 0
-
-#     dataset = None  # Close dataset
-    
-#     if verbose:
-#         hb.log('Called is_cog on ' + raster_path + ' with results: is_tiled: ' + str(is_tiled) + ' has_overviews: ' + str(has_overviews) + ' is_byte_accessible: ' + str(is_byte_accessible))
-
-#     return is_tiled and has_overviews and is_byte_accessible
-
-def convert_to_cog_via_translate(input_raster, output_raster, output_data_type, overview_resampling_method, ndv, compression="ZSTD", blocksize=512, verbose=False):
-    """
-    DEPRECATED. Still working on full write-to-cog functionality. This basically just translates and makes it ready for conversion, but is not fully compatible.
-    Converts a raster file to a Cloud Optimized GeoTIFF (COG).
-    
-    Args:
-        input_raster (str): Path to the input raster file.
-        output_raster (str): Path to the output COG file.
-        compression (str, optional): Compression type (default: "LZW").
-        blocksize (int, optional): Tile size (default: 512x512).
-    
-    Returns:
-        str: Path to the created COG file.
-    """
-    if cog.is_path_cog(input_raster, verbose) and verbose:
-            hb.log(f"Raster is already a COG: {input_raster}")
-            
-    # Ensure output directory exists
-    os.makedirs(os.path.dirname(output_raster), exist_ok=True)
-
-
-    # Get the resolution from the src_ds
-    degrees = hb.get_cell_size_from_path(input_raster)
-    arcseconds = hb.get_cell_size_from_path_in_arcseconds(input_raster)
-        
-    # Open the source raster
-    src_ds = gdal.Open(input_raster, gdal.GA_ReadOnly)
-    if not src_ds:
-        raise ValueError(f"Unable to open raster: {input_raster}")
-    
-
-
-    # Define creation options for COG
-    creation_options = [
-        f"COMPRESS={compression}",  # Compression
-        "TILED=YES",  # Enable tiling
-        f"BLOCKXSIZE={blocksize}",  # Set tile size
-        f"BLOCKYSIZE={blocksize}",  
-        "BIGTIFF=IF_SAFER",  # Allow BigTIFF if needed
-        # "COPY_SRC_OVERVIEWS=YES",  # Preserve existing overviews
-        # f"a_nodata={str(ndv)}",
-        # f"OVERVIEW_RESAMPLING={overview_resampling_method}",  # Resample overviews using Nearest Neighbor
-        
-    ]
-    
-    
-    gdal.SetConfigOption("GDAL_NUM_THREADS", "ALL_CPUS")
-    gdal.SetConfigOption("GDAL_CACHEMAX", "4096")    
-    temp_path = hb.temp('.tif', 'cog', True)
-    # Perform the translation
-    gdal.Translate(
-        temp_path, src_ds, format="GTiff", options=gdal.TranslateOptions(creationOptions=creation_options, outputType=output_data_type), noData=ndv, callback=hb.make_logger_callback("Converting to COG %.1f%% complete %s")
-    )
-
-
-    src_ds = None  # Close dataset
-    
-    # Build overviews
-    gdaladdo_cmd = ["gdaladdo", "-r", overview_resampling_method.upper(), temp_path] + [str(i) for i in hb.pyramid_compatible_overview_levels[arcseconds]]
-    os.system(" ".join(gdaladdo_cmd))  # Generate overviews
-
-    
-    # Do one more translate so it puts the overviews in the right orfder.
-        # Perform the translation
-    translate_command = f'gdal_translate {temp_path} {output_raster} \
-    -co TILED=YES \
-    -co COPY_SRC_OVERVIEWS=YES \
-    -co COMPRESS=ZSTD \
-    -co BIGTIFF=IF_SAFER'
-    
-    hb.log(f"Running translate command: {translate_command}")
-    os.system(translate_command)
-
-    
-    
-    
-    cogger_dir = os.path.abspath('hazelbean/bin/cogger')
-    # C:\Users\jajohns\Files\hazelbean\hazelbean_dev\hazelbean\bin\cogger
-    # c:\Users\jajohns\Files\hazelbean\hazelbean_dev\hazelbean\bin\cogger
-    print(os.path.abspath(cogger_dir))
-    # sys.path.insert(0, cogger_dir)
-    
-    os.chdir(cogger_dir)
-    cog_temp_path = hb.temp('.tif', 'cog', True)
-    cogger_cmd = f'cogger  -output {cog_temp_path} {output_raster}'   # test if output is a cog
-    hb.log(f"Running cogger command: {cogger_cmd}")
-    os.system(cogger_cmd)
-    
-    hb.swap_filenames(output_raster, cog_temp_path)
-    
-    # cogger_cmd = f'{cogger_path} -output {output_path} {output_raster}   # test if output is a cog
-    
-    # START HERE: Writes a temp file, adds overviews, but then this returns False still.
-    if not cog.is_path_cog(cog_temp_path, verbose=verbose) and verbose:
-        hb.log(f"Failed to create COG: {cog_temp_path}")
-            
-    return output_raster
 
 
 def numpy_dtype_to_gdal(dtype):
