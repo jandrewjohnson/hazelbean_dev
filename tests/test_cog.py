@@ -64,8 +64,10 @@ class TestCOGCompliance(unittest.TestCase):
     def test_make_path_pog(self):
         """Test make_path_pog"""
 
+
+        # START HERE: If I run the test in debug mode via launch.json, it works. If I run it in the vs code click button, it fails.
         with self.subTest(file=self.invalid_cog_path):
-            temp_path = hb.temp('.tif', remove_at_exit=True)
+            temp_path = hb.temp('.tif', 'test_make_path_pog', remove_at_exit=True)
             make_path_pog(self.invalid_cog_path, temp_path, output_data_type=1, overview_resampling_method='mode', ndv=255, compression="ZSTD", blocksize=512, verbose=True)
             result = is_path_cog(temp_path, check_tiled=True, full_check=True, raise_exceptions=False, verbose=False)
             self.assertTrue(result, f"{temp_path} is a valid COG")

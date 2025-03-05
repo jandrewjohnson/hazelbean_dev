@@ -911,7 +911,7 @@ def is_path_global_pyramid(input_path):
 
     # Check if compressed (pyramidal file standards require compression)
     if str(compression).lower() not in ['zstd']:
-        L.critical('Not a global pyramid because compression was not deflate: ' + str(input_path))
+        L.critical('Not a global pyramid because compression was not zstd: ' + str(input_path))
         to_return = False
 
     data_type = ds.GetRasterBand(1).DataType
