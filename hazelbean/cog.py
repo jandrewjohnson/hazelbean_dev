@@ -11,7 +11,106 @@ from osgeo import gdal
 
 
 
-def make_path_cog(input_raster, output_raster, output_data_type, overview_resampling_method, ndv, compression="ZSTD", blocksize=512, verbose=False):
+def make_path_cog(input_raster_path, output_raster_path=None, output_data_type=None, overview_resampling_method=None, ndv=None, compression="ZSTD", blocksize=512, verbose=False):
+    """ Create a Pog (pyramidal cog) from input_raster_path. Writes in-place if output_raster_path is not set. Chooses correct values for 
+    everything else if not set."""
+    
+    # Check if input exists
+    if not hb.path_exists(input_raster_path, verbose=verbose):
+        raise FileNotFoundError(f"Input raster does not exist: {input_raster_path} at abs path {hb.path_abs(input_raster_path)}")
+    
+    if is_path_pog(input_raster_path, verbose) and verbose:
+        hb.log(f"Raster is already a COG: {input_raster_path}")
+        
+    # Make a local copy at a temp file to process on to avoid corrupting the original
+    temp_copy_path = hb.temp('.tif', 'copy', True, tag_along_file_extensions=['.aux.xml'])
+    
+    # Ensure output directory exists
+    os.makedirs(os.path.dirname(temp_copy_path), exist_ok=True)       
+    
+    if output_data_type is None:
+        output_data_type = input_data_type 
+
+    input_data_type = hb.get_datatype_from_uri(input_raster_path)
+    if output_data_type is not None:
+        if output_data_type != input_data_type:
+            gdal.Translate(temp_copy_path, input_raster_path, outputType=hb.gdal_number_to_gdal_type[output_data_type])
+        else:
+            hb.path_copy(input_raster_path, temp_copy_path) # Can just copy it direclty without accessing the raster.        
+    
+    # Get the resolution from the src_ds
+    degrees = hb.get_cell_size_from_path(temp_copy_path)
+    arcseconds = hb.get_cell_size_from_path_in_arcseconds(temp_copy_path)
+    
+    original_output_raster_path = output_raster_path
+    if output_raster_path is None:        
+        output_raster_path = hb.temp('.tif', hb.file_root(input_raster_path), remove_at_exit=False, folder=os.path.dirname(input_raster_path), tag_along_file_extensions=['.aux.xml'])
+    
+    if output_data_type is None:
+        input_data_type = hb.get_datatype_from_uri(temp_copy_path)
+        output_data_type = input_data_type       
+        
+    ndv = hb.no_data_values_by_gdal_type[output_data_type][0] # NOTE AWKWARD INCLUSINO OF zero as second option to work with faster_zonal_stats
+        
+    # Open the source raster in UPDATE MODE so it writes the overviews as internal
+    src_ds = gdal.OpenEx(temp_copy_path, gdal.GA_Update)
+    if not src_ds:
+        raise ValueError(f"Unable to open raster: {input_raster_path}")
+
+    # Remove existing overviews (if any)
+    src_ds.BuildOverviews(None, [])     
+    resampling_algorithm = hb.pyramid_resampling_algorithms_by_data_type[output_data_type] 
+    if overview_resampling_method is None:           
+        overview_resampling_method = resampling_algorithm
+    
+    # Set the overview levels based on the pyramid arcseconds
+    overview_levels = hb.pyramid_compatible_overview_levels[arcseconds]
+    src_ds.BuildOverviews(overview_resampling_method.upper(), overview_levels)
+
+    # Close the dataset to ensure overviews are saved
+    del src_ds    
+    
+    # Reopen it to use it as a copy target
+    src_ds = gdal.OpenEx(temp_copy_path, gdal.GA_ReadOnly)
+    
+    # Define creation options for COG
+    creation_options = [
+        f"COMPRESS={compression}",
+        f"BLOCKSIZE={blocksize}",  
+        f"BIGTIFF=YES", 
+        f"OVERVIEW_COMPRESS={compression}",        
+        f"RESAMPLING={resampling_algorithm}",
+        f"OVERVIEWS=IGNORE_EXISTING",
+        f"OVERVIEW_RESAMPLING={overview_resampling_method}",
+    ]
+
+    cog_driver = gdal.GetDriverByName('COG')
+    if cog_driver is None:
+        raise RuntimeError("COG driver is not available in this GDAL build.")    
+    
+    if ndv is not None and src_ds is not None:
+        for i in range(1, src_ds.RasterCount + 1):
+            band = src_ds.GetRasterBand(i)
+            band.SetNoDataValue(ndv)
+            
+    # Actually create the COG
+    dst_ds = cog_driver.CreateCopy(
+        output_raster_path,
+        src_ds,
+        strict=0,  # set to 1 to fail on any “creation option not recognized”
+        options=creation_options
+    )        
+    dst_ds = None
+    
+    if original_output_raster_path is None:
+        hb.swap_filenames(output_raster_path, input_raster_path)        
+
+    if not is_path_cog(output_raster_path, verbose=verbose) and verbose:
+        hb.log(f"Failed to create COG: {output_raster_path} at abs path {hb.path_abs(output_raster_path)}")
+
+
+
+def make_path_cog_old(input_raster, output_raster, output_data_type, overview_resampling_method, ndv, compression="ZSTD", blocksize=512, verbose=False):
     """
     Potentially superceeded by make_path_cog. 
     
@@ -48,7 +147,7 @@ def make_path_cog(input_raster, output_raster, output_data_type, overview_resamp
         # f"OVERVIEW_RESAMPLING={overview_resampling_method}",  # Resample overviews using Nearest Neighbor
     ]    
     
-    temp_path = hb.temp('.tif', 'cog', True)
+    temp_path = hb.temp('.tif', 'cog', True, tag_along_file_extensions=['.aux.xml'])
     # Perform the translation
     gdal.Translate(
         temp_path, src_ds, format="GTiff", options=gdal.TranslateOptions(creationOptions=creation_options, outputType=output_data_type), noData=ndv, callback=hb.make_logger_callback("Converting to COG %.1f%% complete %s")
@@ -82,7 +181,7 @@ def make_path_cog(input_raster, output_raster, output_data_type, overview_resamp
     # sys.path.insert(0, cogger_dir)
     
     os.chdir(cogger_dir)
-    cog_temp_path = hb.temp('.tif', 'cog', True)
+    cog_temp_path = hb.temp('.tif', 'cog', True, tag_along_file_extensions=['.aux.xml'])
     cogger_cmd = f'cogger  -output {cog_temp_path} {output_raster}'   # test if output is a cog
     if verbose:
         hb.log(f"Running cogger command: {cogger_cmd}")
@@ -96,7 +195,8 @@ def make_path_cog(input_raster, output_raster, output_data_type, overview_resamp
     return output_raster
 
 def make_path_pog(input_raster_path, output_raster_path=None, output_data_type=None, overview_resampling_method=None, ndv=None, compression="ZSTD", blocksize=512, verbose=False):
-    """ Uses make path cog to create a pog, which is a pyramidal cog"""
+    """ Create a Pog (pyramidal cog) from input_raster_path. Writes in-place if output_raster_path is not set. Chooses correct values for 
+    everything else if not set."""
     
     # Check if input exists
     if not hb.path_exists(input_raster_path, verbose=verbose):
@@ -106,11 +206,20 @@ def make_path_pog(input_raster_path, output_raster_path=None, output_data_type=N
         hb.log(f"Raster is already a COG: {input_raster_path}")
         
     # Make a local copy at a temp file to process on to avoid corrupting the original
-    temp_copy_path = hb.temp('.tif', 'copy', True)
+    temp_copy_path = hb.temp('.tif', 'copy', True, tag_along_file_extensions=['.aux.xml'])
     
     # Ensure output directory exists
     os.makedirs(os.path.dirname(temp_copy_path), exist_ok=True)       
-    hb.path_copy(input_raster_path, temp_copy_path)
+    
+    if output_data_type is None:
+        output_data_type = input_data_type 
+
+    input_data_type = hb.get_datatype_from_uri(input_raster_path)
+    if output_data_type is not None:
+        if output_data_type != input_data_type:
+            gdal.Translate(temp_copy_path, input_raster_path, outputType=hb.gdal_number_to_gdal_type[output_data_type])
+        else:
+            hb.path_copy(input_raster_path, temp_copy_path) # Can just copy it direclty without accessing the raster.        
     
     # Get the resolution from the src_ds
     degrees = hb.get_cell_size_from_path(temp_copy_path)
@@ -118,7 +227,7 @@ def make_path_pog(input_raster_path, output_raster_path=None, output_data_type=N
     
     original_output_raster_path = output_raster_path
     if output_raster_path is None:        
-        output_raster_path = hb.temp('.tif', hb.file_root(input_raster_path), remove_at_exit=False, folder=os.path.dirname(input_raster_path))
+        output_raster_path = hb.temp('.tif', hb.file_root(input_raster_path), remove_at_exit=False, folder=os.path.dirname(input_raster_path), tag_along_file_extensions=['.aux.xml'])
     
     if output_data_type is None:
         input_data_type = hb.get_datatype_from_uri(temp_copy_path)
@@ -132,7 +241,11 @@ def make_path_pog(input_raster_path, output_raster_path=None, output_data_type=N
         raise ValueError(f"Unable to open raster: {input_raster_path}")
 
     # Remove existing overviews (if any)
-    src_ds.BuildOverviews(None, []) 
+    src_ds.BuildOverviews(None, [])     
+    
+    resampling_algorithm = hb.pyramid_resampling_algorithms_by_data_type[output_data_type]    
+    if overview_resampling_method is None:
+        overview_resampling_method = resampling_algorithm
     
     # Set the overview levels based on the pyramid arcseconds
     overview_levels = hb.pyramid_compatible_overview_levels[arcseconds]
@@ -144,64 +257,37 @@ def make_path_pog(input_raster_path, output_raster_path=None, output_data_type=N
     # Reopen it to use it as a copy target
     src_ds = gdal.OpenEx(temp_copy_path, gdal.GA_ReadOnly)
     
-    resampling_algorithm = hb.pyramid_resampling_algorithms_by_data_type[output_data_type]
-    zstd_level = 4
-    overview_resampling_method = 'mode'
     # Define creation options for COG
     creation_options = [
         f"COMPRESS={compression}",
-        f"ZSTD_LEVEL={zstd_level}",# Compression
-        # f"TILED=YES",  # Enable tiling
-        # f"BLOCKXSIZE={blocksize}",  # Set tile size
-        # f"BLOCKYSIZE={blocksize}",  
         f"BLOCKSIZE={blocksize}",  
         f"BIGTIFF=YES", 
         f"OVERVIEW_COMPRESS={compression}",        
-        # f"OVERVIEW_LEVELS={overview_levels_as_list}",
         f"RESAMPLING={resampling_algorithm}",
         f"OVERVIEWS=IGNORE_EXISTING",
         f"OVERVIEW_RESAMPLING={overview_resampling_method}",
-        # f"COPY_SRC_OVERVIEWS=YES",  # Preserve existing overviews
-        # f"a_nodata={str(ndv)}",
     ]
-    
-
-    # # Define creation options for COG
-    # creation_options = [
-    #     f"COMPRESS={compression}",  # Compression
-    #     f"TILED=YES",  # Enable tiling
-    #     f"BLOCKXSIZE={blocksize}",  # Set tile size
-    #     f"BLOCKYSIZE={blocksize}",  
-    #     f"BIGTIFF=IF_SAFER",  # Allow BigTIFF if needed
-    #     # f"COPY_SRC_OVERVIEWS=YES",  # Preserve existing overviews
-    #     # f"a_nodata={str(ndv)}",
-    #     # f"OVERVIEW_RESAMPLING={overview_resampling_method}",  # Resample overviews using Nearest Neighbor
-    # ]    
-    
-    temp_path = hb.temp('.tif', 'cog', True)
 
     cog_driver = gdal.GetDriverByName('COG')
     if cog_driver is None:
         raise RuntimeError("COG driver is not available in this GDAL build.")    
     
+    if ndv is not None and src_ds is not None:
+        for i in range(1, src_ds.RasterCount + 1):
+            band = src_ds.GetRasterBand(i)
+            band.SetNoDataValue(ndv)
+            
     # Actually create the COG
     dst_ds = cog_driver.CreateCopy(
         output_raster_path,
         src_ds,
         strict=0,  # set to 1 to fail on any “creation option not recognized”
         options=creation_options
-    )
-    
-    if ndv is not None and dst_ds is not None:
-        for i in range(1, dst_ds.RasterCount + 1):
-            band = dst_ds.GetRasterBand(i)
-            band.SetNoDataValue(ndv)
-    
+    )        
     dst_ds = None
     
     if original_output_raster_path is None:
-        hb.swap_filenames(output_raster_path, input_raster_path)
-        
+        hb.swap_filenames(output_raster_path, input_raster_path)        
 
     if not is_path_cog(output_raster_path, verbose=verbose) and verbose:
         hb.log(f"Failed to create COG: {output_raster_path} at abs path {hb.path_abs(output_raster_path)}")
@@ -230,7 +316,7 @@ def make_path_cog_FAILED(input_raster_path, output_raster_path=None, output_data
     
     original_output_raster_path = output_raster_path
     if output_raster_path is None:        
-        output_raster_path = hb.temp('.tif', hb.file_root(input_raster_path), remove_at_exit=False, folder=os.path.dirname(input_raster_path))
+        output_raster_path = hb.temp('.tif', hb.file_root(input_raster_path), remove_at_exit=False, folder=os.path.dirname(input_raster_path), tag_along_file_extensions=['.aux.xml'])
     
     if output_data_type is None:
         input_data_type = hb.get_datatype_from_uri(input_raster_path)

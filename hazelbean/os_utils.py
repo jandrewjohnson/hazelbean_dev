@@ -41,9 +41,12 @@ def make_run_dir(base_folder=hb.config.TEMPORARY_DIR, run_name='', just_return_s
 #     pass
 
 
-def temp(ext=None, filename_start=None, remove_at_exit=True, folder=None, suffix=''):
+def temp(ext=None, filename_start=None, remove_at_exit=True, folder=None, suffix='', tag_along_file_extensions=None):
     """Create a path with extension ext in a temporary dir. Can add filename prefixes or suffixes, and place in a desired folder. Can be removed at exit automatically. 
-    Note, this just makes the path string, not the file itself."""
+    Note, this just makes the path string, not the file itself.
+    
+    tagalong_file_extensions identifies additional files that should also be removed with extra extensions, such as this.tif.aux.xml
+    """
     if ext:
         if not ext.startswith('.'):
             ext = '.' + ext
@@ -72,6 +75,14 @@ def temp(ext=None, filename_start=None, remove_at_exit=True, folder=None, suffix
 
     if remove_at_exit:
         remove_uri_at_exit(uri)
+        
+    if tag_along_file_extensions is not None:
+        if type(tag_along_file_extensions) is str:
+            tag_along_file_extensions = [tag_along_file_extensions]
+        for tag_along_file_extension in tag_along_file_extensions:
+            tag_along_uri = uri + tag_along_file_extension
+            if remove_at_exit:
+                remove_uri_at_exit(tag_along_uri)
 
     return uri
 
