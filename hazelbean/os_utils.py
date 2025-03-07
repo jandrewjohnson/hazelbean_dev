@@ -41,7 +41,7 @@ def make_run_dir(base_folder=hb.config.TEMPORARY_DIR, run_name='', just_return_s
 #     pass
 
 
-def temp(ext=None, filename_start=None, remove_at_exit=True, folder=None, suffix='', tag_along_file_extensions=None):
+def temp(ext=None, filename_start=None, remove_at_exit=True, folder=None, suffix='', tag_along_file_extensions=['.aux.xml']):
     """Create a path with extension ext in a temporary dir. Can add filename prefixes or suffixes, and place in a desired folder. Can be removed at exit automatically. 
     Note, this just makes the path string, not the file itself.
     

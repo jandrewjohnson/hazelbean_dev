@@ -889,20 +889,22 @@ def assert_path_global_pyramid(input_path):
     if not result:
         raise NameError('assert_path_global_pyramid failed on ', input_path)
 
-def is_path_global_pyramid(input_path):
+def is_path_global_pyramid(input_path, verbose=False):
     """Fast method for testing if path is pyramidal."""
     to_return = True
 
     res = hb.determine_pyramid_resolution(input_path)
 
     if res is None:
-        L.critical('Not pyramid because no suitable resolution was found: ' + str(input_path))
+        if verbose:
+            hb.log('Not pyramid because no suitable resolution was found: ' + str(input_path))
         return False
 
     gt = hb.get_geotransform_path(input_path)
 
     if not pyramid_compatible_geotransforms[pyramid_compatible_resolution_to_arcseconds[res]] == gt:
-        L.critical('Not pyramid because geotransform was not pyramidal. Found ' + str(gt) + ' which was not equal to ' + str(pyramid_compatible_geotransforms[pyramid_compatible_resolution_to_arcseconds[res]]) + ' for: '  + str(input_path))
+        if verbose:
+            hb.log('Not pyramid because geotransform was not pyramidal. Found ' + str(gt) + ' which was not equal to ' + str(pyramid_compatible_geotransforms[pyramid_compatible_resolution_to_arcseconds[res]]) + ' for: '  + str(input_path))
         to_return = False
 
     ds = gdal.OpenEx(input_path)
@@ -911,7 +913,8 @@ def is_path_global_pyramid(input_path):
 
     # Check if compressed (pyramidal file standards require compression)
     if str(compression).lower() not in ['zstd']:
-        L.critical('Not a global pyramid because compression was not zstd: ' + str(input_path))
+        if verbose:
+            hb.log('Not a global pyramid because compression was not zstd: ' + str(input_path))
         to_return = False
 
     data_type = ds.GetRasterBand(1).DataType
@@ -919,7 +922,8 @@ def is_path_global_pyramid(input_path):
     
     correct_ndv = hb.get_correct_ndv_from_flex(data_type)
     if ndv != correct_ndv:
-        L.critical('Not pyramid because ndv was not correct for datatype: ' + str(input_path))
+        if verbose:
+            hb.log('Not pyramid because ndv was not correct for datatype: ' + str(input_path))
         to_return = False
 
 
@@ -1349,7 +1353,7 @@ def make_path_global_pyramid(
     rewrite_array = False
 
     # Check if compressed (pyramidal file standards require compression)
-    if str(compression).lower() not in  ['deflate']:
+    if str(compression).lower() not in  ['zstd']:
         L.critical('rewrite_array triggered because compression was not deflate.')
         rewrite_array = True
 
@@ -1360,10 +1364,9 @@ def make_path_global_pyramid(
         options = (
             'TILED=YES',
             'BIGTIFF=YES',
-            'COMPRESS=DEFLATE',
-            'BLOCKXSIZE=256',
-            'BLOCKYSIZE=256',
-            'PREDICTOR=3',
+            'COMPRESS=ZSTD',
+            'BLOCKXSIZE=512',
+            'BLOCKYSIZE=512',
         )
     else:
         options = hb.globals.DEFAULT_GTIFF_CREATION_OPTIONS

@@ -203,7 +203,7 @@ def make_path_pog(input_raster_path, output_raster_path=None, output_data_type=N
         raise FileNotFoundError(f"Input raster does not exist: {input_raster_path} at abs path {hb.path_abs(input_raster_path)}")
     
     if is_path_pog(input_raster_path, verbose) and verbose:
-        hb.log(f"Raster is already a COG: {input_raster_path}")
+        hb.log(f"Raster is already a POG: {input_raster_path}")
         
     # Make a local copy at a temp file to process on to avoid corrupting the original
     temp_copy_path = hb.temp('.tif', 'copy', True, tag_along_file_extensions=['.aux.xml'])
@@ -211,10 +211,19 @@ def make_path_pog(input_raster_path, output_raster_path=None, output_data_type=N
     # Ensure output directory exists
     os.makedirs(os.path.dirname(temp_copy_path), exist_ok=True)       
     
+    input_data_type = hb.get_datatype_from_uri(input_raster_path)
+    if output_data_type == 'auto':
+        if input_data_type in [1, 2, 3, 4, 5, 12, 13]:
+            output_data_type = 13
+        elif input_data_type in [6]:
+            output_data_type = 6
+        elif input_data_type in [7, 8, 9, 10, 11]:
+            output_data_type = 7
+    
     if output_data_type is None:
         output_data_type = input_data_type 
 
-    input_data_type = hb.get_datatype_from_uri(input_raster_path)
+    
     if output_data_type is not None:
         if output_data_type != input_data_type:
             gdal.Translate(temp_copy_path, input_raster_path, outputType=hb.gdal_number_to_gdal_type[output_data_type])
@@ -229,12 +238,37 @@ def make_path_pog(input_raster_path, output_raster_path=None, output_data_type=N
     if output_raster_path is None:        
         output_raster_path = hb.temp('.tif', hb.file_root(input_raster_path), remove_at_exit=False, folder=os.path.dirname(input_raster_path), tag_along_file_extensions=['.aux.xml'])
     
-    if output_data_type is None:
-        input_data_type = hb.get_datatype_from_uri(temp_copy_path)
-        output_data_type = input_data_type       
+    # if output_data_type is None:
+    #     input_data_type = hb.get_datatype_from_uri(temp_copy_path)
+    #     output_data_type = input_data_type       
         
     ndv = hb.no_data_values_by_gdal_type[output_data_type][0] # NOTE AWKWARD INCLUSINO OF zero as second option to work with faster_zonal_stats
-        
+    
+    gt = hb.get_geotransform_from_uri(input_raster_path)    
+    gt_pyramid = hb.get_global_geotransform_from_resolution(degrees)
+    if gt != gt_pyramid:
+        resample_temp_path = hb.temp('.tif', 'resample', True, tag_along_file_extensions=['.aux.xml'])
+        hb.pyramid_compatable_shapes
+        hb.resample_to_match(
+            input_raster_path,
+            match_path,
+            resample_temp_path,
+            resample_method='bilinear',
+            output_data_type=None,
+            src_ndv=None,
+            ndv=None,
+            s_srs_wkt=None,
+            compress=True,
+            ensure_fits=False,
+            gtiff_creation_options=hb.globals.DEFAULT_GTIFF_CREATION_OPTIONS,
+            calc_raster_stats=False,
+            add_overviews=False,
+            pixel_size_override=None,
+            target_aligned_pixels=True,
+            bb_override=None,
+            verbose=False, 
+        )
+        hb.swap_filenames(resample_temp_path, input_raster_path)
     # Open the source raster in UPDATE MODE so it writes the overviews as internal
     src_ds = gdal.OpenEx(temp_copy_path, gdal.GA_Update)
     if not src_ds:

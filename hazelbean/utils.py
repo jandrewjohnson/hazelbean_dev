@@ -1816,3 +1816,98 @@ def parse_df_element_to_python_object(input_df_element, verbose=False):
     # if verbose:
     #     hb.log('parse_df_element_to_python_object:\n' + input_df_string + '\nparsed to\n' + str(to_return))
     # return to_return
+
+
+
+def write_pog_of_value(output_path, match_path, value, data_type, ndv, resampling_algorithm, overview_resampling_method, compression='ZSTD', blocksize='512'):
+    
+    # Define creation options for COG
+    gtiff_creation_options = [
+        f"COMPRESS={compression}",
+        f"BLOCKXSIZE={str(blocksize)}",  
+        f"BLOCKYSIZE={str(blocksize)}",  
+        f"BIGTIFF=YES", 
+        # f"OVERVIEWS=IGNORE_EXISTING",
+    ]    
+
+    # cog_creation_options = [
+    #     f"COMPRESS={compression}",
+    #     f"BLOCKSIZE={str(blocksize)}",  
+    #     f"BIGTIFF=YES", 
+    #     # f"OVERVIEW_COMPRESS={compression}",        
+    #     # f"RESAMPLING={resampling_algorithm}",
+    #     # f"OVERVIEWS=IGNORE_EXISTING",
+    #     # f"OVERVIEW_RESAMPLING={overview_resampling_method}",
+    # ]    
+
+    # Open existing raster to match
+    src_ds = gdal.Open(match_path)
+    geotransform = src_ds.GetGeoTransform()
+    projection = src_ds.GetProjection()
+    x_size = src_ds.RasterXSize
+    y_size = src_ds.RasterYSize
+    degrees = hb.get_cell_size_from_path(match_path)
+    arcseconds = hb.get_cell_size_from_path_in_arcseconds(match_path)        
+    
+    temp_path = hb.temp('.tif', filename_start='temp_gtiff_b4_cog', remove_at_exit=True)
+    driver = gdal.GetDriverByName('GTiff')
+    tmp_ds = driver.Create(temp_path, x_size, y_size, 1, data_type, options=gtiff_creation_options)
+    tmp_ds.SetGeoTransform(geotransform)
+    tmp_ds.SetProjection(projection)    
+    
+    # Efficiently write zeros line-by-line
+    value_row = np.full((1, x_size), value, dtype=hb.gdal_number_to_numpy_type[data_type])
+    for row in range(y_size):
+        tmp_ds.GetRasterBand(1).WriteArray(value_row, xoff=0, yoff=row)
+        
+    # Build Overviews
+    tmp_ds.GetRasterBand(1).SetNoDataValue(ndv)    
+    tmp_ds.BuildOverviews(None, []) # Remove existing overviews (if any) 
+    
+    resampling_algorithm = hb.pyramid_resampling_algorithms_by_data_type[data_type]    
+    if overview_resampling_method is None:
+        overview_resampling_method = resampling_algorithm
+    
+    # Set the overview levels based on the pyramid arcseconds
+    overview_levels = hb.pyramid_compatible_overview_levels[arcseconds]
+    tmp_ds.BuildOverviews(overview_resampling_method.upper(), overview_levels)
+    
+    tmp_ds.FlushCache()
+    del tmp_ds  # Close temp dataset
+
+    # Step 2: Convert temporary GTiff to COG using CreateCopy
+    cog_driver = gdal.GetDriverByName('COG')
+    cog_creation_options = [
+        f'COMPRESS={compression}',
+        f'BLOCKSIZE={blocksize}',
+        'BIGTIFF=YES',
+        'OVERVIEWS=IGNORE_EXISTING'
+    ]
+
+    tmp_ds = gdal.Open(temp_path)
+    cog_ds = cog_driver.CreateCopy(output_path, tmp_ds, options=cog_creation_options)
+
+    if cog_ds is None:
+        raise RuntimeError('Failed to create COG dataset.')
+
+    # Cleanup
+    del cog_ds
+    del tmp_ds
+    del src_ds
+
+    # Remove temporary file
+    os.remove(temp_path)
+
+
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
