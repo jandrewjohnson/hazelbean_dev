@@ -194,7 +194,7 @@ def make_path_cog_old(input_raster, output_raster, output_data_type, overview_re
             
     return output_raster
 
-def make_path_pog(input_raster_path, output_raster_path=None, output_data_type=None, overview_resampling_method=None, ndv=None, compression="ZSTD", blocksize=512, verbose=False):
+def make_path_pog(input_raster_path, output_raster_path=None, output_data_type=None, ndv=None, overview_resampling_method=None, compression="ZSTD", blocksize=512, verbose=False):
     """ Create a Pog (pyramidal cog) from input_raster_path. Writes in-place if output_raster_path is not set. Chooses correct values for 
     everything else if not set."""
     
@@ -237,14 +237,10 @@ def make_path_pog(input_raster_path, output_raster_path=None, output_data_type=N
     original_output_raster_path = output_raster_path
     if output_raster_path is None:        
         output_raster_path = hb.temp('.tif', hb.file_root(input_raster_path), remove_at_exit=False, folder=os.path.dirname(input_raster_path), tag_along_file_extensions=['.aux.xml'])
-    
-    # if output_data_type is None:
-    #     input_data_type = hb.get_datatype_from_uri(temp_copy_path)
-    #     output_data_type = input_data_type       
         
     ndv = hb.no_data_values_by_gdal_type[output_data_type][0] # NOTE AWKWARD INCLUSINO OF zero as second option to work with faster_zonal_stats
     
-    gt = hb.get_geotransform_from_uri(input_raster_path)    
+    gt = hb.get_geotransform_path(input_raster_path)    
     gt_pyramid = hb.get_global_geotransform_from_resolution(degrees)
     if gt != gt_pyramid:
         resample_temp_path = hb.temp('.tif', 'resample', True, tag_along_file_extensions=['.aux.xml'])
@@ -276,10 +272,9 @@ def make_path_pog(input_raster_path, output_raster_path=None, output_data_type=N
 
     # Remove existing overviews (if any)
     src_ds.BuildOverviews(None, [])     
-    
-    resampling_algorithm = hb.pyramid_resampling_algorithms_by_data_type[output_data_type]    
+        
     if overview_resampling_method is None:
-        overview_resampling_method = resampling_algorithm
+        overview_resampling_method = hb.pyramid_resampling_algorithms_by_data_type[output_data_type] 
     
     # Set the overview levels based on the pyramid arcseconds
     overview_levels = hb.pyramid_compatible_overview_levels[arcseconds]
@@ -297,7 +292,7 @@ def make_path_pog(input_raster_path, output_raster_path=None, output_data_type=N
         f"BLOCKSIZE={blocksize}",  
         f"BIGTIFF=YES", 
         f"OVERVIEW_COMPRESS={compression}",        
-        f"RESAMPLING={resampling_algorithm}",
+        f"RESAMPLING={overview_resampling_method}",
         f"OVERVIEWS=IGNORE_EXISTING",
         f"OVERVIEW_RESAMPLING={overview_resampling_method}",
     ]
