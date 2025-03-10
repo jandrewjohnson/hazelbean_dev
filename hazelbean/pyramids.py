@@ -45,6 +45,31 @@ pyramid_compatible_arcseconds_old = [
     36000.0,
     ]
 
+pyramid_ha_per_cell_ref_paths = {}
+pyramid_ha_per_cell_ref_paths[1.0] = os.path.join('pyramids', 'ha_per_cell_1sec.tif')
+pyramid_ha_per_cell_ref_paths[10.0] = os.path.join('pyramids', 'ha_per_cell_10sec.tif')
+pyramid_ha_per_cell_ref_paths[30.0] = os.path.join('pyramids', 'ha_per_cell_30sec.tif')
+pyramid_ha_per_cell_ref_paths[150.0] = os.path.join('pyramids', 'ha_per_cell_150sec.tif')
+pyramid_ha_per_cell_ref_paths[300.0] = os.path.join('pyramids', 'ha_per_cell_300sec.tif')
+pyramid_ha_per_cell_ref_paths[900.0] = os.path.join('pyramids', 'ha_per_cell_900sec.tif')
+pyramid_ha_per_cell_ref_paths[1800.0] = os.path.join('pyramids', 'ha_per_cell_1800sec.tif')
+pyramid_ha_per_cell_ref_paths[3600.0] = os.path.join('pyramids', 'ha_per_cell_3600sec.tif')
+pyramid_ha_per_cell_ref_paths[7200.0] = os.path.join('pyramids', 'ha_per_cell_7200sec.tif')
+pyramid_ha_per_cell_ref_paths[14400.0] = os.path.join('pyramids', 'ha_per_cell_14400sec.tif')
+pyramid_ha_per_cell_ref_paths[36000.0] = os.path.join('pyramids', 'ha_per_cell_36000sec.tif')
+
+ha_per_cell_column_1sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_1sec.tif')
+ha_per_cell_column_10sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_10sec.tif')
+ha_per_cell_column_30sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_30sec.tif')
+ha_per_cell_column_150sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_150sec.tif')
+ha_per_cell_column_300sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_300sec.tif')
+ha_per_cell_column_900sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_900sec.tif')
+ha_per_cell_column_1800sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_1800sec.tif')
+ha_per_cell_column_3600sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_3600sec.tif')
+ha_per_cell_column_7200sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_7200sec.tif')
+ha_per_cell_column_14400sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_14400sec.tif')
+ha_per_cell_column_36000sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_36000sec.tif')
+
 pyramid_compatible_resolution_to_arcseconds = {}
 pyramid_compatible_resolution_to_arcseconds[0.0002777777777777777775] =    1.0
 pyramid_compatible_resolution_to_arcseconds[0.002777777777777778] =    10.0
@@ -216,57 +241,6 @@ ha_per_cell_ref_paths[14400.0] = ha_per_cell_14400sec_ref_path
 ha_per_cell_ref_paths[36000.0] = ha_per_cell_36000sec_ref_path
 
 
-
-# TODOO Deprecate. I'm moving away from having hb define path-specific info, but kept for now for backwards compatibility. Could clean this.
-pyramid_ha_per_cell = {}
-pyramid_ha_per_cell[10.0] = os.path.join(hb.config.BASE_DATA_DIR, 'pyramids', 'ha_per_cell_10sec.tif')
-pyramid_ha_per_cell[30.0] = os.path.join(hb.config.BASE_DATA_DIR, 'pyramids', 'ha_per_cell_30sec.tif')
-pyramid_ha_per_cell[300.0] = os.path.join(hb.config.BASE_DATA_DIR, 'pyramids', 'ha_per_cell_300sec.tif')
-pyramid_ha_per_cell[900.0] = os.path.join(hb.config.BASE_DATA_DIR, 'pyramids', 'ha_per_cell_900sec.tif')
-pyramid_ha_per_cell[1800.0] = os.path.join(hb.config.BASE_DATA_DIR, 'pyramids', 'ha_per_cell_1800sec.tif')
-pyramid_ha_per_cell[3600.0] = os.path.join(hb.config.BASE_DATA_DIR, 'pyramids', 'ha_per_cell_3600sec.tif')
-pyramid_ha_per_cell[7200.0] = os.path.join(hb.config.BASE_DATA_DIR, 'pyramids', 'ha_per_cell_7200sec.tif')
-pyramid_ha_per_cell[14400.0] = os.path.join(hb.config.BASE_DATA_DIR, 'pyramids', 'ha_per_cell_14400sec.tif')
-pyramid_ha_per_cell[36000.0] = os.path.join(hb.config.BASE_DATA_DIR, 'pyramids', 'ha_per_cell_36000sec.tif')
-
-pyramid_ha_per_cell_column = {}
-pyramid_ha_per_cell_column[10.0] = os.path.join(hb.config.BASE_DATA_DIR, 'pyramids', 'ha_per_cell_column_10sec.tif')
-pyramid_ha_per_cell_column[30.0] = os.path.join(hb.config.BASE_DATA_DIR, 'pyramids', 'ha_per_cell_column_30sec.tif')
-pyramid_ha_per_cell_column[150.0] = os.path.join(hb.config.BASE_DATA_DIR, 'pyramids', 'ha_per_cell_column_150sec.tif')
-pyramid_ha_per_cell_column[300.0] = os.path.join(hb.config.BASE_DATA_DIR, 'pyramids', 'ha_per_cell_column_300sec.tif')
-pyramid_ha_per_cell_column[900.0] = os.path.join(hb.config.BASE_DATA_DIR, 'pyramids', 'ha_per_cell_column_900sec.tif')
-pyramid_ha_per_cell_column[1800.0] = os.path.join(hb.config.BASE_DATA_DIR, 'pyramids', 'ha_per_cell_column_1800sec.tif')
-pyramid_ha_per_cell_column[3600.0] = os.path.join(hb.config.BASE_DATA_DIR, 'pyramids', 'ha_per_cell_column_3600sec.tif')
-pyramid_ha_per_cell_column[7200.0] = os.path.join(hb.config.BASE_DATA_DIR, 'pyramids', 'ha_per_cell_column_7200sec.tif')
-pyramid_ha_per_cell_column[14400.0] = os.path.join(hb.config.BASE_DATA_DIR, 'pyramids', 'ha_per_cell_column_14400sec.tif')
-pyramid_ha_per_cell_column[36000.0] = os.path.join(hb.config.BASE_DATA_DIR, 'pyramids', 'ha_per_cell_column_36000sec.tif')
-
-
-
-ha_per_cell_column_1sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_1sec.tif')
-ha_per_cell_column_10sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_10sec.tif')
-ha_per_cell_column_30sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_30sec.tif')
-ha_per_cell_column_150sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_150sec.tif')
-ha_per_cell_column_300sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_300sec.tif')
-ha_per_cell_column_900sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_900sec.tif')
-ha_per_cell_column_1800sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_1800sec.tif')
-ha_per_cell_column_3600sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_3600sec.tif')
-ha_per_cell_column_7200sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_7200sec.tif')
-ha_per_cell_column_14400sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_14400sec.tif')
-ha_per_cell_column_36000sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_36000sec.tif')
-
-
-ha_per_cell_column_10sec_path = os.path.join('pyramids', 'ha_per_cell_column_10sec.tif')
-ha_per_cell_column_30sec_path = os.path.join('pyramids', 'ha_per_cell_column_30sec.tif')
-ha_per_cell_column_150sec_path = os.path.join('pyramids', 'ha_per_cell_column_150sec.tif')
-ha_per_cell_column_300sec_path = os.path.join('pyramids', 'ha_per_cell_column_300sec.tif')
-ha_per_cell_column_900sec_path = os.path.join('pyramids', 'ha_per_cell_column_900sec.tif')
-ha_per_cell_column_1800sec_path = os.path.join('pyramids', 'ha_per_cell_column_1800sec.tif')
-ha_per_cell_column_3600sec_path = os.path.join('pyramids', 'ha_per_cell_column_3600sec.tif')
-ha_per_cell_column_7200sec_path = os.path.join('pyramids', 'ha_per_cell_column_7200sec.tif')
-ha_per_cell_column_14400sec_path = os.path.join('pyramids', 'ha_per_cell_column_14400sec.tif')
-ha_per_cell_column_36000sec_path = os.path.join('pyramids', 'ha_per_cell_column_36000sec.tif')
-
 ha_per_cell_column_ref_paths = {}
 ha_per_cell_column_ref_paths[10.0] = ha_per_cell_column_10sec_ref_path
 ha_per_cell_column_ref_paths[30.0] = ha_per_cell_column_30sec_ref_path
@@ -279,33 +253,20 @@ ha_per_cell_column_ref_paths[7200.0] = ha_per_cell_column_7200sec_ref_path
 ha_per_cell_column_ref_paths[14400.0] = ha_per_cell_column_14400sec_ref_path
 ha_per_cell_column_ref_paths[36000.0] = ha_per_cell_column_36000sec_ref_path
 
-# TODOO DEPRECATE in favor of ref_path
-ha_per_cell_column_paths = {}
-ha_per_cell_column_paths[10.0] = ha_per_cell_column_10sec_path
-ha_per_cell_column_paths[30.0] = ha_per_cell_column_30sec_path
-ha_per_cell_column_paths[150.0] = ha_per_cell_column_150sec_path
-ha_per_cell_column_paths[300.0] = ha_per_cell_column_300sec_path
-ha_per_cell_column_paths[900.0] = ha_per_cell_column_900sec_path
-ha_per_cell_column_paths[1800.0] = ha_per_cell_column_1800sec_path
-ha_per_cell_column_paths[3600.0] = ha_per_cell_column_3600sec_path
-ha_per_cell_column_paths[7200.0] = ha_per_cell_column_7200sec_path
-ha_per_cell_column_paths[14400.0] = ha_per_cell_column_14400sec_path
-ha_per_cell_column_paths[36000.0] = ha_per_cell_column_36000sec_path
 
+# # TODOO DEPRECATE because references hazelbean paths
+# global_esa_lulc_paths_by_year = {}
+# global_esa_lulc_paths_by_year[2000] = os.path.join(hb.config.SEALS_BASE_DATA_DIR, "lulc_esa", "full", "ESACCI-LC-L4-LCCS-Map-300m-P1Y-2000-v2.0.7.tif")
+# global_esa_lulc_paths_by_year[2010] = os.path.join(hb.config.SEALS_BASE_DATA_DIR, "lulc_esa", "full", "ESACCI-LC-L4-LCCS-Map-300m-P1Y-2010-v2.0.7.tif")
+# global_esa_lulc_paths_by_year[2014] = os.path.join(hb.config.SEALS_BASE_DATA_DIR, "lulc_esa", "full", "ESACCI-LC-L4-LCCS-Map-300m-P1Y-2014-v2.0.7.tif")
+# global_esa_lulc_paths_by_year[2015] = os.path.join(hb.config.SEALS_BASE_DATA_DIR, "lulc_esa", "full", "ESACCI-LC-L4-LCCS-Map-300m-P1Y-2015-v2.0.7.tif")
 
-# TODOO DEPRECATE because references hazelbean paths
-global_esa_lulc_paths_by_year = {}
-global_esa_lulc_paths_by_year[2000] = os.path.join(hb.config.SEALS_BASE_DATA_DIR, "lulc_esa", "full", "ESACCI-LC-L4-LCCS-Map-300m-P1Y-2000-v2.0.7.tif")
-global_esa_lulc_paths_by_year[2010] = os.path.join(hb.config.SEALS_BASE_DATA_DIR, "lulc_esa", "full", "ESACCI-LC-L4-LCCS-Map-300m-P1Y-2010-v2.0.7.tif")
-global_esa_lulc_paths_by_year[2014] = os.path.join(hb.config.SEALS_BASE_DATA_DIR, "lulc_esa", "full", "ESACCI-LC-L4-LCCS-Map-300m-P1Y-2014-v2.0.7.tif")
-global_esa_lulc_paths_by_year[2015] = os.path.join(hb.config.SEALS_BASE_DATA_DIR, "lulc_esa", "full", "ESACCI-LC-L4-LCCS-Map-300m-P1Y-2015-v2.0.7.tif")
-
-# TODOO DEPRECATE because references hazelbean paths
-global_esa_seals5_lulc_paths_by_year = {}
-global_esa_seals5_lulc_paths_by_year[2000] = os.path.join(hb.config.SEALS_BASE_DATA_DIR, "lulc_esa\simplified\lulc_esa_simplified_2000.tif")
-global_esa_seals5_lulc_paths_by_year[2010] = os.path.join(hb.config.SEALS_BASE_DATA_DIR, "lulc_esa\simplified\lulc_esa_simplified_2010.tif")
-global_esa_seals5_lulc_paths_by_year[2014] = os.path.join(hb.config.SEALS_BASE_DATA_DIR, "lulc_esa\simplified\lulc_esa_simplified_2014.tif")
-global_esa_seals5_lulc_paths_by_year[2015] = os.path.join(hb.config.SEALS_BASE_DATA_DIR, "lulc_esa\simplified\lulc_esa_simplified_2015.tif")
+# # TODOO DEPRECATE because references hazelbean paths
+# global_esa_seals5_lulc_paths_by_year = {}
+# global_esa_seals5_lulc_paths_by_year[2000] = os.path.join(hb.config.SEALS_BASE_DATA_DIR, "lulc_esa\simplified\lulc_esa_simplified_2000.tif")
+# global_esa_seals5_lulc_paths_by_year[2010] = os.path.join(hb.config.SEALS_BASE_DATA_DIR, "lulc_esa\simplified\lulc_esa_simplified_2010.tif")
+# global_esa_seals5_lulc_paths_by_year[2014] = os.path.join(hb.config.SEALS_BASE_DATA_DIR, "lulc_esa\simplified\lulc_esa_simplified_2014.tif")
+# global_esa_seals5_lulc_paths_by_year[2015] = os.path.join(hb.config.SEALS_BASE_DATA_DIR, "lulc_esa\simplified\lulc_esa_simplified_2015.tif")
 
 global_bounding_box = [-180.0, -90.0, 180.0, 90.0]
 

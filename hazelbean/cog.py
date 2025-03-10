@@ -1,7 +1,7 @@
 import os.path
 import struct
 import sys
-
+import pathlib
 import hazelbean as hb
 
 from osgeo import gdal
@@ -260,15 +260,18 @@ def make_path_pog(input_raster_path, output_raster_path=None, output_data_type=N
     
     gt = hb.get_geotransform_path(input_raster_path)    
     gt_pyramid = hb.get_global_geotransform_from_resolution(degrees)
+    
+    user_dir = pathlib.Path.home()
+    match_path = os.path.join(user_dir, 'Files', 'base_data', hb.ha_per_cell_ref_paths[arcseconds])
     if gt != gt_pyramid:
         resample_temp_path = hb.temp('.tif', 'resample', True, tag_along_file_extensions=['.aux.xml'])
-        hb.pyramid_compatable_shapes
+
         hb.resample_to_match(
-            input_raster_path,
+            temp_copy_path,
             match_path,
             resample_temp_path,
             resample_method='bilinear',
-            output_data_type=None,
+            output_data_type=output_data_type,
             src_ndv=None,
             ndv=None,
             s_srs_wkt=None,
@@ -282,15 +285,15 @@ def make_path_pog(input_raster_path, output_raster_path=None, output_data_type=N
             bb_override=None,
             verbose=False, 
         )
-        hb.swap_filenames(resample_temp_path, input_raster_path)
+        hb.swap_filenames(resample_temp_path, temp_copy_path)
         
         
-    add_stats_to_geotiff_with_gdal(input_raster_path, approx_ok=False, force=True, verbose=verbose)
+    add_stats_to_geotiff_with_gdal(temp_copy_path, approx_ok=False, force=True, verbose=verbose)
     
     # Open the source raster in UPDATE MODE so it writes the overviews as internal
     src_ds = gdal.OpenEx(temp_copy_path, gdal.GA_Update)
     if not src_ds:
-        raise ValueError(f"Unable to open raster: {input_raster_path}")
+        raise ValueError(f"Unable to open raster: {temp_copy_path}")
 
 
 

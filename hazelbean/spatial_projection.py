@@ -546,28 +546,28 @@ def resample_to_match(input_path,
 
         target_bb[2] += target_pixel_size[0]
         target_bb[3] += target_pixel_size[1]
-    if compress is True or compress == 'LZW':
+    if compress is True or compress == 'ZSTD':
         gtiff_creation_options = (
             'TILED=YES',
             'BIGTIFF=YES',
-            'COMPRESS=LZW',
-            'BLOCKXSIZE=256',
-            'BLOCKYSIZE=256',
+            'COMPRESS=ZSTD',
+            'BLOCKXSIZE=512',
+            'BLOCKYSIZE=512',
         )
     elif compress:
         gtiff_creation_options = (
             'TILED=YES',
             'BIGTIFF=YES',
-            'BLOCKXSIZE=256',
-            'BLOCKYSIZE=256',
+            'BLOCKXSIZE=512',
+            'BLOCKYSIZE=512',
             compress.upper(),
         )
     else:
         gtiff_creation_options = (
             'TILED=YES',
             'BIGTIFF=YES',
-            'BLOCKXSIZE=256',
-            'BLOCKYSIZE=256',
+            'BLOCKXSIZE=512',
+            'BLOCKYSIZE=512',
         )
     hb.warp_raster_hb(input_path, target_pixel_size, output_path,
                       resample_method, target_bb=target_bb, base_sr_wkt=s_srs_wkt, target_sr_wkt=target_sr_wkt,
