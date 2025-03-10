@@ -1,5 +1,3 @@
-
-
 import os.path
 import struct
 import sys
@@ -44,7 +42,7 @@ def make_path_cog(input_raster_path, output_raster_path=None, output_data_type=N
     
     original_output_raster_path = output_raster_path
     if output_raster_path is None:        
-        output_raster_path = hb.temp('.tif', hb.file_root(input_raster_path), remove_at_exit=False, folder=os.path.dirname(input_raster_path), tag_along_file_extensions=['.aux.xml'])
+        output_raster_path = hb.temp('.tif', hb.file_root(input_raster_path) + '_displacement_io_by_make_path_cog', remove_at_exit=False, folder=os.path.dirname(input_raster_path), tag_along_file_extensions=['.aux.xml'])
     
     if output_data_type is None:
         input_data_type = hb.get_datatype_from_uri(temp_copy_path)
@@ -56,7 +54,11 @@ def make_path_cog(input_raster_path, output_raster_path=None, output_data_type=N
     src_ds = gdal.OpenEx(temp_copy_path, gdal.GA_Update)
     if not src_ds:
         raise ValueError(f"Unable to open raster: {input_raster_path}")
-
+    
+    # I'm not sure why, but getting the stats from the src_ds, then building overviews, then reassigning it keeps COG compliance.
+    add_stats_to_geotiff_with_gdal(input_raster_path, approx_ok=False, force=True, verbose=verbose)
+    stats_dict = get_stats_from_geotiff(input_raster_path)    
+    
     # Remove existing overviews (if any)
     src_ds.BuildOverviews(None, [])     
     resampling_algorithm = hb.pyramid_resampling_algorithms_by_data_type[output_data_type] 
@@ -65,10 +67,12 @@ def make_path_cog(input_raster_path, output_raster_path=None, output_data_type=N
     
     # Set the overview levels based on the pyramid arcseconds
     overview_levels = hb.pyramid_compatible_overview_levels[arcseconds]
-    src_ds.BuildOverviews(overview_resampling_method.upper(), overview_levels)
+    src_ds.BuildOverviews(overview_resampling_method.upper(), overview_levels, hb.make_gdal_callback(f'Building overviews for {temp_copy_path}'))
 
     # Close the dataset to ensure overviews are saved
     del src_ds    
+    
+    add_stats_to_geotiff_from_dict(temp_copy_path, stats_dict)  
     
     # Reopen it to use it as a copy target
     src_ds = gdal.OpenEx(temp_copy_path, gdal.GA_ReadOnly)
@@ -80,7 +84,7 @@ def make_path_cog(input_raster_path, output_raster_path=None, output_data_type=N
         f"BIGTIFF=YES", 
         f"OVERVIEW_COMPRESS={compression}",        
         f"RESAMPLING={resampling_algorithm}",
-        f"OVERVIEWS=IGNORE_EXISTING",
+        # f"OVERVIEWS=IGNORE_EXISTING", 
         f"OVERVIEW_RESAMPLING={overview_resampling_method}",
     ]
 
@@ -93,14 +97,19 @@ def make_path_cog(input_raster_path, output_raster_path=None, output_data_type=N
             band = src_ds.GetRasterBand(i)
             band.SetNoDataValue(ndv)
             
+              
+            
     # Actually create the COG
     dst_ds = cog_driver.CreateCopy(
         output_raster_path,
         src_ds,
         strict=0,  # set to 1 to fail on any “creation option not recognized”
-        options=creation_options
+        options=creation_options,
+        callback=hb.make_gdal_callback(f'cog_driver creating copy at {output_raster_path}')
     )        
     dst_ds = None
+    
+    # add_stats_to_geotiff_from_dict(output_raster_path, stats_dict)
     
     if original_output_raster_path is None:
         hb.swap_filenames(output_raster_path, input_raster_path)        
@@ -108,92 +117,101 @@ def make_path_cog(input_raster_path, output_raster_path=None, output_data_type=N
     if not is_path_cog(output_raster_path, verbose=verbose) and verbose:
         hb.log(f"Failed to create COG: {output_raster_path} at abs path {hb.path_abs(output_raster_path)}")
 
-
-
-def make_path_cog_old(input_raster, output_raster, output_data_type, overview_resampling_method, ndv, compression="ZSTD", blocksize=512, verbose=False):
+def add_stats_to_geotiff_with_gdal(geotiff_path, approx_ok=False, force=True, verbose=True):
     """
-    Potentially superceeded by make_path_cog. 
-    
-    Convert a raster to a Cloud Optimized GeoTIFF (COG) using gdal.Translate and a binary cogger.exe.
+    Computes raster statistics and embeds them into GeoTIFF internal metadata
+    without creating .aux.xml files when opened in QGIS.
+
+    Parameters:
+        geotiff_path (str): Path to GeoTIFF.
+        approx_ok (bool): Allow approximate stats computation.
+        force (bool): Force recomputation of statistics.
+        verbose (bool): Print detailed statistics per band.
     """
-    gdal.SetConfigOption("GDAL_NUM_THREADS", "ALL_CPUS")
-    gdal.SetConfigOption("GDAL_CACHEMAX", "4096")    
-        
-    if is_path_cog(input_raster, verbose) and verbose:
+    ds = gdal.Open(geotiff_path, gdal.GA_Update)
+
+    if not ds:
+        raise ValueError(f"Could not open {geotiff_path}")
+
+    for band_index in range(1, ds.RasterCount + 1):
+        band = ds.GetRasterBand(band_index)  
+        band.SetMetadataItem("STATISTICS_MINIMUM", None)
+        band.SetMetadataItem("STATISTICS_MAXIMUM", None)
+        band.SetMetadataItem("STATISTICS_MEAN", None)
+        band.SetMetadataItem("STATISTICS_STDDEV", None)                    
+        stats = band.ComputeStatistics(approx_ok=approx_ok, callback=hb.make_gdal_callback('Calculating stats.') if verbose else None)
+
         if verbose:
-            hb.log(f"Raster is already a COG: {input_raster}")
-            
-    # Ensure output directory exists
-    os.makedirs(os.path.dirname(output_raster), exist_ok=True)
+            print(
+                f"\nBand {band_index} stats: "
+                f"min={stats[0]:.4f}, max={stats[1]:.4f}, mean={stats[2]:.4f}, stddev={stats[3]:.4f}"
+            )
 
-    # Get the resolution from the src_ds
-    degrees = hb.get_cell_size_from_path(input_raster)
-    arcseconds = hb.get_cell_size_from_path_in_arcseconds(input_raster)
-        
-    # Open the source raster
-    src_ds = gdal.Open(input_raster, gdal.GA_ReadOnly)
-    if not src_ds:
-        raise ValueError(f"Unable to open raster: {input_raster}")
+        band.FlushCache()
 
-    # Define creation options for COG
-    creation_options = [
-        f"COMPRESS={compression}",  # Compression
-        f"TILED=YES",  # Enable tiling
-        f"BLOCKXSIZE={blocksize}",  # Set tile size
-        f"BLOCKYSIZE={blocksize}",  
-        f"BIGTIFF=IF_SAFER",  # Allow BigTIFF if needed
-        # f"COPY_SRC_OVERVIEWS=YES",  # Preserve existing overviews
-        # f"a_nodata={str(ndv)}",
-        # f"OVERVIEW_RESAMPLING={overview_resampling_method}",  # Resample overviews using Nearest Neighbor
-    ]    
+    ds = None 
     
-    temp_path = hb.temp('.tif', 'cog', True, tag_along_file_extensions=['.aux.xml'])
-    # Perform the translation
-    gdal.Translate(
-        temp_path, src_ds, format="GTiff", options=gdal.TranslateOptions(creationOptions=creation_options, outputType=output_data_type), noData=ndv, callback=hb.make_logger_callback("Converting to COG %.1f%% complete %s")
-    )
-    src_ds = None  # Close dataset
+def get_stats_from_geotiff(geotiff_path):
+    """
+    Returns a dictionary of statistics (min, max, mean, stddev) for each band in the GeoTIFF.
     
-    # Build overviews
-    gdaladdo_cmd = ["gdaladdo", "-r", overview_resampling_method.upper(), temp_path] + [str(i) for i in hb.pyramid_compatible_overview_levels[arcseconds]]
-    os.system(" ".join(gdaladdo_cmd))  # Generate overviews
+    Args:
+        geotiff_path (str): Path to the input GeoTIFF file.
+    
+    Returns:
+        dict: A dictionary where keys are band numbers (1-based) and values are dicts of statistics.
+    """
+    ds = gdal.Open(geotiff_path, gdal.GA_ReadOnly)
+    if ds is None:
+        raise FileNotFoundError(f"Could not open file: {geotiff_path}")
+    
+    stats_by_band = {}
+    for i in range(1, ds.RasterCount + 1):
+        band = ds.GetRasterBand(i)
+        stats = band.GetStatistics(True, True)  # (min, max, mean, stddev)
+        if stats is not None:
+            stats_by_band[i] = {
+                'min': stats[0],
+                'max': stats[1],
+                'mean': stats[2],
+                'stddev': stats[3]
+            }
+        else:
+            stats_by_band[i] = None  # or handle missing stats as needed
+    
+    ds = None  # Close the dataset
+    return stats_by_band
 
-    
-    # Do one more translate so it puts the overviews in the right orfder.
-        # Perform the translation
-    translate_command = f'gdal_translate {temp_path} {output_raster} \
-    -co TILED=YES \
-    -co COPY_SRC_OVERVIEWS=YES \
-    -co COMPRESS=ZSTD \
-    -co BIGTIFF=IF_SAFER'
-    
-    if verbose:
-        hb.log(f"Running translate command: {translate_command}")
-    os.system(translate_command)
+def add_stats_to_geotiff_from_dict(geotiff_path, stats_dict, ignore_cog_warning=True):
+    """
+    Adds per-band statistics to a GeoTIFF file using the given stats dictionary.
 
+    Args:
+        geotiff_path (str): Path to the GeoTIFF file to update.
+        stats_dict (dict): Dictionary with keys as band numbers (1-based) and values as
+                           dicts containing 'min', 'max', 'mean', 'stddev'.
+    """
     
+    open_options = ["IGNORE_COG_LAYOUT_BREAK=YES"] if ignore_cog_warning else []
     
-    
-    cogger_dir = os.path.abspath('hazelbean/bin/cogger')
-    # C:\Users\jajohns\Files\hazelbean\hazelbean_dev\hazelbean\bin\cogger
-    # c:\Users\jajohns\Files\hazelbean\hazelbean_dev\hazelbean\bin\cogger
-    print(os.path.abspath(cogger_dir))
-    # sys.path.insert(0, cogger_dir)
-    
-    os.chdir(cogger_dir)
-    cog_temp_path = hb.temp('.tif', 'cog', True, tag_along_file_extensions=['.aux.xml'])
-    cogger_cmd = f'cogger  -output {cog_temp_path} {output_raster}'   # test if output is a cog
-    if verbose:
-        hb.log(f"Running cogger command: {cogger_cmd}")
-    os.system(cogger_cmd)
-    
-    hb.swap_filenames(output_raster, cog_temp_path)
-    
-    if not is_path_cog(cog_temp_path, verbose=verbose) and verbose:
-        hb.log(f"Failed to create COG: {cog_temp_path}")
-            
-    return output_raster
+    ds = gdal.OpenEx(geotiff_path, gdal.OF_UPDATE, open_options=open_options) # LEARNING POINT, OF_UPDATE is for openex whereas GA_Update is for open
+    if ds is None:
+        raise FileNotFoundError(f"Could not open file for update: {geotiff_path}")
 
+    for band_num, stats in stats_dict.items():
+        if stats is None:
+            continue
+        band = ds.GetRasterBand(band_num)
+        band.SetStatistics(
+            stats['min'],
+            stats['max'],
+            stats['mean'],
+            stats['stddev']
+        )
+
+    ds.FlushCache()
+    ds = None  # Close and save
+    
 def make_path_pog(input_raster_path, output_raster_path=None, output_data_type=None, ndv=None, overview_resampling_method=None, compression="ZSTD", blocksize=512, verbose=False):
     """ Create a Pog (pyramidal cog) from input_raster_path. Writes in-place if output_raster_path is not set. Chooses correct values for 
     everything else if not set."""
@@ -265,10 +283,16 @@ def make_path_pog(input_raster_path, output_raster_path=None, output_data_type=N
             verbose=False, 
         )
         hb.swap_filenames(resample_temp_path, input_raster_path)
+        
+        
+    add_stats_to_geotiff_with_gdal(input_raster_path, approx_ok=False, force=True, verbose=verbose)
+    
     # Open the source raster in UPDATE MODE so it writes the overviews as internal
     src_ds = gdal.OpenEx(temp_copy_path, gdal.GA_Update)
     if not src_ds:
         raise ValueError(f"Unable to open raster: {input_raster_path}")
+
+
 
     # Remove existing overviews (if any)
     src_ds.BuildOverviews(None, [])     

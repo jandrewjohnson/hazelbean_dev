@@ -1449,8 +1449,78 @@ def make_simple_gdal_callback(message):
 
     return logger_callback
 
+def gdal_progress_callback(complete, message, unknown):
+    percent = float(complete * 100)
+    if percent % 10 == 0:
+        print(f"\r{percent}%", end='', flush=True)
+    else:
+        print('.', end='', flush=True)
+        
+
+
+def make_gdal_callback(msg=None):
+    if msg is None:
+        msg = "GDAL running:"
+    else:
+        msg = str(msg) + ": "
+
+    state = {
+        'start_time': None,
+        'last_time': 0,
+        'last_displayed_percent': -1,
+        'buffer': '',
+        'printed_header': False,
+        'finished': False
+    }
+
+    def maybe_flush(now):
+        if not state['printed_header'] and (now - state['start_time']) >= 0.5:
+            print(msg, end='', flush=True)
+            print(state['buffer'], end='', flush=True)
+            state['printed_header'] = True
+            state['buffer'] = ''  # clear buffer
+
+    def callback(complete, message, unknown):
+        percent = int(complete * 100)
+        now = time.time()
+
+        if state['start_time'] is None:
+            state['start_time'] = now
+
+        output = ''
+        if percent % 10 == 0 and percent != state['last_displayed_percent']:
+            output = f"{percent}%."
+            state['last_displayed_percent'] = percent
+        elif now - state['last_time'] >= 3 and percent != state['last_displayed_percent']:
+            output = '.'
+            state['last_time'] = now
+
+        if output:
+            if state['printed_header']:
+                print(output, end='', flush=True)
+            else:
+                state['buffer'] += output
+
+        # Check if it's time to flush
+        maybe_flush(now)
+
+        # Final flush at 100%
+        if percent == 100 and not state['finished']:
+            maybe_flush(now)
+            if state['printed_header']:
+                print()  # newline
+            state['finished'] = True
+
+        return 1
+
+    return callback
+
+
+# gdal_callback_standard = generate_gdal_callback_standard()
+
 
 def get_vector_info_hb(vector_path, layer_index=0):
+    
     """Get information about an OGR vector (datasource).
 
     Parameters:

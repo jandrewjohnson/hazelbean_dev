@@ -33,6 +33,17 @@ pyramid_compatible_arcseconds = [
     14400.0,
     36000.0,
     ]
+pyramid_compatible_arcseconds_old = [
+    10.0,
+    30.0,
+    300.0,
+    900.0,
+    1800.0,
+    3600.0,
+    7200.0,
+    14400.0,
+    36000.0,
+    ]
 
 pyramid_compatible_resolution_to_arcseconds = {}
 pyramid_compatible_resolution_to_arcseconds[0.0002777777777777777775] =    1.0
@@ -175,42 +186,6 @@ pyramid_resampling_algorithms_by_data_type[np.float64] = 'average'
 pyramid_resampling_algorithms_by_data_type[np.uint64] = 'average'
 pyramid_resampling_algorithms_by_data_type[np.int64] = 'average'
 
-
-
-def numpy_dtype_to_gdal(dtype):
-    """
-    Map a NumPy data type to a corresponding GDAL data type.
-    """
-    if dtype in numpy_to_gdal_type:
-        return numpy_to_gdal_type[dtype]
-    else:
-        raise ValueError("Unsupported NumPy data type: {}".format(dtype))
-
-
-
-# TODOOO Deprecate
-pyramid_compatible_half_overview_levels = {}
-pyramid_compatible_half_overview_levels[10.0] = [2, 3, 6, 12, 24, 30, 60, 90]
-pyramid_compatible_half_overview_levels[30.0] = [2, 4, 8, 10, 20, 30, 60]
-pyramid_compatible_half_overview_levels[300.0] = [2, 3, 6, 12]
-pyramid_compatible_half_overview_levels[900.0] = [2, 4]
-pyramid_compatible_half_overview_levels[1800.0] = [2]
-pyramid_compatible_half_overview_levels[3600.0] = []
-pyramid_compatible_half_overview_levels[7200.0] = []
-pyramid_compatible_half_overview_levels[14400.0] = []
-pyramid_compatible_half_overview_levels[36000.0] = []
-
-# TODOOO Deprecate
-pyramid_compatible_full_overview_levels = {}
-pyramid_compatible_full_overview_levels[10.0] = [2, 3, 2*3, 4*3, 8*3, 10*3, 20*3, 30*3, 60*3, 120*3, 240*3, 480*3, 960*3]
-pyramid_compatible_full_overview_levels[30.0] = [2, 4, 8, 10, 20, 30, 60, 120, 240, 480, 960]
-pyramid_compatible_full_overview_levels[300.0] = [2, 3, 6, 12, 24, 48, 96]
-pyramid_compatible_full_overview_levels[900.0] = [2, 4, 8, 16, 32]
-pyramid_compatible_full_overview_levels[1800.0] = [2, 4, 8, 16]
-pyramid_compatible_full_overview_levels[3600.0] = [2, 4, 8]
-pyramid_compatible_full_overview_levels[7200.0] = [2, 4]
-pyramid_compatible_full_overview_levels[14400.0] = [2]
-pyramid_compatible_full_overview_levels[36000.0] = []
 
 
 ### It is it ref_path NOT refpath. These are correct

@@ -1832,8 +1832,16 @@ def write_pog_of_value_from_match(output_path, match_path, value, output_data_ty
     # Check if match exists
     if not hb.path_exists(match_path, verbose=verbose):
         raise FileNotFoundError(f"Input raster does not exist: {match_path} at abs path {hb.path_abs(match_path)}")
-    # START HERE: Make write_pog_of_value_from_match match the defaults of make_path_pog
     
+    if output_data_type is None:
+        output_data_type = hb.get_datatype_from_uri(match_path)
+        
+    if ndv is None:
+        ndv = hb.no_data_values_by_gdal_type[output_data_type][0] 
+
+    if overview_resampling_method is None:
+            overview_resampling_method = hb.pyramid_resampling_algorithms_by_data_type[output_data_type] 
+            
     # Open existing raster to match
     src_ds = gdal.Open(match_path)
     geotransform = src_ds.GetGeoTransform()
@@ -1852,8 +1860,33 @@ def write_pog_of_value_from_match(output_path, match_path, value, output_data_ty
     
     # Memory safe (hopefully) way to write the value to the raster, row by row
     value_row = np.full((1, x_size), value, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+
+    # Initialize accumulators for statistics
+    total_sum = 0.0
+    total_sq_sum = 0.0
+    total_count = 0
+    global_min = np.inf
+    global_max = -np.inf        
+    
+    band = tmp_ds.GetRasterBand(1)
     for row in range(y_size):
-        tmp_ds.GetRasterBand(1).WriteArray(value_row, xoff=0, yoff=row)
+        band.WriteArray(value_row, xoff=0, yoff=row)
+      
+        # Update statistics incrementally
+        total_sum += value_row.sum()
+        total_sq_sum += np.square(value_row).sum()
+        total_count += value_row.size
+        global_min = min(global_min, np.min(value_row))
+        global_max = max(global_max, np.max(value_row))    
+
+    mean = total_sum / total_count if total_count else 0
+    variance = (total_sq_sum / total_count - mean ** 2) if total_count else 0
+    variance = max(variance, 0)  # safeguard against negative variance
+    stddev = np.sqrt(variance)
+
+    # Set statistics directly
+    # bTODOO ensure this works with ints   
+    band.SetStatistics(float(global_min), float(global_max), float(mean), float(stddev))
         
     # Build Overviews
     tmp_ds.GetRasterBand(1).SetNoDataValue(ndv)    
@@ -1892,77 +1925,6 @@ def write_pog_of_value_from_match(output_path, match_path, value, output_data_ty
     os.remove(temp_path)
 
 
-
-def writeBORK_pog_of_value_from_match_manually(output_path, match_path, value, data_type, ndv, resampling_algorithm, overview_resampling_method, compression='ZSTD', blocksize='512'):
-    
-    # Define creation options for COG
-    precog_gtiff_creation_options = [
-        f"COMPRESS={compression}",
-        f"BLOCKXSIZE={str(blocksize)}",  
-        f"BLOCKYSIZE={str(blocksize)}",  
-        f"BIGTIFF=YES", 
-    ]    
-    
-    # Open existing raster to match
-    src_ds = gdal.Open(match_path)
-    geotransform = src_ds.GetGeoTransform()
-    projection = src_ds.GetProjection()
-    x_size = src_ds.RasterXSize
-    y_size = src_ds.RasterYSize
-    degrees = hb.get_cell_size_from_path(match_path)
-    arcseconds = hb.get_cell_size_from_path_in_arcseconds(match_path)        
-    
-    # Make a temp geotiff based on match
-    temp_path = hb.temp('.tif', filename_start='temp_gtiff_b4_cog', remove_at_exit=True)
-    driver = gdal.GetDriverByName('GTiff')
-    tmp_ds = driver.Create(temp_path, x_size, y_size, 1, data_type, options=precog_gtiff_creation_options)
-    tmp_ds.SetGeoTransform(geotransform)
-    tmp_ds.SetProjection(projection)    
-    
-    # Memory safe (hopefully) way to write the value to the raster, row by row
-    value_row = np.full((1, x_size), value, dtype=hb.gdal_number_to_numpy_type[data_type])
-    for row in range(y_size):
-        tmp_ds.GetRasterBand(1).WriteArray(value_row, xoff=0, yoff=row)
-        
-    # Build Overviews
-    tmp_ds.GetRasterBand(1).SetNoDataValue(ndv)    
-    tmp_ds.BuildOverviews(None, []) # Remove existing overviews (if any) 
-    
-    resampling_algorithm = hb.pyramid_resampling_algorithms_by_data_type[data_type]    
-    if overview_resampling_method is None:
-        overview_resampling_method = resampling_algorithm
-    
-    # Set the overview levels based on the pyramid arcseconds
-    overview_levels = hb.pyramid_compatible_overview_levels[arcseconds]
-    tmp_ds.BuildOverviews(overview_resampling_method.upper(), overview_levels)
-    
-    tmp_ds.FlushCache()
-    del tmp_ds  # Close temp dataset
-
-    # Step 2: Convert temporary GTiff to COG using CreateCopy
-    cog_driver = gdal.GetDriverByName('COG')
-    cog_creation_options = [
-        f'COMPRESS={compression}',
-        f'BLOCKSIZE={blocksize}',
-        'BIGTIFF=YES',
-        'OVERVIEWS=IGNORE_EXISTING'
-    ]
-
-    tmp_ds = gdal.Open(temp_path)
-    cog_ds = cog_driver.CreateCopy(output_path, tmp_ds, options=cog_creation_options)
-
-    if cog_ds is None:
-        raise RuntimeError('Failed to create COG dataset.')
-
-    # Cleanup
-    del cog_ds
-    del tmp_ds
-    del src_ds
-    os.remove(temp_path)
-
-
-
-    
     
     
     
