@@ -253,23 +253,7 @@ ha_per_cell_column_ref_paths[7200.0] = ha_per_cell_column_7200sec_ref_path
 ha_per_cell_column_ref_paths[14400.0] = ha_per_cell_column_14400sec_ref_path
 ha_per_cell_column_ref_paths[36000.0] = ha_per_cell_column_36000sec_ref_path
 
-
-# # TODOO DEPRECATE because references hazelbean paths
-# global_esa_lulc_paths_by_year = {}
-# global_esa_lulc_paths_by_year[2000] = os.path.join(hb.config.SEALS_BASE_DATA_DIR, "lulc_esa", "full", "ESACCI-LC-L4-LCCS-Map-300m-P1Y-2000-v2.0.7.tif")
-# global_esa_lulc_paths_by_year[2010] = os.path.join(hb.config.SEALS_BASE_DATA_DIR, "lulc_esa", "full", "ESACCI-LC-L4-LCCS-Map-300m-P1Y-2010-v2.0.7.tif")
-# global_esa_lulc_paths_by_year[2014] = os.path.join(hb.config.SEALS_BASE_DATA_DIR, "lulc_esa", "full", "ESACCI-LC-L4-LCCS-Map-300m-P1Y-2014-v2.0.7.tif")
-# global_esa_lulc_paths_by_year[2015] = os.path.join(hb.config.SEALS_BASE_DATA_DIR, "lulc_esa", "full", "ESACCI-LC-L4-LCCS-Map-300m-P1Y-2015-v2.0.7.tif")
-
-# # TODOO DEPRECATE because references hazelbean paths
-# global_esa_seals5_lulc_paths_by_year = {}
-# global_esa_seals5_lulc_paths_by_year[2000] = os.path.join(hb.config.SEALS_BASE_DATA_DIR, "lulc_esa\simplified\lulc_esa_simplified_2000.tif")
-# global_esa_seals5_lulc_paths_by_year[2010] = os.path.join(hb.config.SEALS_BASE_DATA_DIR, "lulc_esa\simplified\lulc_esa_simplified_2010.tif")
-# global_esa_seals5_lulc_paths_by_year[2014] = os.path.join(hb.config.SEALS_BASE_DATA_DIR, "lulc_esa\simplified\lulc_esa_simplified_2014.tif")
-# global_esa_seals5_lulc_paths_by_year[2015] = os.path.join(hb.config.SEALS_BASE_DATA_DIR, "lulc_esa\simplified\lulc_esa_simplified_2015.tif")
-
 global_bounding_box = [-180.0, -90.0, 180.0, 90.0]
-
 
 mollweide_compatible_resolutions = {}
 mollweide_compatible_resolutions[10.0] = 309.2208077590933 # calculated via hb.size_of_one_arcdegree_at_equator_in_meters / (60 * 6)

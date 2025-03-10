@@ -66,7 +66,7 @@ class TestCOGCompliance(unittest.TestCase):
         with self.subTest(file=self.invalid_cog_path):
             
             # Make a non-global subset of the COG
-            non_global_subset = hb.temp('.tif', 'nonglobal', remove_at_exit=False)
+            non_global_subset = hb.temp('.tif', 'nonglobal', remove_at_exit=1)
             bb = [-130, -60, 130, 50]            
             # NOTE TRICKY ASSUMPTION: It returns a mem array without writing anything UNLESS you specify an output path, but that is often the intended use of this.
             hb.load_geotiff_chunk_by_bb(self.invalid_cog_path, bb, inclusion_behavior='centroid', stride_rate=None, datatype=None, output_path=non_global_subset, ndv=None, raise_all_exceptions=False)

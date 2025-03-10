@@ -398,7 +398,7 @@ def warp_raster_HAZELBEAN_REPLACEMENT(
 
     # need to make this a closure so we get the current time and we can affect
     # state
-    reproject_callback = _make_logger_callback(
+    reproject_callback = hb.make_gdal_callback(
         "ReprojectImage %.1f%% complete %s, psz_message '%s'")
 
     # Perform the projection/resampling
@@ -553,7 +553,7 @@ def warp_raster_hb(
     working_bb[3] = float(Decimal(str(working_bb[1])) + abs(Decimal(str(target_pixel_size[1])) * Decimal(str(target_y_size))))
 
 
-    reproject_callback = _make_logger_callback("Warp %.1f%% complete %s for %s")
+    reproject_callback = hb.make_gdal_callback("Warp %.1f%% complete %s for %s")
 
     warp_options = []
     if n_threads:
@@ -1285,35 +1285,35 @@ def _is_raster_path_band_formatted(raster_path_band):
         return True
 
 
-def _make_logger_callback(message):
-    """Build a timed logger callback that prints `message` replaced.
+# def make_gdal_callback(message):
+#     """Build a timed logger callback that prints `message` replaced.
 
-    Parameters:
-        message (string): a string that expects 3 placement %% variables,
-            first for % complete from `df_complete`, second `psz_message`
-            and last is `p_progress_arg[0]`.
+#     Parameters:
+#         message (string): a string that expects 3 placement %% variables,
+#             first for % complete from `df_complete`, second `psz_message`
+#             and last is `p_progress_arg[0]`.
 
-    Returns:
-        Function with signature:
-            logger_callback(df_complete, psz_message, p_progress_arg)
-    """
+#     Returns:
+#         Function with signature:
+#             logger_callback(df_complete, psz_message, p_progress_arg)
+#     """
 
-    def logger_callback(df_complete, psz_message, p_progress_arg):
-        """The argument names come from the GDAL API for callbacks."""
-        try:
-            current_time = time.time()
-            if ((current_time - logger_callback.last_time) > 5.0 or
-                    (df_complete == 1.0 and
-                     logger_callback.total_time >= 5.0)):
-                L.info(
-                    message, df_complete * 100, psz_message, p_progress_arg[0])
-                logger_callback.last_time = current_time
-                logger_callback.total_time += current_time
-        except AttributeError:
-            logger_callback.last_time = time.time()
-            logger_callback.total_time = 0.0
+#     def logger_callback(df_complete, psz_message, p_progress_arg):
+#         """The argument names come from the GDAL API for callbacks."""
+#         try:
+#             current_time = time.time()
+#             if ((current_time - logger_callback.last_time) > 5.0 or
+#                     (df_complete == 1.0 and
+#                      logger_callback.total_time >= 5.0)):
+#                 L.info(
+#                     message, df_complete * 100, psz_message, p_progress_arg[0])
+#                 logger_callback.last_time = current_time
+#                 logger_callback.total_time += current_time
+#         except AttributeError:
+#             logger_callback.last_time = time.time()
+#             logger_callback.total_time = 0.0
 
-    return logger_callback
+#     return logger_callback
 
 # DUPLICATED Above to make non-internal
 def invoke_timed_callback(

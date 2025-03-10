@@ -1080,7 +1080,7 @@ def warp_raster(
 
     # need to make this a closure so we get the current time and we can affect
     # state
-    reproject_callback = _make_logger_callback(
+    reproject_callback = hb.make_gdal_callback(
         "ReprojectImage %.1f%% complete %s, psz_message '%s'")
 
     # Perform the projection/resampling
@@ -1151,7 +1151,7 @@ def rasterize(
     vector = gdal.OpenEx(vector_path)
     layer = vector.GetLayer(layer_index)
 
-    # rasterize_callback = _make_logger_callback(
+    # rasterize_callback = hb.make_gdal_callback(
     #     "RasterizeLayer %.1f%% complete %s, psz_message '%s'")
 
     def progress_callback(complete, message, unknown):
@@ -2415,7 +2415,7 @@ def _merge_bounding_boxes(bb1, bb2, mode):
     return bb_out
 
 
-def _make_logger_callback(message):
+def make_gdal_callback(message):
     """Build a timed logger callback that prints `message` replaced.
 
     Parameters:

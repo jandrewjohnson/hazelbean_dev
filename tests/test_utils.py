@@ -17,7 +17,7 @@ class TestUtils(unittest.TestCase):
     def test_write_pog_of_value_from_match(self):
         with self.subTest(file=self.valid_cog_path):
  
-            write_pog_of_value_from_match = hb.temp('.tif', filename_start='write_pog_of_value_from_match', remove_at_exit=False, tag_along_file_extensions=['.aux.xml'])
+            write_pog_of_value_from_match = hb.temp('.tif', filename_start='write_pog_of_value_from_match', remove_at_exit=1, tag_along_file_extensions=['.aux.xml'])
             hb.write_pog_of_value_from_match(write_pog_of_value_from_match, self.valid_pog_path, 55, 1, 255, 'mode', compression='ZSTD', blocksize='512')
             
             result = is_path_pog(write_pog_of_value_from_match, check_tiled=True, full_check=True, raise_exceptions=False, verbose=False)

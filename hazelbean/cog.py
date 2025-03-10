@@ -244,7 +244,7 @@ def make_path_pog(input_raster_path, output_raster_path=None, output_data_type=N
     
     if output_data_type is not None:
         if output_data_type != input_data_type:
-            gdal.Translate(temp_copy_path, input_raster_path, outputType=hb.gdal_number_to_gdal_type[output_data_type])
+            gdal.Translate(temp_copy_path, input_raster_path, outputType=hb.gdal_number_to_gdal_type[output_data_type], callback=hb.make_gdal_callback(f"Translating to expand to global extent on {temp_copy_path}"))
         else:
             hb.path_copy(input_raster_path, temp_copy_path) # Can just copy it direclty without accessing the raster.        
     
