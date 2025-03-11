@@ -277,7 +277,7 @@ def make_path_pog(input_raster_path, output_raster_path=None, output_data_type=N
             s_srs_wkt=None,
             compress=True,
             ensure_fits=False,
-            gtiff_creation_options=hb.globals.DEFAULT_GTIFF_CREATION_OPTIONS,
+            gtiff_creation_options=hb.globals.PRECOG_GTIFF_CREATION_OPTIONS_LIST,
             calc_raster_stats=False,
             add_overviews=False,
             pixel_size_override=None,
@@ -320,7 +320,7 @@ def make_path_pog(input_raster_path, output_raster_path=None, output_data_type=N
         f"BIGTIFF=YES", 
         f"OVERVIEW_COMPRESS={compression}",        
         f"RESAMPLING={overview_resampling_method}",
-        f"OVERVIEWS=IGNORE_EXISTING",
+        # f"OVERVIEWS=IGNORE_EXISTING",
         f"OVERVIEW_RESAMPLING={overview_resampling_method}",
     ]
 
@@ -347,129 +347,6 @@ def make_path_pog(input_raster_path, output_raster_path=None, output_data_type=N
 
     if not is_path_cog(output_raster_path, verbose=verbose) and verbose:
         hb.log(f"Failed to create COG: {output_raster_path} at abs path {hb.path_abs(output_raster_path)}")
-
-
-
-
-def make_path_cog_FAILED(input_raster_path, output_raster_path=None, output_data_type=None, overview_resampling_method=None, ndv=None, compression="ZSTD", blocksize=512, verbose=False):
-    
-    """
-    This failed because I could not figure out how to use gdal's cog driver to create a cog with manually specified overviews. Thus I am reverting to the 3-pass method of translate, addo, cogger, implemented now in make_path_cog above
-    Convert a raster to a Cloud Optimized GeoTIFF (COG) using gdal.Translate and a binary cogger.exe.
-    """
-    gdal.SetConfigOption("GDAL_NUM_THREADS", "ALL_CPUS")
-    gdal.SetConfigOption("GDAL_CACHEMAX", "4096")    
-        
-    if is_path_cog(input_raster_path, verbose) and verbose:
-            hb.log(f"Raster is already a COG: {input_raster_path}")
-            
-    # Ensure output directory exists
-    os.makedirs(os.path.dirname(input_raster_path), exist_ok=True)
-
-    # Get the resolution from the src_ds
-    degrees = hb.get_cell_size_from_path(input_raster_path)
-    arcseconds = hb.get_cell_size_from_path_in_arcseconds(input_raster_path)
-    
-    original_output_raster_path = output_raster_path
-    if output_raster_path is None:        
-        output_raster_path = hb.temp('.tif', hb.file_root(input_raster_path), remove_at_exit=False, folder=os.path.dirname(input_raster_path), tag_along_file_extensions=['.aux.xml'])
-    
-    if output_data_type is None:
-        input_data_type = hb.get_datatype_from_uri(input_raster_path)
-        output_data_type = input_data_type
-        
-        
-        
-    ndv = hb.no_data_values_by_gdal_type[output_data_type][0] # NOTE AWKWARD INCLUSINO OF zero as second option to work with faster_zonal_stats
-    
-    
-    # Open the source raster
-    src_ds = gdal.Open(input_raster_path, gdal.GA_ReadOnly)
-    if not src_ds:
-        raise ValueError(f"Unable to open raster: {input_raster_path}")
-
-    overview_levels = hb.pyramid_compatible_overview_levels[arcseconds]
-    overview_levels_as_list = ' '.join([str(i) for i in overview_levels])
-    
-    resampling_algorithm = hb.pyramid_resampling_algorithms_by_data_type[output_data_type]
-    zstd_level = 4
-    overview_resampling_method = 'ZSTD'
-    # Define creation options for COG
-    creation_options = [
-        f"COMPRESS={compression}",
-        # f"ZSTD_LEVEL={zstd_level}",# Compression
-        # f"TILED=YES",  # Enable tiling
-        # f"BLOCKXSIZE={blocksize}",  # Set tile size
-        # f"BLOCKYSIZE={blocksize}",  
-        f"BLOCKSIZE={blocksize}",  
-        f"BIGTIFF=YES", 
-        f"OVERVIEW_COMPRESS={compression}",        
-        f"OVERVIEW_LEVELS={overview_levels_as_list}",
-        f"RESAMPLING={resampling_algorithm}",
-        f"OVERVIEW_RESAMPLING={overview_resampling_method}",
-        # f"COPY_SRC_OVERVIEWS=YES",  # Preserve existing overviews
-        # f"a_nodata={str(ndv)}",
-    ]
-    
-    cog_driver = gdal.GetDriverByName('COG')
-    if cog_driver is None:
-        raise RuntimeError("COG driver is not available in this GDAL build.")    
-    print("GDAL version:", gdal.VersionInfo("RELEASE_NAME"))
-    creation_options = [
-        "COMPRESS=ZSTD",
-        "BLOCKSIZE=512",
-        "BIGTIFF=YES",
-        "OVERVIEW_COMPRESS=ZSTD",
-        "OVERVIEW_LEVELS=2 4 8 16",
-        "OVERVIEW_RESAMPLING=AVERAGE",
-        # "ZSTD_LEVEL=4",  # Only if your GDAL version supports it
-    ]    
-    
-    
-    translate_command = f'gdal_translate {input_raster_path} {output_raster_path} '
-    translate_command += ' -of COG \
-    -co COPY_SRC_OVERVIEWS=YES \
-    -co COMPRESS=ZSTD \
-    -co BIGTIFF=IF_SAFER \
-    -co OVERVIEW_RESAMPLING=AVERAGE \
-    -co BLOCKSIZE=512 \
-    -co ovr=2,4,8,16\
-            '
-    hb.log(f"Running translate command: {translate_command}")
-    os.system(translate_command)
-    
-    # Actually create the COG
-    dst_ds = cog_driver.CreateCopy(
-        output_raster_path,
-        src_ds,
-        strict=0,  # set to 1 to fail on any “creation option not recognized”
-        options=creation_options
-    )
-    
-     # 6. If needed, explicitly set nodata on the new dataset’s bands
-
-    
-    
-    # gdal.Translate(
-    #     destName=output_raster_path,
-    #     srcDS=src_ds,
-    #     format="COG",  # <-- Use "COG" instead of "GTiff"
-    #     options=gdal.TranslateOptions(
-    #         creationOptions=creation_options,
-    #         outputType=output_data_type
-    #     ),
-    #     noData=ndv,
-    #     callback=hb.make_logger_callback("Converting to COG %.1f%% complete %s")
-    # ) 
-    
-    if not is_path_cog(output_raster_path, verbose=verbose) and verbose:
-        result = is_path_cog(output_raster_path, verbose=verbose)
-        hb.log(f"Failed to create COG: {output_raster_path}: \n {result}")
-            
-    if original_output_raster_path is None:
-        hb.swap_filenames(output_raster_path, input_raster_path)
-            
-    return output_raster_path
 
 
 

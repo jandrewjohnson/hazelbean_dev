@@ -2690,10 +2690,58 @@ def add_overviews_with_gdaladdo(dataset_path, overview_levels=None,
         callback(1.0, "gdaladdo finished with return code: {}".format(result.returncode))
     
     return result.returncode
+
+def area_of_pixel(pixel_size, center_lat):
+    """Calculate m^2 area of a wgs84 square pixel.
+
+    Adapted from: https://gis.stackexchange.com/a/127327/2397
+
+    Args:
+        pixel_size (float): length of side of pixel in degrees.
+        center_lat (float): latitude of the center of the pixel. Note this
+            value +/- half the `pixel-size` must not exceed 90/-90 degrees
+            latitude or an invalid area will be calculated.
+
+    Returns:
+        Area of square pixel of side length `pixel_size` centered at
+        `center_lat` in m^2.
+
+    """
+    a = 6378137  # meters
+    b = 6356752.3142  # meters
+    e = math.sqrt(1 - (b/a)**2)
+    area_list = []
+    for f in [center_lat+pixel_size/2, center_lat-pixel_size/2]:
+        zm = 1 - e*math.sin(math.radians(f))
+        zp = 1 + e*math.sin(math.radians(f))
+        area_list.append(
+            math.pi * b**2 * (
+                math.log(zp/zm) / (2*e) +
+                math.sin(math.radians(f)) / (zp*zm)))
+    return abs(pixel_size / 360. * (area_list[0] - area_list[1]))
+
     
-    
-    
-    
+def raster_to_area_raster(base_raster_path, target_raster_path):
+    """Convert base to a target raster of same shape with per area pixels."""
+    base_raster_info = hb.get_raster_info(base_raster_path)
+
+    # create 1D array of pixel size vs. lat
+    n_rows = base_raster_info['raster_size'][1]
+    pixel_height = abs(base_raster_info['geotransform'][5])
+    # the / 2 is to get in the center of the pixel
+    miny = base_raster_info['bounding_box'][1] + pixel_height/2
+    maxy = base_raster_info['bounding_box'][3] - pixel_height/2
+    lat_vals = np.linspace(maxy, miny, n_rows)
+
+    pixel_area_per_lat = 1.0 / 10000.0 * np.array([
+        [area_of_pixel(pixel_height, lat_val)] for lat_val in lat_vals])
+
+    # hb.raster_calculator_flex
+    # hb.raster_calculator_hb
+    hb.raster_calculator(
+        [(base_raster_path, 1), pixel_area_per_lat],
+        lambda x, y: y, target_raster_path,
+        gdal.GDT_Float64, -9999.0, raster_driver_creation_tuple=hb.PRECOG_GTIFF_CREATION_OPTIONS_TUPLE)
     
     
     
