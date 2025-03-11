@@ -52,7 +52,7 @@ setup(
       "scikit-learn",
       "scipy",
       "seaborn",
-      "setuptools<70",
+      "setuptools>=70.0.0",
       "setuptools_scm",
       "shapely",
       "sip",
