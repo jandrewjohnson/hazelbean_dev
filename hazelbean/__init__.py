@@ -3,6 +3,9 @@ import sys, time, os
 
 # Set hb level options
 import pandas as pd
+
+# print('hazealbean __init__.py at ' + str(__file__))
+
 # Set pandas maximum width to be 1000
 pd.set_option('display.max_columns', 1000)
 pd.set_option('display.width', 1000)
@@ -16,18 +19,47 @@ report_import_times = 0
 
 # Importing GDAL is tricky. Here we use the path of the current python interpretter to guess at the conda env path
 # in order to set any missing GDAL environment variables.
-conda_env_path = os.path.split(sys.executable)[0]
 
-if 'GDAL_DATA' not in os.environ.__dict__:
-    os.environ['GDAL_DATA'] = os.path.join(conda_env_path, 'Library', 'share', 'gdal')
-elif not os.isdir(os.environ['GDAL_DATA']):
-    os.environ['GDAL_DATA'] = os.path.join(conda_env_path, 'Library', 'share', 'gdal')
-    
-if 'PROJ_LIB' not in os.environ.__dict__:
-    os.environ['PROJ_LIB'] = os.path.join(conda_env_path, 'Library', 'share', 'proj')
-elif not os.path.exists(os.path.join(os.environ['PROJ_LIB'], 'proj.db')):
-    os.environ['PROJ_LIB'] = os.path.join(conda_env_path, 'Library', 'share', 'proj')
+# Get Conda environment path
+exe_path = sys.executable
+path_parts = exe_path.split(os.sep)
+try:
+    env_index = path_parts.index("envs") + 1
+    conda_env_path = os.path.join(os.sep.join(path_parts[: env_index + 1]))
+except ValueError:
+    raise Exception(f"Could not determine Conda environment path from sys.executable: {exe_path}")
 
+# Dynamically find the GDAL and PROJ paths based on Conda environment structure
+def find_conda_subdir(subdir_name):
+    """Finds a subdirectory within the Conda environment that includes 'share' in its path.
+    Supports different OS structures."""
+    for root, dirs, _ in os.walk(conda_env_path):
+        if subdir_name in dirs and "share" in root.split(os.sep):
+            return os.path.join(root, subdir_name)
+    return None  # Return None if not found
+
+# Set GDAL_DATA path
+gdal_path = find_conda_subdir("gdal")
+if gdal_path:
+    os.environ["GDAL_DATA"] = gdal_path
+else:
+    raise Exception(f"GDAL data directory not found in Conda environment: {conda_env_path}")
+
+# Set PROJ_LIB path
+proj_path = find_conda_subdir("proj")
+if proj_path:
+    os.environ["PROJ_LIB"] = proj_path
+else:
+    raise Exception(f"PROJ data directory not found in Conda environment: {conda_env_path}")
+
+# if 'GDAL_DATA' not in os.environ.__dict__:
+#     os.environ['GDAL_DATA'] = os.path.join(conda_env_path, 'Library', 'share', 'gdal')
+# elif not os.isdir(os.environ['GDAL_DATA']):
+#     os.environ['GDAL_DATA'] = os.path.join(conda_env_path, 'Library', 'share', 'gdal')
+# if 'PROJ_LIB' not in os.environ.__dict__:
+#     os.environ['PROJ_LIB'] = os.path.join(conda_env_path, 'Library', 'share', 'proj')
+# elif not os.path.exists(os.path.join(os.environ['PROJ_LIB'], 'proj.db')):
+#     os.environ['PROJ_LIB'] = os.path.join(conda_env_path, 'Library', 'share', 'proj')
 
 import hazelbean.config # Needs to be imported before core so that hb.config.LAST_TIME_CHECK is set for hb.timer()
 from hazelbean.config import *
