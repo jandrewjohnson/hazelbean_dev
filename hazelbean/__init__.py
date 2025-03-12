@@ -118,6 +118,16 @@ import hazelbean.raster_vector_interface
 from hazelbean.raster_vector_interface import *
 if report_import_times:
     hb.timer('raster_vector_interface')  
+    
+import hazelbean.cog
+from hazelbean.cog import *
+if report_import_times:
+    hb.timer('cog')
+    
+import hazelbean.pog
+from hazelbean.pog import *
+if report_import_times:
+    hb.timer('pog')
    
 if import_medium_level:
     

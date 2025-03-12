@@ -5888,7 +5888,101 @@ def simplify_polygon(input_path, output_path, tolerance, preserve_topology=True,
     result_gdf.to_file(output_path)
 
 
+def add_stats_to_geotiff_with_gdal(geotiff_path, approx_ok=False, force=True, verbose=True):
+    """
+    Computes raster statistics and embeds them into GeoTIFF internal metadata
+    without creating .aux.xml files when opened in QGIS.
 
+    Parameters:
+        geotiff_path (str): Path to GeoTIFF.
+        approx_ok (bool): Allow approximate stats computation.
+        force (bool): Force recomputation of statistics.
+        verbose (bool): Print detailed statistics per band.
+    """
+    ds = gdal.Open(geotiff_path, gdal.GA_Update)
+
+    if not ds:
+        raise ValueError(f"Could not open {geotiff_path}")
+
+    for band_index in range(1, ds.RasterCount + 1):
+        band = ds.GetRasterBand(band_index)  
+        band.SetMetadataItem("STATISTICS_MINIMUM", None)
+        band.SetMetadataItem("STATISTICS_MAXIMUM", None)
+        band.SetMetadataItem("STATISTICS_MEAN", None)
+        band.SetMetadataItem("STATISTICS_STDDEV", None)                    
+        stats = band.ComputeStatistics(approx_ok=approx_ok, callback=hb.make_gdal_callback('Calculating stats.') if verbose else None)
+
+        if verbose:
+            print(
+                f"\nBand {band_index} stats: "
+                f"min={stats[0]:.4f}, max={stats[1]:.4f}, mean={stats[2]:.4f}, stddev={stats[3]:.4f}"
+            )
+
+        band.FlushCache()
+
+    ds = None 
+    
+def get_stats_from_geotiff(geotiff_path):
+    """
+    Returns a dictionary of statistics (min, max, mean, stddev) for each band in the GeoTIFF.
+    
+    Args:
+        geotiff_path (str): Path to the input GeoTIFF file.
+    
+    Returns:
+        dict: A dictionary where keys are band numbers (1-based) and values are dicts of statistics.
+    """
+    ds = gdal.Open(geotiff_path, gdal.GA_ReadOnly)
+    if ds is None:
+        raise FileNotFoundError(f"Could not open file: {geotiff_path}")
+    
+    stats_by_band = {}
+    for i in range(1, ds.RasterCount + 1):
+        band = ds.GetRasterBand(i)
+        stats = band.GetStatistics(True, True)  # (min, max, mean, stddev)
+        if stats is not None:
+            stats_by_band[i] = {
+                'min': stats[0],
+                'max': stats[1],
+                'mean': stats[2],
+                'stddev': stats[3]
+            }
+        else:
+            stats_by_band[i] = None  # or handle missing stats as needed
+    
+    ds = None  # Close the dataset
+    return stats_by_band
+
+def add_stats_to_geotiff_from_dict(geotiff_path, stats_dict, ignore_cog_warning=True):
+    """
+    Adds per-band statistics to a GeoTIFF file using the given stats dictionary.
+
+    Args:
+        geotiff_path (str): Path to the GeoTIFF file to update.
+        stats_dict (dict): Dictionary with keys as band numbers (1-based) and values as
+                           dicts containing 'min', 'max', 'mean', 'stddev'.
+    """
+    
+    open_options = ["IGNORE_COG_LAYOUT_BREAK=YES"] if ignore_cog_warning else []
+    
+    ds = gdal.OpenEx(geotiff_path, gdal.OF_UPDATE, open_options=open_options) # LEARNING POINT, OF_UPDATE is for openex whereas GA_Update is for open
+    if ds is None:
+        raise FileNotFoundError(f"Could not open file for update: {geotiff_path}")
+
+    for band_num, stats in stats_dict.items():
+        if stats is None:
+            continue
+        band = ds.GetRasterBand(band_num)
+        band.SetStatistics(
+            stats['min'],
+            stats['max'],
+            stats['mean'],
+            stats['stddev']
+        )
+
+    ds.FlushCache()
+    ds = None  # Close and save
+  
 
 
 

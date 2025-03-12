@@ -2,11 +2,48 @@ import os.path
 import struct
 import sys
 import pathlib
+from osgeo import gdal
+import numpy as np
+from osgeo import gdal, osr
+
 import hazelbean as hb
 
-from osgeo import gdal
+def is_path_cog(path, check_tiled=True, full_check=True, raise_exceptions=False, verbose=False):
+    """Check if a file is a (Geo)TIFF with cloud optimized compatible structure."""
+    if not hb.path_exists(path):
+        if verbose:
+            hb.log(f"Path {path} does not exist at abspath {hb.path_abs(path)}")
+        if raise_exceptions:
+            raise FileNotFoundError(f"Path {path} does not exist at abspath {hb.path_abs(path)}")
+        return False
+    if os.path.splitext(path)[1].lower() != ".tif":
+        if verbose:
+            hb.log(f"Path {path} at abspath {hb.path_abs(path)} is not a GeoTIFF")
+        if raise_exceptions:
+            raise ValueError(f"Path {path} at abspath {hb.path_abs(path)} is not a GeoTIFF")
+        return False
+    
+    try: 
+        ds = gdal.OpenEx(path, gdal.OF_RASTER)    
+    except:
+        if verbose:
+            hb.log(f"Unable to open {path} at abspath {hb.path_abs(path)}")
+        if raise_exceptions:
+            raise ValueError(f"Unable to open {path} at abspath {hb.path_abs(path)}")
+        return False
+    
+    result = validate(ds, check_tiled=check_tiled, full_check=full_check)
 
+    
+    # Check if any element of the list result is longer than 1
+    if any(len(item) > 0 for item in result[:-1]):
+        if verbose:
+            hb.log(f"Path {path} at abspath {hb.path_abs(path)} is not a valid COG. It raised the following errors: \n " + '\n'.join([str(i) for i in result]))
+        if raise_exceptions:
+            raise ValueError(f"Path {path} at abspath {hb.path_abs(path)} is not a valid COG. It raised the following errors: \n " + '\n'.join(result))
+        return False
 
+    return True
 
 
 def make_path_cog(input_raster_path, output_raster_path=None, output_data_type=None, overview_resampling_method=None, ndv=None, compression="ZSTD", blocksize=512, verbose=False):
@@ -17,7 +54,7 @@ def make_path_cog(input_raster_path, output_raster_path=None, output_data_type=N
     if not hb.path_exists(input_raster_path, verbose=verbose):
         raise FileNotFoundError(f"Input raster does not exist: {input_raster_path} at abs path {hb.path_abs(input_raster_path)}")
     
-    if is_path_pog(input_raster_path, verbose) and verbose:
+    if is_path_cog(input_raster_path, verbose) and verbose:
         hb.log(f"Raster is already a COG: {input_raster_path}")
         
     # Make a local copy at a temp file to process on to avoid corrupting the original
@@ -56,8 +93,8 @@ def make_path_cog(input_raster_path, output_raster_path=None, output_data_type=N
         raise ValueError(f"Unable to open raster: {input_raster_path}")
     
     # I'm not sure why, but getting the stats from the src_ds, then building overviews, then reassigning it keeps COG compliance.
-    add_stats_to_geotiff_with_gdal(input_raster_path, approx_ok=False, force=True, verbose=verbose)
-    stats_dict = get_stats_from_geotiff(input_raster_path)    
+    hb.add_stats_to_geotiff_with_gdal(input_raster_path, approx_ok=False, force=True, verbose=verbose)
+    stats_dict = hb.get_stats_from_geotiff(input_raster_path)    
     
     # Remove existing overviews (if any)
     src_ds.BuildOverviews(None, [])     
@@ -72,7 +109,7 @@ def make_path_cog(input_raster_path, output_raster_path=None, output_data_type=N
     # Close the dataset to ensure overviews are saved
     del src_ds    
     
-    add_stats_to_geotiff_from_dict(temp_copy_path, stats_dict)  
+    hb.add_stats_to_geotiff_from_dict(temp_copy_path, stats_dict)  
     
     # Reopen it to use it as a copy target
     src_ds = gdal.OpenEx(temp_copy_path, gdal.GA_ReadOnly)
@@ -117,291 +154,6 @@ def make_path_cog(input_raster_path, output_raster_path=None, output_data_type=N
     if not is_path_cog(output_raster_path, verbose=verbose) and verbose:
         hb.log(f"Failed to create COG: {output_raster_path} at abs path {hb.path_abs(output_raster_path)}")
 
-def add_stats_to_geotiff_with_gdal(geotiff_path, approx_ok=False, force=True, verbose=True):
-    """
-    Computes raster statistics and embeds them into GeoTIFF internal metadata
-    without creating .aux.xml files when opened in QGIS.
-
-    Parameters:
-        geotiff_path (str): Path to GeoTIFF.
-        approx_ok (bool): Allow approximate stats computation.
-        force (bool): Force recomputation of statistics.
-        verbose (bool): Print detailed statistics per band.
-    """
-    ds = gdal.Open(geotiff_path, gdal.GA_Update)
-
-    if not ds:
-        raise ValueError(f"Could not open {geotiff_path}")
-
-    for band_index in range(1, ds.RasterCount + 1):
-        band = ds.GetRasterBand(band_index)  
-        band.SetMetadataItem("STATISTICS_MINIMUM", None)
-        band.SetMetadataItem("STATISTICS_MAXIMUM", None)
-        band.SetMetadataItem("STATISTICS_MEAN", None)
-        band.SetMetadataItem("STATISTICS_STDDEV", None)                    
-        stats = band.ComputeStatistics(approx_ok=approx_ok, callback=hb.make_gdal_callback('Calculating stats.') if verbose else None)
-
-        if verbose:
-            print(
-                f"\nBand {band_index} stats: "
-                f"min={stats[0]:.4f}, max={stats[1]:.4f}, mean={stats[2]:.4f}, stddev={stats[3]:.4f}"
-            )
-
-        band.FlushCache()
-
-    ds = None 
-    
-def get_stats_from_geotiff(geotiff_path):
-    """
-    Returns a dictionary of statistics (min, max, mean, stddev) for each band in the GeoTIFF.
-    
-    Args:
-        geotiff_path (str): Path to the input GeoTIFF file.
-    
-    Returns:
-        dict: A dictionary where keys are band numbers (1-based) and values are dicts of statistics.
-    """
-    ds = gdal.Open(geotiff_path, gdal.GA_ReadOnly)
-    if ds is None:
-        raise FileNotFoundError(f"Could not open file: {geotiff_path}")
-    
-    stats_by_band = {}
-    for i in range(1, ds.RasterCount + 1):
-        band = ds.GetRasterBand(i)
-        stats = band.GetStatistics(True, True)  # (min, max, mean, stddev)
-        if stats is not None:
-            stats_by_band[i] = {
-                'min': stats[0],
-                'max': stats[1],
-                'mean': stats[2],
-                'stddev': stats[3]
-            }
-        else:
-            stats_by_band[i] = None  # or handle missing stats as needed
-    
-    ds = None  # Close the dataset
-    return stats_by_band
-
-def add_stats_to_geotiff_from_dict(geotiff_path, stats_dict, ignore_cog_warning=True):
-    """
-    Adds per-band statistics to a GeoTIFF file using the given stats dictionary.
-
-    Args:
-        geotiff_path (str): Path to the GeoTIFF file to update.
-        stats_dict (dict): Dictionary with keys as band numbers (1-based) and values as
-                           dicts containing 'min', 'max', 'mean', 'stddev'.
-    """
-    
-    open_options = ["IGNORE_COG_LAYOUT_BREAK=YES"] if ignore_cog_warning else []
-    
-    ds = gdal.OpenEx(geotiff_path, gdal.OF_UPDATE, open_options=open_options) # LEARNING POINT, OF_UPDATE is for openex whereas GA_Update is for open
-    if ds is None:
-        raise FileNotFoundError(f"Could not open file for update: {geotiff_path}")
-
-    for band_num, stats in stats_dict.items():
-        if stats is None:
-            continue
-        band = ds.GetRasterBand(band_num)
-        band.SetStatistics(
-            stats['min'],
-            stats['max'],
-            stats['mean'],
-            stats['stddev']
-        )
-
-    ds.FlushCache()
-    ds = None  # Close and save
-    
-def make_path_pog(input_raster_path, output_raster_path=None, output_data_type=None, ndv=None, overview_resampling_method=None, compression="ZSTD", blocksize=512, verbose=False):
-    """ Create a Pog (pyramidal cog) from input_raster_path. Writes in-place if output_raster_path is not set. Chooses correct values for 
-    everything else if not set."""
-    
-    # Check if input exists
-    if not hb.path_exists(input_raster_path, verbose=verbose):
-        raise FileNotFoundError(f"Input raster does not exist: {input_raster_path} at abs path {hb.path_abs(input_raster_path)}")
-    
-    if is_path_pog(input_raster_path, verbose) and verbose:
-        hb.log(f"Raster is already a POG: {input_raster_path}")
-        
-    # Make a local copy at a temp file to process on to avoid corrupting the original
-    temp_copy_path = hb.temp('.tif', 'copy', True, tag_along_file_extensions=['.aux.xml'])
-    
-    # Ensure output directory exists
-    os.makedirs(os.path.dirname(temp_copy_path), exist_ok=True)       
-    
-    input_data_type = hb.get_datatype_from_uri(input_raster_path)
-    if output_data_type == 'auto':
-        if input_data_type in [1, 2, 3, 4, 5, 12, 13]:
-            output_data_type = 13
-        elif input_data_type in [6]:
-            output_data_type = 6
-        elif input_data_type in [7, 8, 9, 10, 11]:
-            output_data_type = 7
-    
-    if output_data_type is None:
-        output_data_type = input_data_type 
-
-    
-    if output_data_type is not None:
-        if output_data_type != input_data_type:
-            gdal.Translate(temp_copy_path, input_raster_path, outputType=hb.gdal_number_to_gdal_type[output_data_type], callback=hb.make_gdal_callback(f"Translating to expand to global extent on {temp_copy_path}"))
-        else:
-            hb.path_copy(input_raster_path, temp_copy_path) # Can just copy it direclty without accessing the raster.        
-    
-    # Get the resolution from the src_ds
-    degrees = hb.get_cell_size_from_path(temp_copy_path)
-    arcseconds = hb.get_cell_size_from_path_in_arcseconds(temp_copy_path)
-    
-    original_output_raster_path = output_raster_path
-    if output_raster_path is None:        
-        output_raster_path = hb.temp('.tif', hb.file_root(input_raster_path), remove_at_exit=False, folder=os.path.dirname(input_raster_path), tag_along_file_extensions=['.aux.xml'])
-        
-    ndv = hb.no_data_values_by_gdal_type[output_data_type][0] # NOTE AWKWARD INCLUSINO OF zero as second option to work with faster_zonal_stats
-    
-    gt = hb.get_geotransform_path(input_raster_path)    
-    gt_pyramid = hb.get_global_geotransform_from_resolution(degrees)
-    
-    user_dir = pathlib.Path.home()
-    match_path = os.path.join(user_dir, 'Files', 'base_data', hb.ha_per_cell_ref_paths[arcseconds])
-    if gt != gt_pyramid:
-        resample_temp_path = hb.temp('.tif', 'resample', True, tag_along_file_extensions=['.aux.xml'])
-
-        hb.resample_to_match(
-            temp_copy_path,
-            match_path,
-            resample_temp_path,
-            resample_method='bilinear',
-            output_data_type=output_data_type,
-            src_ndv=None,
-            ndv=None,
-            s_srs_wkt=None,
-            compress=True,
-            ensure_fits=False,
-            gtiff_creation_options=hb.globals.PRECOG_GTIFF_CREATION_OPTIONS_LIST,
-            calc_raster_stats=False,
-            add_overviews=False,
-            pixel_size_override=None,
-            target_aligned_pixels=True,
-            bb_override=None,
-            verbose=False, 
-        )
-        hb.swap_filenames(resample_temp_path, temp_copy_path)
-        
-        
-    add_stats_to_geotiff_with_gdal(temp_copy_path, approx_ok=False, force=True, verbose=verbose)
-    
-    # Open the source raster in UPDATE MODE so it writes the overviews as internal
-    src_ds = gdal.OpenEx(temp_copy_path, gdal.GA_Update)
-    if not src_ds:
-        raise ValueError(f"Unable to open raster: {temp_copy_path}")
-
-
-
-    # Remove existing overviews (if any)
-    src_ds.BuildOverviews(None, [])     
-        
-    if overview_resampling_method is None:
-        overview_resampling_method = hb.pyramid_resampling_algorithms_by_data_type[output_data_type] 
-    
-    # Set the overview levels based on the pyramid arcseconds
-    overview_levels = hb.pyramid_compatible_overview_levels[arcseconds]
-    src_ds.BuildOverviews(overview_resampling_method.upper(), overview_levels)
-
-    # Close the dataset to ensure overviews are saved
-    del src_ds    
-    
-    # Reopen it to use it as a copy target
-    src_ds = gdal.OpenEx(temp_copy_path, gdal.GA_ReadOnly)
-    
-    # Define creation options for COG
-    creation_options = [
-        f"COMPRESS={compression}",
-        f"BLOCKSIZE={blocksize}",  
-        f"BIGTIFF=YES", 
-        f"OVERVIEW_COMPRESS={compression}",        
-        f"RESAMPLING={overview_resampling_method}",
-        # f"OVERVIEWS=IGNORE_EXISTING",
-        f"OVERVIEW_RESAMPLING={overview_resampling_method}",
-    ]
-
-    cog_driver = gdal.GetDriverByName('COG')
-    if cog_driver is None:
-        raise RuntimeError("COG driver is not available in this GDAL build.")    
-    
-    if ndv is not None and src_ds is not None:
-        for i in range(1, src_ds.RasterCount + 1):
-            band = src_ds.GetRasterBand(i)
-            band.SetNoDataValue(ndv)
-            
-    # Actually create the COG
-    dst_ds = cog_driver.CreateCopy(
-        output_raster_path,
-        src_ds,
-        strict=0,  # set to 1 to fail on any “creation option not recognized”
-        options=creation_options
-    )        
-    dst_ds = None
-    
-    if original_output_raster_path is None:
-        hb.swap_filenames(output_raster_path, input_raster_path)        
-
-    if not is_path_cog(output_raster_path, verbose=verbose) and verbose:
-        hb.log(f"Failed to create COG: {output_raster_path} at abs path {hb.path_abs(output_raster_path)}")
-
-
-
-
-def is_path_cog(path, check_tiled=True, full_check=True, raise_exceptions=False, verbose=False):
-    """Check if a file is a (Geo)TIFF with cloud optimized compatible structure."""
-    if not hb.path_exists(path):
-        if verbose:
-            hb.log(f"Path {path} does not exist at abspath {hb.path_abs(path)}")
-        if raise_exceptions:
-            raise FileNotFoundError(f"Path {path} does not exist at abspath {hb.path_abs(path)}")
-        return False
-    if os.path.splitext(path)[1].lower() != ".tif":
-        if verbose:
-            hb.log(f"Path {path} at abspath {hb.path_abs(path)} is not a GeoTIFF")
-        if raise_exceptions:
-            raise ValueError(f"Path {path} at abspath {hb.path_abs(path)} is not a GeoTIFF")
-        return False
-    
-    try: 
-        ds = gdal.OpenEx(path, gdal.OF_RASTER)    
-    except:
-        if verbose:
-            hb.log(f"Unable to open {path} at abspath {hb.path_abs(path)}")
-        if raise_exceptions:
-            raise ValueError(f"Unable to open {path} at abspath {hb.path_abs(path)}")
-        return False
-    
-    result = validate(ds, check_tiled=check_tiled, full_check=full_check)
-
-    
-    # Check if any element of the list result is longer than 1
-    if any(len(item) > 0 for item in result[:-1]):
-        if verbose:
-            hb.log(f"Path {path} at abspath {hb.path_abs(path)} is not a valid COG. It raised the following errors: \n " + '\n'.join([str(i) for i in result]))
-        if raise_exceptions:
-            raise ValueError(f"Path {path} at abspath {hb.path_abs(path)} is not a valid COG. It raised the following errors: \n " + '\n'.join(result))
-        return False
-
-    return True
-
-
-
-def is_path_pog(path, check_tiled=True, full_check=True, raise_exceptions=False, verbose=False):
-    
-    is_pyramid = hb.is_path_global_pyramid(path)
-    is_cog = is_path_cog(path, check_tiled=check_tiled, full_check=full_check, raise_exceptions=raise_exceptions, verbose=verbose)
-
-    return is_pyramid and is_cog
-
-
-    
-
-import numpy as np
-from osgeo import gdal, osr
 
 def write_random_cog(output_path, xsize=256, ysize=256, epsg=4326):
     """
@@ -477,7 +229,7 @@ def write_random_cog(output_path, xsize=256, ysize=256, epsg=4326):
     return result
 
 
-
+### From here onwards we have vendored code for validating if a cog is a cog.
 # Drawn from https://github.com/OSGeo/gdal/blob/master/swig/python/gdal-utils/osgeo_utils/samples/validate_cloud_optimized_geotiff.py
 
 #!/usr/bin/env python3
@@ -965,75 +717,3 @@ def validate(ds, check_tiled=True, full_check=False):
 
     return warnings, errors, details
 
-
-def main(argv=sys.argv):
-    """Return 0 in case of success, 1 for failure."""
-
-    i = 1
-    filename = None
-    quiet = False
-    full_check = None
-    while i < len(argv):
-        if argv[i] == "-q":
-            quiet = True
-        elif argv[i] == "--full-check=yes":
-            full_check = True
-        elif argv[i] == "--full-check=no":
-            full_check = False
-        elif argv[i] == "--full-check=auto":
-            full_check = None
-        elif argv[i][0] == "-":
-            return Usage()
-        elif filename is None:
-            filename = argv[i]
-        else:
-            return Usage()
-
-        i += 1
-
-    if filename is None:
-        return Usage()
-
-    gdal.UseExceptions()
-
-    if full_check is None:
-        full_check = filename.startswith("/vsimem/") or os.path.exists(filename)
-
-    try:
-        ret = 0
-        warnings, errors, details = validate(filename, full_check=full_check)
-        if warnings:
-            if not quiet:
-                print("The following warnings were found:")
-                for warning in warnings:
-                    print(" - " + warning)
-                print("")
-        if errors:
-            if not quiet:
-                print("%s is NOT a valid cloud optimized GeoTIFF." % filename)
-                print("The following errors were found:")
-                for error in errors:
-                    print(" - " + error)
-                print("")
-            ret = 1
-        else:
-            if not quiet:
-                print("%s is a valid cloud optimized GeoTIFF" % filename)
-
-        if not quiet and not warnings and not errors:
-            headers_size = min(
-                details["data_offsets"][k] for k in details["data_offsets"]
-            )
-            if headers_size == 0:
-                headers_size = gdal.VSIStatL(filename).size
-            print("\nThe size of all IFD headers is %d bytes" % headers_size)
-    except ValidateCloudOptimizedGeoTIFFException as e:
-        if not quiet:
-            print("%s is NOT a valid cloud optimized GeoTIFF : %s" % (filename, str(e)))
-        ret = 1
-
-    return ret
-
-
-if __name__ == "__main__":
-    sys.exit(main(sys.argv))

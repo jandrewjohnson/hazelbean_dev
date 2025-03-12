@@ -1,7 +1,6 @@
 import unittest, os, sys
 import hazelbean as hb
 
-from hazelbean.cog import *
 from hazelbean.pyramids import *
 
 class TestPyramids(unittest.TestCase):
@@ -29,9 +28,9 @@ class TestPyramids(unittest.TestCase):
             
             # Make it a pog
             temp_pog_path = hb.temp('.tif', filename_start='test_area_raster_as_pog', remove_at_exit=False, tag_along_file_extensions=['.aux.xml'])
-            cog.make_path_pog(temp_path, temp_pog_path, output_data_type=7, verbose=True)
+            hb.make_path_pog(temp_path, temp_pog_path, output_data_type=7, verbose=True)
 
-            result = is_path_pog(temp_pog_path, check_tiled=True, full_check=True, raise_exceptions=False, verbose=True)
+            result = hb.is_path_pog(temp_pog_path, check_tiled=True, full_check=True, raise_exceptions=False, verbose=True)
             self.assertTrue(result)
 
 if __name__ == "__main__":
