@@ -93,8 +93,8 @@ def make_path_cog(input_raster_path, output_raster_path=None, output_data_type=N
         raise ValueError(f"Unable to open raster: {input_raster_path}")
     
     # I'm not sure why, but getting the stats from the src_ds, then building overviews, then reassigning it keeps COG compliance.
-    hb.add_stats_to_geotiff_with_gdal(input_raster_path, approx_ok=False, force=True, verbose=verbose)
-    stats_dict = hb.get_stats_from_geotiff(input_raster_path)    
+    hb.add_stats_to_geotiff_with_gdal(temp_copy_path, approx_ok=False, force=True, verbose=verbose)
+    stats_dict = hb.get_stats_from_geotiff(temp_copy_path)    
     
     # Remove existing overviews (if any)
     src_ds.BuildOverviews(None, [])     
