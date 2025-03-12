@@ -4,8 +4,6 @@ import sys, time, os
 # Set hb level options
 import pandas as pd
 
-# print('hazealbean __init__.py at ' + str(__file__))
-
 # Set pandas maximum width to be 1000
 pd.set_option('display.max_columns', 1000)
 pd.set_option('display.width', 1000)
@@ -51,15 +49,6 @@ if proj_path:
     os.environ["PROJ_LIB"] = proj_path
 else:
     raise Exception(f"PROJ data directory not found in Conda environment: {conda_env_path}")
-
-# if 'GDAL_DATA' not in os.environ.__dict__:
-#     os.environ['GDAL_DATA'] = os.path.join(conda_env_path, 'Library', 'share', 'gdal')
-# elif not os.isdir(os.environ['GDAL_DATA']):
-#     os.environ['GDAL_DATA'] = os.path.join(conda_env_path, 'Library', 'share', 'gdal')
-# if 'PROJ_LIB' not in os.environ.__dict__:
-#     os.environ['PROJ_LIB'] = os.path.join(conda_env_path, 'Library', 'share', 'proj')
-# elif not os.path.exists(os.path.join(os.environ['PROJ_LIB'], 'proj.db')):
-#     os.environ['PROJ_LIB'] = os.path.join(conda_env_path, 'Library', 'share', 'proj')
 
 import hazelbean.config # Needs to be imported before core so that hb.config.LAST_TIME_CHECK is set for hb.timer()
 from hazelbean.config import *
