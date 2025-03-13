@@ -229,6 +229,8 @@ tests/optional_test_data
 !/data/crops/johnson/crop_calories/maize_calories_per_ha_masked.tif
 !/data/pyramids/ha_per_cell_14400sec.tif
 !/data/pyramids/ha_per_cell_36000sec.tif
+!/data/pyramids/ha_per_cell_column_1sec.tif
+!/data/pyramids/ha_per_cell_column_10sec.tif
 !/data/pyramids/ha_per_cell_column_30sec.tif
 !/data/pyramids/ha_per_cell_column_300sec.tif
 !/data/pyramids/ha_per_cell_column_900sec.tif
@@ -237,8 +239,6 @@ tests/optional_test_data
 !/data/pyramids/ha_per_cell_column_7200sec.tif
 !/data/pyramids/ha_per_cell_column_14400sec.tif
 !/data/pyramids/ha_per_cell_column_36000sec.tif
-!/data/pyramids/match_30sec.tif
-!/data/pyramids/match_150sec.tif
 !/data/pyramids/match_300sec.tif
 !/data/pyramids/match_900sec.tif
 !/data/pyramids/match_1800sec.tif
@@ -254,4 +254,5 @@ tests/optional_test_data
 !/data/tests/invalid_cog_example.tif
 !/data/tests/valid_cog_example.tif
 !/hazelbean/bin/cogger/cogger.exe
+
 
