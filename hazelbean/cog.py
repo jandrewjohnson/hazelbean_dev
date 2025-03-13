@@ -8,7 +8,7 @@ from osgeo import gdal, osr
 
 import hazelbean as hb
 
-def is_path_cog(path, check_tiled=True, full_check=True, raise_exceptions=False, verbose=False):
+def is_path_cog(path, check_tiled=True, full_check=False, raise_exceptions=False, verbose=False):
     """Check if a file is a (Geo)TIFF with cloud optimized compatible structure."""
     if not hb.path_exists(path):
         if verbose:
@@ -169,9 +169,10 @@ def write_random_cog(output_path, xsize=256, ysize=256, epsg=4326):
     from osgeo import gdal
     driver = gdal.GetDriverByName('COG')
     if driver is None:
-        print("COG driver not available in this GDAL build.")
+        print("Warning: COG driver not available in this GDAL build.")
     else:
-        print("COG driver is available.")
+        # print("COG driver is available.")
+        pass
 
     # 1. Create random data (8-bit range 0-255)
     arr = np.random.randint(0, 256, size=(ysize, xsize), dtype=np.uint8)
@@ -218,23 +219,32 @@ def write_random_cog(output_path, xsize=256, ysize=256, epsg=4326):
 
     # 8. Clean up
     mem_ds = None
-    print(f"COG created at: {output_path}")
 
     # Optional: Print out some info on the resulting file
-    info_str = gdal.Info(output_path)
-    print(info_str)
-    
+    info_str = gdal.Info(output_path)    
     result = is_path_cog(output_path, verbose=True)
-    print(result)
+    
     return result
 
 def make_path_cog_with_cogger(input_raster_path, output_raster_path=None, verbose=False):
     hazelbean_dir = pathlib.Path(__file__).parent
-    cogger_path = hazelbean_dir/'bin'/'cogger.exe'
+    cogger_path = hazelbean_dir/'bin/cogger/cogger.exe'
     if not hb.path_exists(cogger_path):
         raise FileNotFoundError(f"Could not find cogger at {cogger_path} at abs path {hb.path_abs(cogger_path)}")
+    # cogger -output mycog.tif geotif.tif
+    cogger_cmd = f'{cogger_path} -output {output_raster_path} {input_raster_path}'
+    if verbose:
+        print('cogger_cmd', cogger_cmd)
+    os.system(cogger_cmd)
+
+    result = is_path_cog(output_raster_path, raise_exceptions=True, verbose=verbose)
     
-    5
+    if result != True:
+        raise ValueError(f"Failed to make {output_raster_path} a COG with absolute path {hb.path_abs(output_raster_path)}")
+    
+    return result
+
+
 ### From here onwards we have vendored code for validating if a cog is a cog.
 # Drawn from https://github.com/OSGeo/gdal/blob/master/swig/python/gdal-utils/osgeo_utils/samples/validate_cloud_optimized_geotiff.py
 

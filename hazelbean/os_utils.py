@@ -1152,7 +1152,7 @@ def path_rename(input_path, new_path, skip_if_exists=False):
         try:
             os.rename(input_path, new_path)
         except:
-            raise NameError('Failed to rename ' + input_path + ' to ' + new_path)
+            raise NameError('Failed to rename ' + input_path + ' to ' + str(new_path))
     else:
         if not os.path.exists(new_path):
             try:
