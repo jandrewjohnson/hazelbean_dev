@@ -85,7 +85,7 @@ ha_per_cell_column_14400sec_ref_path = os.path.join('pyramids', 'ha_per_cell_col
 ha_per_cell_column_36000sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_36000sec.tif')
 
 pyramid_compatible_resolution_to_arcseconds = {}
-pyramid_compatible_resolution_to_arcseconds[0.0002777777777777777775] =    1.0
+pyramid_compatible_resolution_to_arcseconds[0.0002777777777777778] =    1.0
 pyramid_compatible_resolution_to_arcseconds[0.002777777777777778] =    10.0
 pyramid_compatible_resolution_to_arcseconds[0.008333333333333333] =    30.0
 pyramid_compatible_resolution_to_arcseconds[0.008333333333333333 * 5] =    150.0
@@ -98,7 +98,7 @@ pyramid_compatible_resolution_to_arcseconds[4.0] = 14400.0
 pyramid_compatible_resolution_to_arcseconds[10.0] = 36000.0
 
 pyramid_compatible_resolutions = {}
-pyramid_compatible_resolutions[1.0] =     0.0002777777777777777775
+pyramid_compatible_resolutions[1.0] =     0.0002777777777777778 # 0002777777777777778, 0002777777777777777775
 pyramid_compatible_resolutions[10.0] =    0.002777777777777778
 pyramid_compatible_resolutions[30.0] =    0.008333333333333333
 pyramid_compatible_resolutions[150.0] =   0.008333333333333333 * 5
@@ -112,7 +112,7 @@ pyramid_compatible_resolutions[36000.0] = 10.0
 
 # Define the bounds of what should raise an assertion that the file is close but not exactly matching one of the supported resolutions.
 pyramid_compatible_resolution_bounds = {}
-pyramid_compatible_resolution_bounds[1.0] =    (0.0002777777, -0.0002777778)
+pyramid_compatible_resolution_bounds[1.0] =    (0.0002777777, 0.0002777778)
 pyramid_compatible_resolution_bounds[10.0] =    (0.0027777, 0.00277778)
 pyramid_compatible_resolution_bounds[30.0] =    (0.0083333, 0.00833334)
 pyramid_compatible_resolution_bounds[150.0] =    (0.0083333*5, 0.00833334*5)
@@ -162,10 +162,10 @@ geotransform_global_300sec = (-180.0, 0.08333333333333333, 0.0, 90.0, 0.0, -0.08
 geotransform_global_150sec = (-180.0, 0.008333333333333333 * 5, 0.0, 90.0, 0.0, -0.008333333333333333 * 5)  # NOTE, the 0.08333333333333333 is defined very precisely as the answer a 64 bit compiled python gives from the answer 1/12 (i.e. 5 arc minutes)
 geotransform_global_30sec = (-180.0, 0.008333333333333333, 0.0, 90.0, 0.0, -0.008333333333333333)  # NOTE, the 0.008333333333333333 is defined very precisely as the answer a 64 bit compiled python gives from the answer 1/120 (i.e. 30 arc seconds) Note that this has 1 more digit than 1/12 due to how floating points are stored in computers via exponents.
 geotransform_global_10ssec = (-180.0, 0.002777777777777778, 0.0, 90.0, 0.0, -0.002777777777777778)  # NOTE, the 0.002777777777777778 is defined very precisely
-geotransform_global_1sec = (-180.0, 0.0002777777777777777775, 0.0, 90.0, 0.0, -0.0002777777777777777775)  # NOTE, the 0.0002777777777777777775 is defined very precisely, in this case from the gdal C library
+geotransform_global_1sec = (-180.0, 0.0002777777777777778, 0.0, 90.0, 0.0, -0.0002777777777777778)  # NOTE, the 0.0002777777777777778 is defined very precisely, in this case from the gdal C library
 
 pyramid_compatible_geotransforms = {}
-pyramid_compatible_geotransforms[1.0] = (-180.0, 0.0002777777777777777775, 0.0, 90.0, 0.0, -0.0002777777777777777775)
+pyramid_compatible_geotransforms[1.0] = (-180.0, 0.0002777777777777778, 0.0, 90.0, 0.0, -0.0002777777777777778)
 pyramid_compatible_geotransforms[10.0] = (-180.0, 0.002777777777777778, 0.0, 90.0, 0.0, -0.002777777777777778)
 pyramid_compatible_geotransforms[30.0] = (-180.0, 0.008333333333333333, 0.0, 90.0, 0.0, -0.008333333333333333)
 pyramid_compatible_geotransforms[150.0] = (-180.0, 0.008333333333333333*5, 0.0, 90.0, 0.0, -0.008333333333333333*5)
@@ -631,7 +631,7 @@ def determine_pyramid_resolution(input_path):
         raise Exception('Could not open ' + str(input_path) + ' at abspath ' + str(os.path.abspath(input_path)))
     gt = ds.GetGeoTransform()
     ulx, xres, _, uly, _, yres = gt[0], gt[1], gt[2], gt[3], gt[4], gt[5]
-
+    # (-180.0, 0.0002777777777777778, 0.0, 90.0, 0.0, -0.0002777777777777778)
     resolution = None
     if xres in pyramid_compatible_resolutions.keys():
         resolution = xres

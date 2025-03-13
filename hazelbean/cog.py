@@ -228,7 +228,13 @@ def write_random_cog(output_path, xsize=256, ysize=256, epsg=4326):
     print(result)
     return result
 
-
+def make_path_cog_with_cogger(input_raster_path, output_raster_path=None, verbose=False):
+    hazelbean_dir = pathlib.Path(__file__).parent
+    cogger_path = hazelbean_dir/'bin'/'cogger.exe'
+    if not hb.path_exists(cogger_path):
+        raise FileNotFoundError(f"Could not find cogger at {cogger_path} at abs path {hb.path_abs(cogger_path)}")
+    
+    5
 ### From here onwards we have vendored code for validating if a cog is a cog.
 # Drawn from https://github.com/OSGeo/gdal/blob/master/swig/python/gdal-utils/osgeo_utils/samples/validate_cloud_optimized_geotiff.py
 
