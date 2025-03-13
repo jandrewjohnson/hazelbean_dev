@@ -58,6 +58,20 @@ pyramid_ha_per_cell_ref_paths[7200.0] = os.path.join('pyramids', 'ha_per_cell_72
 pyramid_ha_per_cell_ref_paths[14400.0] = os.path.join('pyramids', 'ha_per_cell_14400sec.tif')
 pyramid_ha_per_cell_ref_paths[36000.0] = os.path.join('pyramids', 'ha_per_cell_36000sec.tif')
 
+
+pyramid_match_ref_paths = {}
+pyramid_match_ref_paths[1.0] = os.path.join('pyramids', 'match_1sec.tif')
+pyramid_match_ref_paths[10.0] = os.path.join('pyramids', 'match_10sec.tif')
+pyramid_match_ref_paths[30.0] = os.path.join('pyramids', 'match_30sec.tif')
+pyramid_match_ref_paths[150.0] = os.path.join('pyramids', 'match_150sec.tif')
+pyramid_match_ref_paths[300.0] = os.path.join('pyramids', 'match_300sec.tif')
+pyramid_match_ref_paths[900.0] = os.path.join('pyramids', 'match_900sec.tif')
+pyramid_match_ref_paths[1800.0] = os.path.join('pyramids', 'match_1800sec.tif')
+pyramid_match_ref_paths[3600.0] = os.path.join('pyramids', 'match_3600sec.tif')
+pyramid_match_ref_paths[7200.0] = os.path.join('pyramids', 'match_7200sec.tif')
+pyramid_match_ref_paths[14400.0] = os.path.join('pyramids', 'match_14400sec.tif')
+pyramid_match_ref_paths[36000.0] = os.path.join('pyramids', 'match_36000sec.tif')
+
 ha_per_cell_column_1sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_1sec.tif')
 ha_per_cell_column_10sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_10sec.tif')
 ha_per_cell_column_30sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_30sec.tif')

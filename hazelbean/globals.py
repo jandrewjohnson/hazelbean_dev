@@ -48,7 +48,7 @@ COG_CREATION_OPTIONS_LIST = [
     'COMPRESS=ZSTD',
     'BLOCKSIZE=512',
     'BIGTIFF=YES',
-    'TILED=YES',
+    # 'TILED=YES', # TILED is actually not a valid cog driver creation option because it requries it. however, you  need to have the precog option specify it.
     # 'OVERVIEWS=IGNORE_EXISTING'
 ]
 
@@ -71,7 +71,7 @@ COG_CREATION_OPTIONS_TUPLE = (
         'COMPRESS=ZSTD',
         'BLOCKSIZE=512',
         'BIGTIFF=YES',
-        'TILED=YES',
+        # 'TILED=YES', # TILED is actually not a valid cog driver creation option because it requries it. however, you  need to have the precog option specify it.
         # 'OVERVIEWS=IGNORE_EXISTING'
     )
 )
