@@ -5618,20 +5618,39 @@ def new_raster_from_base_pgp(
             target_band = None
     target_raster = None
 
-def add_overviews_to_path(input_path, raise_exception_on_fail=False, specific_overviews_to_add=None, overview_resampling_algorithm=None, make_pyramid_compatible=True):
+def add_overviews_to_path(input_path, raise_exception_on_fail=False, specific_overviews_to_add=None, overview_resampling_algorithm=None, make_external=False, make_pyramid_compatible=True):
 
     # Rename any old overviews if they exist
-    if hb.path_exists(input_path + '.ovr'):
+    if hb.path_exists(str(input_path) + '.ovr'):
         hb.rename_with_overwrite(input_path + '.ovr', hb.suri(input_path, 'displaced') + '.ovr')
-
-    if specific_overviews_to_add is None:
-        specific_overviews_to_add = [3, 6, 10, 15, 30, 90]
+    
+    if make_external:
+        src_ds = gdal.OpenEx(input_path, gdal.OF_RASTER)        
+    else:
+        src_ds = gdal.OpenEx(input_path, gdal.GA_Update)
+    
+    # Remove existing overviews (if any)
+    src_ds.BuildOverviews(None, [])      
+    
+    output_data_type = hb.get_datatype_from_uri(input_path)
+    
+    if overview_resampling_algorithm is None:
+        overview_resampling_algorithm = hb.pyramid_resampling_algorithms_by_data_type[output_data_type] 
+        
+    degrees = hb.get_cell_size_from_path(input_path)
+    arcseconds = hb.get_cell_size_from_path_in_arcseconds(input_path)
+        
+    if specific_overviews_to_add is not None:
+        overview_levels = specific_overviews_to_add
+    else:
+        overview_levels = hb.pyramid_compatible_overview_levels[arcseconds]
+        
     data_type = hb.get_datatype_from_uri(input_path)
 
     if overview_resampling_algorithm is None:
         if make_pyramid_compatible:
             if data_type <= 5:
-                overview_resampling_algorithm = 'nearest'
+                overview_resampling_algorithm = 'mode'
             else:
                 overview_resampling_algorithm = 'average'
         else:
@@ -5640,27 +5659,12 @@ def add_overviews_to_path(input_path, raise_exception_on_fail=False, specific_ov
             else:
                 overview_resampling_algorithm = 'bilinear'
 
-    ds = gdal.OpenEx(input_path)
-    gdal.SetConfigOption('COMPRESS_OVERVIEW', 'DEFLATE')
-    L.info('Creating overviews with resampling method: ', overview_resampling_algorithm)
-    callback = hb.make_logger_callback("hb.spatial_utils.add_overviews_to_path() %.1f%% complete %s for%s")
+    src_ds.BuildOverviews(overview_resampling_algorithm.upper(), overview_levels)
 
-    gdal.SetConfigOption('GDAL_NUM_THREADS', 'ALL_CPUS')
-    ds.BuildOverviews(overview_resampling_algorithm, specific_overviews_to_add, callback, [input_path])  # Based on commonly used data shapes for 10s data
-    ds = None
+    del src_ds    
+        
+        
 
-    # try:
-    #     ds = gdal.OpenEx(input_path)
-    #     gdal.SetConfigOption('COMPRESS_OVERVIEW', 'DEFLATE')
-    #     callback = hb.make_logger_callback("hb.spatial_utils.add_overviews_to_path() %.1f%% complete %s for%s")
-    #     ds.BuildOverviews('bilinear', specific_overviews_to_add, callback, [input_path])  # Based on commonly used data shapes for 10s data
-    #     ds = None
-    # except AssertionError as error_message:
-    #     message = 'Unable to add overviews to ' + str(input_path) + '\nPrior exception that caused this:\n\n' + str(error_message)
-    #     if raise_exception_on_fail:
-    #         raise NameError(message)
-    #     else:
-    #         L.critical(message)
 def add_geotiff_overview_file(geotiff_uri):
     L.critical('Deprecated in favor of add_overviews_to_path()')
     """Creates an .ovr file with the same file_root as the geotiff_uri that allows for faster display of tifs."""

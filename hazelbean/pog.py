@@ -10,7 +10,7 @@ from hazelbean.pog import *
 
 def is_path_pog(path, check_tiled=True, full_check=True, raise_exceptions=False, verbose=False):
     
-    is_pyramid = hb.is_path_global_pyramid(path)
+    is_pyramid = hb.is_path_global_pyramid(path, verbose=True)
     is_cog = hb.is_path_cog(path, check_tiled=check_tiled, full_check=full_check, raise_exceptions=raise_exceptions, verbose=verbose)
 
     return is_pyramid and is_cog
