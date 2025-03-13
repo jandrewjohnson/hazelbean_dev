@@ -253,4 +253,5 @@ tests/optional_test_data
 !/data/pyramids/ha_per_cell_7200sec.tif
 !/data/tests/invalid_cog_example.tif
 !/data/tests/valid_cog_example.tif
+!/hazelbean/bin/cogger/cogger.exe
 
