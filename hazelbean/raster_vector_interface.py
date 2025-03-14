@@ -534,11 +534,20 @@ def zonal_statistics_rasterized(zone_ids_raster_path, values_raster_path, zones_
 
             if stats_to_retrieve=='sums':
                 sums = hb.calculation_core.cython_functions.zonal_stats_cythonized(zones_array, values_array, unique_zone_ids_np, zones_ndv=zones_ndv, values_ndv=values_ndv, stats_to_retrieve=stats_to_retrieve)
-                aggregated_sums += sums
+                sums = np.asarray(sums, dtype=float)
+                sums[np.isnan(sums)] = 0.0 
+                aggregated_sums = aggregated_sums + sums
             elif stats_to_retrieve == 'sums_counts':
                 sums, counts = hb.calculation_core.cython_functions.zonal_stats_cythonized(zones_array, values_array, unique_zone_ids_np, zones_ndv=zones_ndv, values_ndv=values_ndv, stats_to_retrieve=stats_to_retrieve)
-                aggregated_sums += sums
-                aggregated_counts += counts
+                sums = np.asarray(sums, dtype=float)
+                counts = np.asarray(counts, dtype=int)
+                print(np.isnan(sums))
+                sums[np.isnan(sums)] = 0.0 
+                counts[np.isnan(counts)] = 0
+                aggregated_sums = aggregated_sums + sums
+                aggregated_counts = aggregated_counts + counts
+                print('sums', np.array(sums))
+            
             elif stats_to_retrieve == 'enumeration':
                 if multiply_raster_path is not None:
                     multiply_ds = gdal.OpenEx(multiply_raster_path)
@@ -563,6 +572,10 @@ def zonal_statistics_rasterized(zone_ids_raster_path, values_raster_path, zones_
 
             last_time = hb.invoke_timed_callback(
                 last_time, lambda: print('Zonal statistics rasterized on ' + str(values_raster_path) + ': ' + str(float(pixels_processed) / n_pixels * 100.0)), 2)
+    
+    print('aggregated_sums', aggregated_sums)
+    print('aggregated_sums', aggregated_sums[aggregated_sums != 0])
+    print('aggregated_counts', aggregated_counts)
     if stats_to_retrieve == 'sums':
         return unique_zone_ids, aggregated_sums
     elif stats_to_retrieve == 'sums_counts':
@@ -686,9 +699,12 @@ def zonal_statistics(
         if id_min is None or id_max is None:
             # START HERE: DASK FAILS BECAUSE RIOXARRAY DOESNT SUPPORT 64bit int. wtf...
             hb.log('Finding uniques to get min and max')
-            from hazelbean import parallel
+            # from hazelbean import parallel
             from hazelbean.parallel import unique_count_dask
-            uniques = unique_count_dask(zone_ids_raster_path)
+            # uniques = unique_count_dask(zone_ids_raster_path)
+            
+            ### WARNING not memory safe
+            uniques = np.unique(hb.as_array(zone_ids_raster_path))
             sorted_uniques = sorted(uniques)
             id_min = sorted_uniques[0]
             id_max = sorted_uniques[-1]
@@ -794,7 +810,7 @@ def zonal_statistics(
         base_raster_path_band = (input_raster_path, 1)
         to_return = pgp.zonal_statistics(
             base_raster_path_band, zones_vector_path,
-            aggregate_layer_name=id_column_label, ignore_nodata=True,
+            aggregate_layer_name=None, ignore_nodata=True,
             polygons_might_overlap=True, working_dir=None)
         if csv_output_path is not None:
             hb.python_object_to_csv(to_return, csv_output_path)
@@ -833,7 +849,9 @@ def zonal_statistics(
         u_df = pd.DataFrame(data=unique_zone_ids)
         # Create a DF of the exhaustive, continuous ints in unique_zone_ids, which may have lots of zeros.
 
-
+        print('sums', sums)
+        print('sums', sums[sums != 0])
+        print('len', len(sums[sums != 0]))
         df_sums = pd.DataFrame(data={output_column_prefix + '_sums': sums, output_column_prefix + '_counts': counts})
         df_sums['id'] = df_sums.index
         df = hb.df_merge(u_df, df_sums, how='outer', left_on=0, right_on='id')
