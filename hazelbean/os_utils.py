@@ -95,7 +95,7 @@ def temporary_filename(filename_start=None, ext='', remove_at_exit=True, folder=
     return temp(ext=ext, filename_start=filename_start, remove_at_exit=remove_at_exit, folder=folder, suffix=suffix)
 
 
-def temporary_dir(dirname_prefix=None, dirname_suffix=None, remove_at_exit=True):
+def temporary_dir(dir_root=None, dir_name='tmpdir', dirname_prefix=None, dirname_suffix=None, remove_at_exit=True, add_random_string_to_dir_name=True):
     """Get path to new temporary folder that will be deleted on program exit.
 
     he folder is deleted on exit
@@ -104,13 +104,23 @@ def temporary_dir(dirname_prefix=None, dirname_suffix=None, remove_at_exit=True)
     Returns:
         path (string): an absolute, unique and temporary folder path. All underneath will be deleted.
     """
-    pre_post_string = 'tmp'
+    
+    if dir_root is None:
+        # Set as users home temp dir
+        user_home = pathlib.Path.home()
+        dir_root = str(user_home/'temp')
+
+            
+    pre_post_string = dir_name
     if dirname_prefix:
         pre_post_string = dirname_prefix + '_' + pre_post_string
     if dirname_suffix:
         pre_post_string += '_' + dirname_suffix
 
-    path = os.path.join(hb.globals.TEMPORARY_DIR, ruri(pre_post_string))
+    if add_random_string_to_dir_name:
+        path = os.path.join(dir_root, ruri(pre_post_string))
+    else:
+        path = os.path.join(dir_root, pre_post_string)
     if os.path.exists(path):
         raise FileExistsError()
     else:

@@ -19,7 +19,7 @@ class TestPyramids(unittest.TestCase):
     def test_raster_to_area_raster(self):
         """Check if TIFF files are valid Cloud-Optimized GeoTIFFs (COGs)."""
 
-        temp_path = hb.temp('.tif', filename_start='test_raster_to_area_raster', remove_at_exit=False, tag_along_file_extensions=['.aux.xml'])
+        temp_path = hb.temp('.tif', filename_start='test_raster_to_area_raster', remove_at_exit=True, tag_along_file_extensions=['.aux.xml'])
         with self.subTest(file=self.ha_per_cell_path):
             raster_to_area_raster(self.ha_per_cell_path, temp_path)
             result = hb.path_exists(temp_path)
@@ -27,7 +27,7 @@ class TestPyramids(unittest.TestCase):
             
             
             # Make it a pog
-            temp_pog_path = hb.temp('.tif', filename_start='test_area_raster_as_pog', remove_at_exit=False, tag_along_file_extensions=['.aux.xml'])
+            temp_pog_path = hb.temp('.tif', filename_start='test_area_raster_as_pog', remove_at_exit=True, tag_along_file_extensions=['.aux.xml'])
             hb.make_path_pog(temp_path, temp_pog_path, output_data_type=7, verbose=True)
 
             result = hb.is_path_pog(temp_pog_path, check_tiled=True, full_check=True, raise_exceptions=False, verbose=True)

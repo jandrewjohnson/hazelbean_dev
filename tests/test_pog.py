@@ -63,7 +63,7 @@ class TestPOGCompliance(unittest.TestCase):
     def test_write_pog_of_value_from_scratch(self):
         with self.subTest(file=self.valid_cog_path):
  
-            write_pog_of_value_from_scratch = hb.temp('.tif', filename_start='write_pog_of_value_from_scratch', remove_at_exit=0, tag_along_file_extensions=['.aux.xml'])
+            write_pog_of_value_from_scratch = hb.temp('.tif', filename_start='write_pog_of_value_from_scratch', remove_at_exit=1, tag_along_file_extensions=['.aux.xml'])
             value = 55
             arcsecond_resolution = 900.0
             output_data_type = 1
