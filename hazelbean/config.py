@@ -213,7 +213,9 @@ def get_logger(logger_name=None, logging_level='info', format='full'):
     Used to get a custom logger specific to a file other than just susing the config defined one."""
     if not logger_name:
         try:
-            logger_name = os.path.basename(main.__file__)
+            # Get the basename from the name of the current file
+            logger_name = os.path.basename(inspect.getfile(inspect.currentframe().f_back))
+            # logger_name = os.path.basename(main.__file__)
         except:
             logger_name = 'unnamed_logger'
     L = logging.getLogger(logger_name)

@@ -342,14 +342,15 @@ def create_directories(directory_list, ignore_dots_in_dirname=False):
         # except:
         #     split_dir_name = os.path.split(dir_name)[0]
         if split_dir_name is not None:
-            try:
-                os.makedirs(split_dir_name)
-            except OSError as exception:
-                #It's okay if the directory already exists, if it fails for
-                #some other reason, raise that exception
-                if (exception.errno != errno.EEXIST and
-                        exception.errno != errno.ENOENT):
-                    raise
+            if not hb.path_exists(split_dir_name):
+                try:
+                    os.makedirs(split_dir_name)
+                except OSError as exception:
+                    #It's okay if the directory already exists, if it fails for
+                    #some other reason, raise that exception
+                    if (exception.errno != errno.EEXIST and
+                            exception.errno != errno.ENOENT):
+                        raise
 
 
 
