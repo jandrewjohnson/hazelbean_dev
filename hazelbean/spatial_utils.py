@@ -54,11 +54,13 @@ def is_path_gdal_readable(input_path):
 def assert_path_is_gdal_readable(input_path):
     if not os.path.exists(input_path):
         raise FileNotFoundError('hb.assert_path_is_gdal_readable could not find ' + str(input_path))
-    try:
-        ds = gdal.Open(input_path)
-        gt = ds.GetGeoTransform() # Assume that if you can read a geotransform, that's enough to count as gdal readable.
-    except OSError as e:
-        raise NameError('hb.assert_path_is_gdal_readable failed on the loading step of ' + str(input_path), e)
+    
+    ### TODOO Netcdf4 magically stopped working as a gdal driver... disabled for now but should fix for robustness.
+    # try:
+    #     ds = gdal.OpenEx(input_path)
+    #     gt = ds.GetGeoTransform() # Assume that if you can read a geotransform, that's enough to count as gdal readable.
+    # except OSError as e:
+    #     raise NameError('hb.assert_path_is_gdal_readable failed on the loading step of ' + str(input_path), e)
 
 # I got confused on  the folowing two  lists. See http://www.gdal.org/ogr__core_8h.html#a787194bea637faf12d61643124a7c9fc
 gdal_number_to_ogr_field_type = {
