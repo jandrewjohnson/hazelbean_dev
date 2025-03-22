@@ -697,7 +697,7 @@ def zonal_statistics(
             
     else:
         if id_min is None or id_max is None:
-            # START HERE: DASK FAILS BECAUSE RIOXARRAY DOESNT SUPPORT 64bit int. wtf...
+            # GAVE UP HERE: DASK FAILS BECAUSE RIOXARRAY DOESNT SUPPORT 64bit int. wtf...
             hb.log('Finding uniques to get min and max')
             # from hazelbean import parallel
             from hazelbean.parallel import unique_count_dask
