@@ -654,7 +654,7 @@ def df_merge_list_of_csv_paths(csv_path_list, output_csv_path=None, on='index', 
             new_df = current_df
             
             # merged_df = pd.merge(merged_df, new_df, how='outer', left_on=left_on, right_on=right_on, left_index=left_index, right_index=right_index)
-            merged_df = df_merge(merged_df, new_df, how='outer', left_on=left_on, right_on=right_on, verbose=False)
+            merged_df = df_merge(merged_df, new_df, how='outer', left_on=left_on, right_on=right_on, supress_warnings=True, verbose=False)
     if output_csv_path:
         merged_df.to_csv(output_csv_path, index=False)
   

@@ -541,12 +541,12 @@ def zonal_statistics_rasterized(zone_ids_raster_path, values_raster_path, zones_
                 sums, counts = hb.calculation_core.cython_functions.zonal_stats_cythonized(zones_array, values_array, unique_zone_ids_np, zones_ndv=zones_ndv, values_ndv=values_ndv, stats_to_retrieve=stats_to_retrieve)
                 sums = np.asarray(sums, dtype=float)
                 counts = np.asarray(counts, dtype=int)
-                print(np.isnan(sums))
+
                 sums[np.isnan(sums)] = 0.0 
                 counts[np.isnan(counts)] = 0
                 aggregated_sums = aggregated_sums + sums
                 aggregated_counts = aggregated_counts + counts
-                print('sums', np.array(sums))
+
             
             elif stats_to_retrieve == 'enumeration':
                 if multiply_raster_path is not None:
@@ -573,9 +573,7 @@ def zonal_statistics_rasterized(zone_ids_raster_path, values_raster_path, zones_
             last_time = hb.invoke_timed_callback(
                 last_time, lambda: print('Zonal statistics rasterized on ' + str(values_raster_path) + ': ' + str(float(pixels_processed) / n_pixels * 100.0)), 2)
     
-    print('aggregated_sums', aggregated_sums)
-    print('aggregated_sums', aggregated_sums[aggregated_sums != 0])
-    print('aggregated_counts', aggregated_counts)
+
     if stats_to_retrieve == 'sums':
         return unique_zone_ids, aggregated_sums
     elif stats_to_retrieve == 'sums_counts':
@@ -671,7 +669,7 @@ def zonal_statistics(
     # # If the id_column is not an int, check to see if its at least unique, then generate that.
     # if not 'int' in str(gdf[id_column_label].dtype):
     #     if len(gdf[id_column_label].unique()) == gdf.shape[0]:
-    #         print('like this')
+    #         print ('like this')
     #     raise NameError('NYI but could generate a unique ids from a unique non int.')
 
     # Determine if we can get away with 8bit data.
@@ -698,9 +696,9 @@ def zonal_statistics(
     else:
         if id_min is None or id_max is None:
             # GAVE UP HERE: DASK FAILS BECAUSE RIOXARRAY DOESNT SUPPORT 64bit int. wtf...
-            hb.log('Finding uniques to get min and max')
+            # hb.log('Finding uniques to get min and max')
             # from hazelbean import parallel
-            from hazelbean.parallel import unique_count_dask
+            # from hazelbean.parallel import unique_count_dask
             # uniques = unique_count_dask(zone_ids_raster_path)
             
             ### WARNING not memory safe
@@ -715,7 +713,7 @@ def zonal_statistics(
             if id_max == zones_ndv:
                 id_max = sorted_uniques[-2]
                 
-            hb.log('    found min and max', id_min, id_max) 
+            # hb.log('    found min and max', id_min, id_max) 
 
         # hb.log('Getting unique_zone_ids min from ' + str(zone_ids_raster_path))
         # id_min = np.min(unique_zone_ids)
@@ -832,11 +830,10 @@ def zonal_statistics(
 
         df_sums = pd.DataFrame(data={output_column_prefix + '_sums': sums})
         df_sums['id'] = df_sums.index
-        df = hb.df_merge(u_df, df_sums, how='outer', left_on=0, right_on='id')
+        df = hb.df_merge(u_df, df_sums, how='outer', left_on=0, right_on='id', supress_warnings=True)
         # df_sums = pd.DataFrame(index=unique_zone_ids, data={output_column_prefix + '_sums': sums})
         # df = pd.DataFrame(index=unique_zone_ids, data={output_column_prefix + '_sums': sums[1: ]}) # PREVIOUSLY HAD THIS LINE! PROBABLY BROKEN ELSEWHERE
 
-        print('df', df)
     elif stats_to_retrieve == 'sums_counts':
         L.debug('Exporting sums_counts.')
         hb.path_exists(zone_ids_raster_path, verbose=verbose)
@@ -849,12 +846,9 @@ def zonal_statistics(
         u_df = pd.DataFrame(data=unique_zone_ids)
         # Create a DF of the exhaustive, continuous ints in unique_zone_ids, which may have lots of zeros.
 
-        print('sums', sums)
-        print('sums', sums[sums != 0])
-        print('len', len(sums[sums != 0]))
         df_sums = pd.DataFrame(data={output_column_prefix + '_sums': sums, output_column_prefix + '_counts': counts})
         df_sums['id'] = df_sums.index
-        df = hb.df_merge(u_df, df_sums, how='outer', left_on=0, right_on='id')
+        df = hb.df_merge(u_df, df_sums, how='outer', left_on=0, right_on='id', supress_warnings=True)
 
 
 
@@ -892,7 +886,7 @@ def zonal_statistics(
         df[id_column_label] = df.index
         dfs = df.loc[gdf[id_column_label]]
         
-        gdfo = hb.df_merge(gdf, dfs, how='outer', left_on=id_column_label, right_on=id_column_label)
+        gdfo = hb.df_merge(gdf, dfs, how='outer', left_on=id_column_label, right_on=id_column_label, supress_warnings=True)
 
         if csv_output_path is not None:
             df = gdfo[[i for i in gdfo.columns if i != 'geometry']]
@@ -968,7 +962,7 @@ def zonal_statistics_merge(
         if df is None:
             df = current_df
         else:
-            df = hb.df_merge(df, current_df)
+            df = hb.df_merge(df, current_df, supress_warnings=True)
 
     if remove_zone_ids_raster_path:
         hb.remove_at_exit(zone_ids_raster_path)
@@ -1031,7 +1025,7 @@ def convert_id_raster_to_polygons(input_raster_path, output_vector_path, dst_lay
 #     { 'BAND' : 1, 'EIGHT_CONNECTEDNESS' : False, 'EXTRA' : '', 'FIELD' : 'id', 'INPUT' : 'C:/Users/jajohns/Files/gtap_invest/projects/test_cwon/intermediate/base_data_generation/joined_region_vectors/gtap_invest/region_boundaries/gtapaez11_aezregions.tif', 'OUTPUT' : 'C:/Users/jajohns/Files/gtap_invest/projects/test_cwon/intermediate/base_data_generation/joined_region_vectors/gtap_invest/region_boundaries/gtapaez11_aezregions.gpkg' }
     # raw command: gdal_polygonize.bat C:/Users/jajohns/Files/gtap_invest/projects/test_cwon/intermediate/base_data_generation/joined_region_vectors/gtap_invest/region_boundaries/gtapaez11_aezregions.tif -b 1 -f "GPKG" C:/Users/jajohns/Files/gtap_invest/projects/test_cwon/intermediate/base_data_generation/joined_region_vectors/gtap_invest/region_boundaries/gtapaez11_aezregions.gpkg gtapaez11_aezregions id
     gdal_command = 'gdal_polygonize.bat ' + input_raster_path + " -b 1 -f \"GPKG\" " + output_vector_path + " gtapaez11_aezregions id"
-    print(gdal_command)
+
     os.system(gdal_command)
     
     

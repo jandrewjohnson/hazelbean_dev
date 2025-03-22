@@ -426,7 +426,7 @@ def fuzzy_merge(left_df, right_df, left_on, right_on, how='inner', cutoff=0.6):
 
 
     # Return the merged output along with a report on what happened.
-    merged = hb.df_merge(left_df, right_df, left_on=left_on, right_on=right_on)
+    merged = hb.df_merge(left_df, right_df, left_on=left_on, right_on=right_on, supress_warnings=True)
     
     return merged, report
     # return left_df.merge(right_df, on=left_on, how=how), report
