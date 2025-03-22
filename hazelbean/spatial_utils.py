@@ -17,6 +17,7 @@ import warnings
 import logging
 from hazelbean import geoprocessing
 from hazelbean import netcdf
+import pygeoprocessing as pgp
 
 from osgeo import gdal
 # gdal.SetConfigOption("IGNORE_COG_LAYOUT_BREAK", "YES") 
@@ -639,73 +640,7 @@ def write_vrt_to_raster(
 
     print(f"Conversion complete: {output_tif_path}")
 
-
-def write_vrt_to_raster_cog(
-    input_vrt_path,
-    output_tif_path,
-    output_data_type=None,
-    resampling_method='near',
-    overview_resampling_method='near',
-    compress='deflate',
-    ):
-    ### NOT FINISHED. doing it this way is not memory safe.
-    
-    # Open the input VRT
-    vrt_ds = gdal.OpenEx(input_vrt_path, gdal.GA_ReadOnly)
-    if vrt_ds is None:
-        raise ValueError(f"Could not open input VRT: {input_vrt_path}")
-    
-    # Determine output data type
-    if output_data_type is None:
-        output_data_type = vrt_ds.GetRasterBand(1).DataType
-        
-    # Set width and height from vrt
-    width = vrt_ds.RasterXSize
-    height = vrt_ds.RasterYSize
-    
-    driver = gdal.GetDriverByName("GTiff")
-    
-    dataset = driver.Create(
-        output_tif_path,
-        width,
-        height,
-        bands=1,  # Number of bands
-        eType=output_data_type,  # Data type
-        # eType=gdal.GDT_Byte,  # Data type
-        options=[
-            "TILED=YES",  # Enable tiling
-            "COMPRESS=DEFLATE",  # Compression
-            "BIGTIFF=IF_SAFER",  # Use BigTIFF if necessary
-            "BLOCKXSIZE=256",  # Tile size in X
-            "BLOCKYSIZE=256",  # Tile size in Y
-        ],
-    )
-    
-    # Get src projection
-    src_proj = vrt_ds.GetProjection()
-    dataset.SetProjection(src_proj)
-    
-    # get src geotransform
-    src_gt = vrt_ds.GetGeoTransform()
-    dataset.SetGeoTransform(src_gt)
-
-    # # Define spatial reference (e.g., WGS84) and geotransform
-    # dataset.SetProjection("EPSG:4326")  # WGS84
-    # dataset.SetGeoTransform([-180, 0.1, 0, 90, 0, -0.1])  # Example geotransform
-
-    # Write data to the raster band
-    band = dataset.GetRasterBand(1)
-    band.WriteArray(data)
-
-    # Step 2: Build custom overviews
-    custom_overview_levels = [2, 4, 8, 16]  # Define overview levels
-    dataset.BuildOverviews("NEAREST", custom_overview_levels)  # Use nearest resampling
-
-    # Step 3: Close the dataset to finalize the COG
-    dataset.FlushCache()  # Ensure data is written to disk
-    dataset = None  # Close the file    
-    
-    
+   
 
 def set_ndv_in_raster_header(input_raster_path, new_ndv):
     # DOES NOT CHANGE UNDERLYING DATA
@@ -1042,7 +977,7 @@ def load_npy_as_array(input_uri, mmap_mode=None):
         # Also, we assume that you the arrays are not named and thus can be accessed by the default attribute arr_0
         return a.f.arr_0
     else:
-        raise NameError('Unknown type given to load_npy_as_array: ' + str(output_uri))
+        raise NameError('Unknown type given to load_npy_as_array: ' + str(input_uri))
 
 def read_1d_npy_chunk(input_path, start_entry, num_entries):
     """
@@ -1339,9 +1274,7 @@ def save_array_as_geotiff(array, out_uri, geotiff_uri_to_match=None, ds_to_match
         L.info('Saving array to ' + str(processed_out_uri))
 
     if save_png:
-        if not ge:
-            raise NameError('No plotting interface configured.')
-        ge.full_show_array(array, output_uri=processed_out_uri.replace('.tif', '.png'), cbar_percentiles=[2,50,99])
+        hb.full_show_array(array, output_uri=processed_out_uri.replace('.tif', '.png'), cbar_percentiles=[2,50,99])
 
 def extract_features_in_shapefile_by_attribute(input_path, output_path, column_name, column_filter):
     gdf = gpd.read_file(input_path)
@@ -1665,7 +1598,7 @@ def as_array_no_path_resampled_to_size(input_array, max_size=200000, return_all_
         scale_factor = float(max_size) / float(input_array.size)
         render_cols = int(input_array.shape[1] * scale_factor ** 0.5)
         render_rows = int(input_array.shape[0] * scale_factor ** 0.5)
-        array = band.ReadAsArray(0, 0, input_array.shape[1], input_array.shape[0], render_cols, render_rows)
+        array = input_array[::int(input_array.shape[0] / render_rows), ::int(input_array.shape[1] / render_cols)]
     else:
         array = input_array
 
@@ -2173,7 +2106,7 @@ def new_raster_from_base_uri(base_uri, *args, **kwargs):
     base_raster = gdal.Open(base_uri)
     if base_raster is None:
         raise IOError("%s not found when opening GDAL raster")
-    new_raster = new_raster_from_base(base_raster, *args, **kwargs)
+    new_raster = pgp.new_raster_from_base(base_raster, *args, **kwargs)
 
     gdal.Dataset.__swig_destroy__(new_raster)
     gdal.Dataset.__swig_destroy__(base_raster)
@@ -3734,7 +3667,7 @@ def create_raster_from_vector_extents_uri(
     """
 
     datasource = ogr.Open(shapefile_uri)
-    create_raster_from_vector_extents(
+    pgp.create_raster_from_vector_extents(
         pixel_size, pixel_size, gdal_format, nodata_out_value, output_uri,
         datasource)
 
@@ -4025,6 +3958,7 @@ def aggregate_raster_values_uri(
 
     #make a shapefile that non-overlapping layers can be added to
     driver = ogr.GetDriverByName('ESRI Shapefile')
+    temporary_folder = hb.temporary_dir(remove_at_exit=True)
     layer_dir = temporary_folder()
     subset_layer_datasouce = driver.CreateDataSource(
         os.path.join(layer_dir, 'subset_layer.shp'))
@@ -4069,7 +4003,7 @@ def aggregate_raster_values_uri(
     pixel_max_dict = pixel_min_dict.copy()
 
     #Loop over each polygon and aggregate
-    minimal_polygon_sets = calculate_disjoint_polygon_set(
+    minimal_polygon_sets = pgp.calculate_disjoint_polygon_set(
         shapefile_uri)
 
     clipped_band = clipped_raster.GetRasterBand(1)
@@ -4210,7 +4144,7 @@ def aggregate_raster_values_uri(
                 result_tuple.hectare_mean[attribute_id] = 0.0
 
         try:
-            assert_datasets_in_same_projection([raster_uri])
+            pgp.assert_datasets_in_same_projection([raster_uri])
         except DatasetUnprojected:
             #doesn't make sense to calculate the hectare mean
             L.warning(
@@ -4807,78 +4741,21 @@ def align_dataset_list(
 
 def get_lookup_from_table(table_uri, key_field):
     """
-    Creates a python dictionary to look up the rest of the fields in a
-    table file table indexed by the given key_field
-
-    Args:
-        table_uri (string): a URI to a dbf or csv file containing at
-            least the header key_field
-        key_field (?): (description)
-
-    Returns:
-        lookup_dict (dict): a dictionary of the form {key_field_0:
-            {header_1: val_1_0, header_2: val_2_0, etc.}
-            depending on the values of those fields
+BROKEN  -  OUTDATED
 
     """
 
-    table_object = fileio.TableHandler(table_uri)
-    raw_table_dictionary = table_object.get_table_dictionary(key_field.lower())
+    # table_object = fileio.TableHandler(table_uri)
+    # raw_table_dictionary = table_object.get_table_dictionary(key_field.lower())
 
     lookup_dict = {}
-    for key, sub_dict in raw_table_dictionary.items():
-        key_value = _smart_cast(key)
-        #Map an entire row to its lookup values
-        lookup_dict[key_value] = (dict(
-            [(sub_key, _smart_cast(value)) for sub_key, value in
-             sub_dict.items()]))
+    # for key, sub_dict in raw_table_dictionary.items():
+    #     key_value = _smart_cast(key)
+    #     #Map an entire row to its lookup values
+    #     lookup_dict[key_value] = (dict(
+    #         [(sub_key, _smart_cast(value)) for sub_key, value in
+    #          sub_dict.items()]))
     return lookup_dict
-
-
-def get_lookup_from_csv(csv_table_uri, key_field):
-    """
-    Creates a python dictionary to look up the rest of the fields in a
-    csv table indexed by the given key_field
-
-    Args:
-        csv_table_uri (string): a URI to a csv file containing at
-            least the header key_field
-        key_field (?): (description)
-
-    Returns:
-        lookup_dict (dict): returns a dictionary of the form {key_field_0:
-            {header_1: val_1_0, header_2: val_2_0, etc.}
-            depending on the values of those fields
-
-    """
-
-    def u(string):
-        if type(string) is StringType:
-            return str(string, 'utf-8')
-        return string
-
-    with open(csv_table_uri, 'rU') as csv_file:
-        csv_reader = csv.reader(csv_file)
-        header_row = [u(s) for s in next(csv_reader)]
-        key_index = header_row.index(key_field)
-        #This makes a dictionary that maps the headers to the indexes they
-        #represent in the soon to be read lines
-        index_to_field = dict(list(zip(list(range(len(header_row))), header_row)))
-
-        lookup_dict = {}
-        for line_num, line in enumerate(csv_reader):
-            try:
-                key_value = _smart_cast(line[key_index])
-            except IndexError as error:
-                L.error('CSV line %s (%s) should have index %s', line_num,
-                             line, key_index)
-                raise error
-            #Map an entire row to its lookup values
-            lookup_dict[key_value] = (
-                dict([(index_to_field[index], _smart_cast(value))
-                      for index, value in zip(list(range(len(line))), line)]))
-        return lookup_dict
-
 
 def extract_datasource_table_by_key(datasource_uri, key_field):
     """
@@ -5169,38 +5046,6 @@ def unique_raster_values_count(dataset_uri, ignore_nodata=True):
     dataset = None
     return itemfreq
 
-def email_report(message, email_address):
-    """
-    A simple wrapper around an SMTP call.  Can be used to send text messages
-    if the email address is constructed as the following:
-
-    Alltel [10-digit phone number]@message.alltel.com
-    AT&T (formerly Cingular) [10-digit phone number]@txt.att.net
-    Boost Mobile [10-digit phone number]@myboostmobile.com
-    Nextel (now Sprint Nextel) [10-digit telephone number]@messaging.nextel.com
-    Sprint PCS (now Sprint Nextel) [10-digit phone number]@messaging.sprintpcs.com
-    T-Mobile [10-digit phone number]@tmomail.net
-    US Cellular [10-digit phone number]email.uscc.net (SMS)
-    Verizon [10-digit phone number]@vtext.com
-    Virgin Mobile USA [10-digit phone number]@vmobl.com
-
-    Args:
-        message (string): the message to send
-        email_address (string): where to send the message
-
-    Returns:
-        nothing
-
-    """
-
-    try:
-        server = smtplib.SMTP('smtp.gmail.com:587')
-        server.starttls()
-        server.login('natcapsoftwareteam@gmail.com', 'assman64')
-        server.sendmail('natcapsoftwareteam@gmail.com', email_address, message)
-        server.quit()
-    except smtplib.socket.gaierror:
-        L.warning("Can't connect to email server, no report will be sent.")
 
 
 def convolve_2d_uri(signal_uri, kernel_uri, output_uri, ignore_nodata=True):
@@ -5603,7 +5448,7 @@ def new_raster_from_base_pgp(
             # computation to hang. This block, though possibly slightly less
             # efficient than `band.Fill` will give real-time feedback about
             # how the fill is progressing.
-            for offsets in iterblocks(target_path, offset_only=True):
+            for offsets in pgp.iterblocks(target_path, offset_only=True):
                 fill_array = numpy.empty(
                     (offsets['win_ysize'], offsets['win_xsize']))
                 pixels_processed += (
@@ -5611,9 +5456,9 @@ def new_raster_from_base_pgp(
                 fill_array[:] = fill_value
                 target_band.WriteArray(
                     fill_array, offsets['xoff'], offsets['yoff'])
-
-                last_time = _invoke_timed_callback(
-                    last_time, lambda: LOGGER.info(
+                _LOGGING_PERIOD = 1
+                last_time = pgp._invoke_timed_callback(
+                    last_time, lambda: L.info(
                         '%.2f%% complete',
                         float(pixels_processed) / n_pixels * 100.0),
                     _LOGGING_PERIOD)

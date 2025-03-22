@@ -1355,7 +1355,7 @@ def path_rename_change_dir_at_depth(input_path, new_dir, depth, verbose=False):
     # LEARNING POINT fun use of pathlib on a pathlib.parts object with the * operator.
     new_path = pathlib.Path(new_dir) / pathlib.Path(*input_path.parts[-depth:])
     if verbose:
-        L.info('  Searched for path ' + str(input_path) + ' and found ' + str(new_path) + ' via path_rename_change_dir_at_depth.')
+        hb.log('  Searched for path ' + str(input_path) + ' and found ' + str(new_path) + ' via path_rename_change_dir_at_depth.')
 
     # LEARNING POINT, Gdal checks for a string object, so it's got to be return here as a string.
     return str(new_path)
@@ -1431,12 +1431,12 @@ def copy_file_tree_to_new_root(input_dir, root_dir, **kwargs):
 
             if target_path in paths:
                 if verbose:
-                    L.info('copying from ' + str(target_path) + ' to ' + str(output_path))
+                    hb.log('copying from ' + str(target_path) + ' to ' + str(output_path))
 
                 hb.copy_shutil_flex(target_path, output_path)
             else:
                 if verbose:
-                    L.info('skipped coppying ' + str(target_path) + ' due to exclusion rule.')
+                    hb.log('skipped coppying ' + str(target_path) + ' due to exclusion rule.')
 def path_abs(input_relative_path):
     try:
         return os.path.abspath(str(input_relative_path))
@@ -1451,7 +1451,7 @@ def copy_shutil_flex(src, dst, copy_tree=True, displace_overwrites=False, overwr
     """Helper util that allows copying of files or dirs in same function"""
     if os.path.isdir(src):
         if verbose:
-            L.info('Copying directory ' + str(src) + ' to ' + str(dst))
+            hb.log('Copying directory ' + str(src) + ' to ' + str(dst))
         if not os.path.exists(dst):
             hb.create_directories(dst)
         if copy_tree:
@@ -1473,7 +1473,7 @@ def copy_shutil_flex(src, dst, copy_tree=True, displace_overwrites=False, overwr
                 os.remove(dst)
         shutil.copyfile(src, dst)
         if verbose:
-            L.info('Copying file ' + str(src) + ' to ' + str(dst))
+            hb.log('Copying file ' + str(src) + ' to ' + str(dst))
 
 def copy_shutil_copytree(src, dst, symlinks=False, ignore=None):
     for item in os.listdir(src):
@@ -2127,7 +2127,7 @@ def print_dict_old(input_dict, level = -1, max_length_to_visualize=255, return_a
                 print(prepend + str(k) )
                 # print_counter = 0'
             level += 1
-            return_string += print_dict(v, level, return_as_string=return_as_string)
+            return_string += hb.print_dict(v, level, return_as_string=return_as_string)
             level -= 1
         elif isinstance(v, list):
 
@@ -2145,7 +2145,7 @@ def print_dict_old(input_dict, level = -1, max_length_to_visualize=255, return_a
                     print(return_string)                
                    
                 
-                return_string += print_dict(v, level, return_as_string=return_as_string)
+                return_string += hb.print_dict(v, level, return_as_string=return_as_string)
             
             else:
                 prepend = '   ' * level
@@ -2213,7 +2213,7 @@ def print_md_dict(input_dict, level = 0):
             print(prepend + str(k) )
 
             level += 1
-            print_dict(v, level)
+            hb.print_dict(v, level)
         else:
             # level += 1
             prepend = '   ' * level

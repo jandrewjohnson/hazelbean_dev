@@ -35,6 +35,7 @@ import numpy as numpy
 import hazelbean as hb
 import multiprocessing
 import threading
+import pygeoprocessing as pgp
 
 L = hb.get_logger('geoprocessing')
 
@@ -1275,10 +1276,10 @@ def distance_transform_edt(
         return numpy.where(
             base_array == nodata, nodata_out, base_array != 0)
 
-    raster_calculator(
+    pgp.raster_calculator(
         [base_mask_raster_path_band], _mask_op, dt_mask_path,
         gdal.GDT_Byte, nodata_out, calc_raster_stats=False)
-    geoprocessing_core.distance_transform_edt(
+    pgp.geoprocessing_core.distance_transform_edt(
         (dt_mask_path, 1), target_distance_raster_path)
     try:
         os.remove(dt_mask_path)

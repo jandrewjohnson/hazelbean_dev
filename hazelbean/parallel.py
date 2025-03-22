@@ -18,6 +18,10 @@ import dask.distributed
 import dask.config
 dask.config.set({'logging.distributed': 'error'})
 
+import pygeoprocessing as pgp
+import geopandas as gpd
+import pandas as pd
+
 # pbar = ProgressBar()
 # pbar.register()
 # dask.config.set({'diagnostics.progress': 'None'})
@@ -398,6 +402,7 @@ def zonal_statistics_dask(
 
     # if zone_ids_raster_path is not defined, use the PGP version, which doesn't use a rasterized approach.
     if not zone_ids_raster_path and rewrite_zone_ids_raster is False:
+        base_raster_path_band = 'fix'
         to_return = pgp.zonal_statistics(
             base_raster_path_band, zone_vector_path,
             aggregate_layer_name=None, ignore_nodata=True,

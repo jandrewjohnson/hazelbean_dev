@@ -1095,9 +1095,10 @@ def raster_calculator_hb(
             # the raster's statistics. When `None` is pushed to the queue
             # the worker will finish and return a (min, max, mean, std)
             # tuple.
+            target = 'fix'
             L.info('starting stats_worker')
             stats_worker_thread = threading.Thread(
-                target=gpc.stats_worker,
+                target=target,
                 args=(stats_worker_queue, exception_queue))
             stats_worker_thread.daemon = True
             stats_worker_thread.start()

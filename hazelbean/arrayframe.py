@@ -298,7 +298,7 @@ class ArrayFrame(object):
         self.num_nonzero = np.count_nonzero(self._nonzero_mask)
         self.num_zero = self.size - self.num_nonzero
         self.nonzero_mask_set = True
-        L.info('Setting nonzero mask. ' + str(self.num_nonzero) + ' nonzero, ' + str(num_zero) + '.')
+        L.info('Setting nonzero mask. ' + str(self.num_nonzero) + ' nonzero, ' + str(self.num_zero) + '.')
 
     def save(self, output_path, overwrite_existing=False):
         """SAVING in this context only means renaming and moving the originnal file."""

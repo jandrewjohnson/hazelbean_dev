@@ -54,15 +54,21 @@ from hazelbean.config import logging_levels
 def path_split_at_dir(input_path, split_dir):
     input_path_replaced = input_path.replace('\\\\', '/').replace('\\', '/')
     input_list = input_path_replaced.split('/')
-    from more_itertools import split_after
+    # from more_itertools import split_after
 
     if not split_dir in input_list:
         raise NameError('Graft dir not in input path and so cannot split: ' + str(input_path) + ', ' + str(split_dir))
-
-    split_in_two = list(split_after(input_list, lambda x: x == split_dir))
-    before = os.sep.join(split_in_two[0][0:-1]) # os.path.join(to_join)
-    split_dir_output = split_in_two[0][-1]
-    after = os.sep.join(split_in_two[1])
+    split = input_path.split(split_dir)
+    if len(split) != 2:
+        raise NameError('Split dir exists more than once in input string: ' + str(input_path) + ', ' + str(split_dir))
+    before = split[0]
+    split_dir_output = split_dir
+    after = split[1]
+    
+    # split_in_two = list(split_after(input_list, lambda x: x == split_dir))
+    # before = os.sep.join(split_in_two[0][0:-1]) # os.path.join(to_join)
+    # split_dir_output = split_in_two[0][-1]
+    # after = os.sep.join(split_in_two[1])
 
     return before, split_dir_output, after
     
@@ -220,7 +226,7 @@ def path_exists(path, minimum_size_check=0, dir_must_have_content=False, verbose
                     raise NameError('Path does not exist: ' + str(path))
                 return False
 
-def path_has_content():
+def path_has_content(path):
     path_exists(path, minimum_size_check=0, verbose=False, assert_true=False)
 
 def path_all_exist(*args, verbose=False):

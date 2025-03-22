@@ -20,12 +20,6 @@ import atexit
 import hazelbean as hb
 import matplotlib.gridspec as gridspec
 
-# Deprecated until pysal api updates.
-# try:
-#     import pysal.esda.mapclassify as ps
-#     from pysal.esda.mapclassify import User_Defined  # For geopandas plotting
-# except:
-#     pass
 
 L = hb.get_logger()
 
@@ -1331,14 +1325,14 @@ def plot_geodataframe_shapefile(gdf, column,
         # I deprecated this until pysal new api is finished
         # custom_cbar_categories = User_Defined(gdf[column], bins)
         # values = np.array(custom_cbar_categories.yb)
-
+        custom_cbar_categories = 'fix'
         fig, ax = plt.subplots(figsize=figsize)
 
         ax.set_aspect('equal')
 
         # These are the color category ids, not actual values.
-        mn = values.min()
-        mx = values.max()
+        mn = custom_cbar_categories.min()
+        mx = custom_cbar_categories.max()
 
         poly_idx = np.array(
             (gdf.geometry.type == 'Polygon') | (gdf.geometry.type == 'MultiPolygon'))
@@ -1350,7 +1344,7 @@ def plot_geodataframe_shapefile(gdf, column,
         color_kwargs['linewidth'] = kw.get('linewidth', 0.5)
 
         if not polys.empty:
-            plot_polygon_collection(ax, polys, values[poly_idx], True,
+            plot_polygon_collection(ax, polys, custom_cbar_categories[poly_idx], True,
                                     vmin=mn, vmax=mx, cmap=color_scheme,
                                     color_kwargs=color_kwargs, **kw)
         show_lat_lon_lines = kw.get('show_lat_lon_lines', True)

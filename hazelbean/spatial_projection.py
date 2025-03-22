@@ -251,7 +251,7 @@ def assert_two_srs_equivilent(first_srs, second_srs, return_result=False):
         else:
             'we good'
     else:
-        error_string = 'The first srs is not the same projection as the other srs. \n  First srs: ' + a + '\n  Second srs: ' + b
+        error_string = 'The first srs is not the same projection as the other srs. \n  First srs:'
         if return_result:
             return False
         raise NameError(error_string)
@@ -722,7 +722,7 @@ def resize_and_resample_dataset_uri(
     output_band = output_dataset.GetRasterBand(1)
     if original_nodata is None:
         original_nodata = float(
-            calculate_value_not_in_dataset(original_dataset))
+            -9999.)
 
     output_band.SetNoDataValue(original_nodata)
 

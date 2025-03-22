@@ -1556,7 +1556,7 @@ def make_path_spatially_clean(input_path,
 
     # Consider operations that may need rewriting the underlying data
     rewrite_array = False
-
+    compression_method = 'ZSTD'
     # Check if compressed (pyramidal file standards require compression)
     if str(compression).lower() != compression_method.lower():
         rewrite_array = True
@@ -1584,7 +1584,7 @@ def make_path_spatially_clean(input_path,
     below_ndv = False
     if verbose:
         L.info('input data_type: ' + str(data_type) + ', input ndv: ' + str(ndv))
-
+    correct_ndv = 'fix'
     if float(ndv) != float(correct_ndv):
         old_ndv = ndv
         ndv = correct_ndv
@@ -1679,7 +1679,7 @@ def add_statistics_to_raster(input_path, verbose=False):
     except Exception as e:
         raise NameError('Missing path: ' + str(input_path) + ' raised exception ' + str(e))
     if verbose:
-        L.info('Starting to calculate stats for ' + str(processed_path))
+        L.info('Starting to calculate stats for ' + str(input_path))
     ds.GetRasterBand(1).ComputeStatistics(False)  # False here means approx NOT okay
     ds.GetRasterBand(1).GetHistogram(approx_ok=0)
 
@@ -2226,6 +2226,7 @@ def add_rows_or_cols_to_geotiff(input_path, r_above, r_below, c_left, c_right, o
     # If there is no output_path, assume that we are going to be doing the operation in-place. BUT, if remove_temporary_files
     # is not True, simply move the input file to temp as a backup.
     if output_path is None:
+        output_dir = os.path.dirname(input_path)
         temp_path = hb.temp('.tif', 'test_add_rows_or_cols_to_geotiff', remove_temporary_files, output_dir)
         hb.rename_with_overwrite(input_path, temp_path)
         output_path = input_path
@@ -2340,126 +2341,127 @@ def numpy_dtype_to_gdal(dtype):
     else:
         raise ValueError("Unsupported NumPy data type: {}".format(dtype))
 
-def write_geotiff_as_cog(input_path, output_path, match_path, verbose=False):
-    """
-    Write a NumPy array to a Cloud Optimized GeoTIFF (COG) using GDAL.
+### DUPLACED SAME FUNCTION BELOW BUT I CANT REMEMBER IF THERE WAS OTHER VALUE TO GET
+# def write_geotiff_as_cog(input_path, output_path, match_path, verbose=False):
+#     """
+#     Write a NumPy array to a Cloud Optimized GeoTIFF (COG) using GDAL.
     
-    This function follows a two‑step process:
-      1. It creates a temporary GTiff file with recommended COG creation options
-         (tiled, compressed, with a fixed block size) and builds internal overviews.
-      2. It then reprojects that file into a final COG using gdal.Translate with the 
-         COPY_SRC_OVERVIEWS option so that the IFD and tile offsets are arranged properly.
+#     This function follows a two‑step process:
+#       1. It creates a temporary GTiff file with recommended COG creation options
+#          (tiled, compressed, with a fixed block size) and builds internal overviews.
+#       2. It then reprojects that file into a final COG using gdal.Translate with the 
+#          COPY_SRC_OVERVIEWS option so that the IFD and tile offsets are arranged properly.
     
-    Parameters:
-      output_path (str): Path to the final output COG file.
-      array (np.ndarray): Data array to be written. Use shape (rows, cols) for a single
-                          band or (bands, rows, cols) for multiband data.
-      geotransform (tuple): A 6‑element tuple defining the geotransform.
-      projection (str): The projection in WKT format.
-      nodata (optional): No-data value to assign to each band.
+#     Parameters:
+#       output_path (str): Path to the final output COG file.
+#       array (np.ndarray): Data array to be written. Use shape (rows, cols) for a single
+#                           band or (bands, rows, cols) for multiband data.
+#       geotransform (tuple): A 6‑element tuple defining the geotransform.
+#       projection (str): The projection in WKT format.
+#       nodata (optional): No-data value to assign to each band.
     
-    Raises:
-      RuntimeError: If dataset creation or translation fails.
+#     Raises:
+#       RuntimeError: If dataset creation or translation fails.
     
-    Example:
+#     Example:
     
-        # For a single‑band array:
-        arr = np.random.randint(0, 255, size=(1024, 1024)).astype(np.uint8)
-        geotrans = (444720, 30, 0, 3751320, 0, -30)
-        proj = osr.SRS_WKT_WGS84  # or load from a proper SRS object
-        write_cog("output_cog.tif", arr, geotrans, proj, nodata=0)
-    """
-    # Determine dimensions and number of bands.
-    if array.ndim == 2:
-        nbands = 1
-        rows, cols = array.shape
-    elif array.ndim == 3:
-        nbands, rows, cols = array.shape
-    else:
-        raise ValueError("Array must be 2D (rows, cols) or 3D (bands, rows, cols).")
+#         # For a single‑band array:
+#         arr = np.random.randint(0, 255, size=(1024, 1024)).astype(np.uint8)
+#         geotrans = (444720, 30, 0, 3751320, 0, -30)
+#         proj = osr.SRS_WKT_WGS84  # or load from a proper SRS object
+#         write_cog("output_cog.tif", arr, geotrans, proj, nodata=0)
+#     """
+#     # Determine dimensions and number of bands.
+#     if array.ndim == 2:
+#         nbands = 1
+#         rows, cols = array.shape
+#     elif array.ndim == 3:
+#         nbands, rows, cols = array.shape
+#     else:
+#         raise ValueError("Array must be 2D (rows, cols) or 3D (bands, rows, cols).")
     
-    # Map the NumPy dtype to a GDAL type.
-    gdal_dtype = numpy_dtype_to_gdal(array.dtype)
+#     # Map the NumPy dtype to a GDAL type.
+#     gdal_dtype = numpy_dtype_to_gdal(array.dtype)
     
-    # Get the GTiff driver.
-    driver = gdal.GetDriverByName('GTiff')
+#     # Get the GTiff driver.
+#     driver = gdal.GetDriverByName('GTiff')
     
-    # Create a temporary file for the intermediate dataset.
-    tmp_fd, tmp_path = tempfile.mkstemp(suffix='.tif')
-    os.close(tmp_fd)  # We let GDAL handle the file.
+#     # Create a temporary file for the intermediate dataset.
+#     tmp_fd, tmp_path = tempfile.mkstemp(suffix='.tif')
+#     os.close(tmp_fd)  # We let GDAL handle the file.
     
-    # Creation options for the temporary file.
-    tmp_creation_options = [
-        'TILED=YES',
-        'BLOCKXSIZE=512',
-        'BLOCKYSIZE=512',
-        'COMPRESS=ZSTD',
-        'PREDICTOR=2',
-        'BIGTIFF=IF_SAFER',
-        'NUM_THREADS=ALL_CPUS',
-    ]
+#     # Creation options for the temporary file.
+#     tmp_creation_options = [
+#         'TILED=YES',
+#         'BLOCKXSIZE=512',
+#         'BLOCKYSIZE=512',
+#         'COMPRESS=ZSTD',
+#         'PREDICTOR=2',
+#         'BIGTIFF=IF_SAFER',
+#         'NUM_THREADS=ALL_CPUS',
+#     ]
     
-    # Create the temporary dataset.
-    dataset = driver.Create(tmp_path, cols, rows, nbands, gdal_dtype, options=tmp_creation_options)
-    if dataset is None:
-        raise RuntimeError("Failed to create temporary dataset.")
+#     # Create the temporary dataset.
+#     dataset = driver.Create(tmp_path, cols, rows, nbands, gdal_dtype, options=tmp_creation_options)
+#     if dataset is None:
+#         raise RuntimeError("Failed to create temporary dataset.")
     
-    # Set georeferencing.
-    dataset.SetGeoTransform(geotransform)
-    dataset.SetProjection(projection)
+#     # Set georeferencing.
+#     dataset.SetGeoTransform(geotransform)
+#     dataset.SetProjection(projection)
     
-    # Write the array data.
-    if nbands == 1:
-        band = dataset.GetRasterBand(1)
-        if nodata is not None:
-            band.SetNoDataValue(nodata)
-        band.WriteArray(array)
-    else:
-        for i in range(nbands):
-            band = dataset.GetRasterBand(i+1)
-            if nodata is not None:
-                band.SetNoDataValue(nodata)
-            band.WriteArray(array[i, :, :])
+#     # Write the array data.
+#     if nbands == 1:
+#         band = dataset.GetRasterBand(1)
+#         if nodata is not None:
+#             band.SetNoDataValue(nodata)
+#         band.WriteArray(array)
+#     else:
+#         for i in range(nbands):
+#             band = dataset.GetRasterBand(i+1)
+#             if nodata is not None:
+#                 band.SetNoDataValue(nodata)
+#             band.WriteArray(array[i, :, :])
     
-    # Ensure data is written.
-    dataset.FlushCache()
+#     # Ensure data is written.
+#     dataset.FlushCache()
     
-    # Build overviews.
-    # Choose overview levels until the reduced size is less than ~256 pixels.
-    overview_levels = []
-    factor = 2
-    while (rows // factor >= 256) and (cols // factor >= 256):
-        overview_levels.append(factor)
-        factor *= 2
-    if overview_levels:
-        # Use a resampling method; "AVERAGE" is often appropriate for continuous data.
-        dataset.BuildOverviews("AVERAGE", overview_levels)
-        dataset.FlushCache()
+#     # Build overviews.
+#     # Choose overview levels until the reduced size is less than ~256 pixels.
+#     overview_levels = []
+#     factor = 2
+#     while (rows // factor >= 256) and (cols // factor >= 256):
+#         overview_levels.append(factor)
+#         factor *= 2
+#     if overview_levels:
+#         # Use a resampling method; "AVERAGE" is often appropriate for continuous data.
+#         dataset.BuildOverviews("AVERAGE", overview_levels)
+#         dataset.FlushCache()
     
-    # Close the temporary dataset.
-    dataset = None
+#     # Close the temporary dataset.
+#     dataset = None
     
-    # Now translate the temporary file into the final COG.
-    # The COPY_SRC_OVERVIEWS option ensures that overviews are copied and that the file
-    # is reorganized so that the primary IFD and tile offsets are optimized.
-    final_creation_options = [
-        'TILED=YES',
-        'COPY_SRC_OVERVIEWS=YES',
-        'COMPRESS=DEFLATE',
-        'PREDICTOR=2',
-        'BIGTIFF=IF_SAFER'
-    ]
+#     # Now translate the temporary file into the final COG.
+#     # The COPY_SRC_OVERVIEWS option ensures that overviews are copied and that the file
+#     # is reorganized so that the primary IFD and tile offsets are optimized.
+#     final_creation_options = [
+#         'TILED=YES',
+#         'COPY_SRC_OVERVIEWS=YES',
+#         'COMPRESS=DEFLATE',
+#         'PREDICTOR=2',
+#         'BIGTIFF=IF_SAFER'
+#     ]
     
-    translate_options = gdal.TranslateOptions(creationOptions=final_creation_options)
-    final_ds = gdal.Translate(output_path, tmp_path, options=translate_options)
-    if final_ds is None:
-        os.remove(tmp_path)
-        raise RuntimeError("Failed to translate to final COG.")
-    final_ds = None
+#     translate_options = gdal.TranslateOptions(creationOptions=final_creation_options)
+#     final_ds = gdal.Translate(output_path, tmp_path, options=translate_options)
+#     if final_ds is None:
+#         os.remove(tmp_path)
+#         raise RuntimeError("Failed to translate to final COG.")
+#     final_ds = None
     
-    # Remove the temporary file.
-    os.remove(tmp_path)
-    print("COG successfully saved to '{}'.".format(output_path))
+#     # Remove the temporary file.
+#     os.remove(tmp_path)
+#     print("COG successfully saved to '{}'.".format(output_path))
     
     
     
