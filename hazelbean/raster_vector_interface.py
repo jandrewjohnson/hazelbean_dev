@@ -364,6 +364,9 @@ def zonal_statistics_flex(input_raster,
         unique_ids, sums, counts = hb.zonal_statistics_rasterized(zone_ids_raster_path, input_raster, zones_ndv=zones_ndv, values_ndv=values_ndv,
                                                                   unique_zone_ids=unique_zone_ids, stats_to_retrieve=stats_to_retrieve, verbose=verbose)
 
+        if len(unique_ids) != len(sums):
+            sums = sums[unique_ids]
+            counts = counts[unique_ids]
         df = pd.DataFrame(index=unique_ids, data={'sums': sums, 'counts': counts})
         df[df == 0] = np.nan
         df.dropna(inplace=True)
