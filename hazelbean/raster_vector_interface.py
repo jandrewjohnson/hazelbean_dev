@@ -903,8 +903,12 @@ def zonal_statistics(
         df['id_created'] = df.index
         
         # Keep only where the id is greater than zero
-        if output_column_prefix + '_sums' in df.columns:
+        if output_column_prefix + '_sums' in df.columns and output_column_prefix + '_counts' in df.columns:
+            # If the sums and counts are both zero, then remove the row.
             df = df[(df[output_column_prefix + '_sums'] > 0) | (df[output_column_prefix + '_counts'] > 0)]
+        elif output_column_prefix + '_sums' in df.columns:
+            # If the sums are zero, then remove the row.
+            df = df[df[output_column_prefix + '_sums'] > 0]
         else: # Then it is an enumeration
             df = df[~(df[[i for i in df.columns if i != 'id']] == 0).all(axis=1)]
             
