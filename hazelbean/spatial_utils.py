@@ -1278,9 +1278,9 @@ def save_array_as_geotiff(array, out_uri, geotiff_uri_to_match=None, ds_to_match
 
 def extract_features_in_shapefile_by_attribute(input_path, output_path, column_name, column_filter):
     gdf = gpd.read_file(input_path)
-    print(gdf)
-    print('column_name: ' + str(column_name))
-    print('column_filter: ' + str(column_filter))
+    
+    hb.log('column_name: ' + str(column_name))
+    hb.log('column_filter: ' + str(column_filter))
     
     gdf_out = gdf.loc[gdf[column_name] == column_filter]
     
@@ -3332,22 +3332,37 @@ def create_buffered_polygon(input_uri, output_uri, buffer_cell_width):
     input_ds.Destroy()
     output_ds.Destroy()
 
-def get_cell_size_from_path(input_path):
+def get_cell_size_from_path(input_path, force_to_pyramid=False):
+    # RETURNS DEGREES
     if os.path.splitext(input_path)[1] == '.nc':
-        return netcdf.get_cell_size_from_nc_path(input_path)
+        size = netcdf.get_cell_size_from_nc_path(input_path)
     else:
         hb.assert_path_is_gdal_readable(input_path)
 
         ds = gdal.Open(input_path)
-        return ds.GetGeoTransform()[1]
+        size = ds.GetGeoTransform()[1]
+        
+    if not force_to_pyramid:
+        return size
+    else:
+        if size in hb.pyramid_compatible_resolution_to_arcseconds:
+            return size
+        else:
+            for k, v in hb.pyramid_compatible_resolution_bounds.items():
+                if v[0] <= size <= v[1]:
+                    return hb.pyramid_compatible_resolutions[k]
+            raise ValueError('Cell size %s not in pyramid compatible resolution bounds %s' % (size, str(hb.pyramid_compatible_resolution_bounds)))
     
-def get_cell_size_from_path_in_degrees(input_path):
-    degrees = get_cell_size_from_path(input_path)
+def get_cell_size_from_path_in_degrees(input_path, force_to_pyramid=False):
+    degrees = get_cell_size_from_path(input_path, force_to_pyramid=force_to_pyramid)
     return degrees
 
-def get_cell_size_from_path_in_arcseconds(input_path):
-    degrees = get_cell_size_from_path(input_path)
-    arcseconds = hb.pyramid_compatible_resolution_to_arcseconds[degrees]
+def get_cell_size_from_path_in_arcseconds(input_path, force_to_pyramid=False):
+    degrees = get_cell_size_from_path(input_path, force_to_pyramid=force_to_pyramid)
+    if degrees in hb.pyramid_compatible_resolution_to_arcseconds:
+        arcseconds = hb.pyramid_compatible_resolution_to_arcseconds[degrees]
+    else:
+        arcseconds = degrees * 3600.0
     return arcseconds
 
 
@@ -5737,7 +5752,31 @@ def simplify_polygon(input_path, output_path, tolerance, preserve_topology=True,
     # Create a new GeoDataFrame
     result_gdf = gpd.GeoDataFrame({'geometry': result_polygons})
     result_gdf.to_file(output_path)
+    
+def raster_path_has_stats(input_path, approx_ok=False):
+    ds = gdal.Open(input_path)
 
+    band = ds.GetRasterBand(1)
+    stats = band.GetMetadata()
+
+    has_stats = 'STATISTICS_MINIMUM' in stats and 'STATISTICS_MAXIMUM' in stats
+
+    is_approximate = stats.get('STATISTICS_APPROXIMATE', 'YES')
+    if is_approximate == 'NO':
+        is_approximate = False
+    else:
+        is_approximate = True
+        
+    if approx_ok:
+        if has_stats:
+            return True
+        else:
+            return False
+    else:
+        if has_stats and not is_approximate:
+            return True
+        else:
+            return False
 
 def add_stats_to_geotiff_with_gdal(geotiff_path, approx_ok=False, force=True, verbose=True):
     """
@@ -5750,7 +5789,8 @@ def add_stats_to_geotiff_with_gdal(geotiff_path, approx_ok=False, force=True, ve
         force (bool): Force recomputation of statistics.
         verbose (bool): Print detailed statistics per band.
     """
-    ds = gdal.Open(geotiff_path, gdal.GA_Update)
+    ds = gdal.Open(geotiff_path)
+    # ds = gdal.Open(geotiff_path, gdal.GA_Update)
 
     if not ds:
         raise ValueError(f"Could not open {geotiff_path}")
@@ -5762,7 +5802,11 @@ def add_stats_to_geotiff_with_gdal(geotiff_path, approx_ok=False, force=True, ve
         band.SetMetadataItem("STATISTICS_MEAN", None)
         band.SetMetadataItem("STATISTICS_STDDEV", None)                    
         stats = band.ComputeStatistics(approx_ok=approx_ok, callback=hb.make_gdal_callback('Calculating stats.') if verbose else None)
-
+        if not approx_ok:
+            band.SetMetadataItem("STATISTICS_APPROXIMATE", "NO")
+        else:
+            band.SetMetadataItem("STATISTICS_APPROXIMATE", "YES")
+            
         if verbose:
             print(
                 f"\nBand {band_index} stats: "

@@ -24,9 +24,10 @@ def make_path_pog(input_raster_path, output_raster_path=None, output_data_type=N
     if not hb.path_exists(input_raster_path, verbose=verbose):
         raise FileNotFoundError(f"Input raster does not exist: {input_raster_path} at abs path {hb.path_abs(input_raster_path)}")
     
-    if is_path_pog(input_raster_path, verbose) and verbose:
+    if is_path_pog(input_raster_path, verbose):
         hb.log(f"Raster is already a POG: {input_raster_path}")
         
+        return
     # Make a local copy at a temp file to process on to avoid corrupting the original
     temp_copy_path = hb.temp('.tif', 'copy', True, tag_along_file_extensions=['.aux.xml'])
     
@@ -53,8 +54,9 @@ def make_path_pog(input_raster_path, output_raster_path=None, output_data_type=N
             hb.path_copy(input_raster_path, temp_copy_path) # Can just copy it direclty without accessing the raster.        
     
     # Get the resolution from the src_ds
-    degrees = hb.get_cell_size_from_path(temp_copy_path)
-    arcseconds = hb.get_cell_size_from_path_in_arcseconds(temp_copy_path)
+    degrees = hb.get_cell_size_from_path(temp_copy_path, force_to_pyramid=True)
+
+    arcseconds = hb.get_cell_size_from_path_in_arcseconds(temp_copy_path, force_to_pyramid=True)
     
     original_output_raster_path = output_raster_path
     if output_raster_path is None:        
@@ -91,11 +93,13 @@ def make_path_pog(input_raster_path, output_raster_path=None, output_data_type=N
         )
         hb.swap_filenames(resample_temp_path, temp_copy_path)
         
-        
-    hb.add_stats_to_geotiff_with_gdal(temp_copy_path, approx_ok=False, force=True, verbose=verbose)
+    if not hb.raster_path_has_stats(temp_copy_path, approx_ok=False):
+        hb.add_stats_to_geotiff_with_gdal(temp_copy_path, approx_ok=False, force=True, verbose=verbose)
     
     # Open the source raster in UPDATE MODE so it writes the overviews as internal
+    # gdal.PushErrorHandler('CPLQuietErrorHandler')
     src_ds = gdal.OpenEx(temp_copy_path, gdal.GA_Update)
+    # gdal.PopErrorHandler()
     if not src_ds:
         raise ValueError(f"Unable to open raster: {temp_copy_path}")
 

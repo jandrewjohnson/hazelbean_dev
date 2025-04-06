@@ -179,8 +179,8 @@ class CustomLogger(logging.LoggerAdapter):
         self.logger.addHandler(hdlr)
 
 CLEAN_FORMAT = "%(message)s"
-LONG_FORMAT = "%(message)s                                                                                                                                                                                                                                                                     --- %(asctime)s --- %(name)s %(levelname)s"
-FORMAT = "%(message)s              --- %(asctime)s --- %(name)s %(levelname)s"
+LONG_FORMAT = "%(message)s              --- %(asctime)s --- %(name)s %(levelname)s"  
+FORMAT = "%(message)s"
 # FORMAT = "%(message)s"
 logging.basicConfig(format=FORMAT)
 

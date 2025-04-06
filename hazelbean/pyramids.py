@@ -33,6 +33,12 @@ pyramid_compatible_arcseconds = [
     14400.0,
     36000.0,
     ]
+for i in pyramid_compatible_arcseconds.copy():
+    pyramid_compatible_arcseconds.append(str(i))
+    pyramid_compatible_arcseconds.append(int(i))
+    pyramid_compatible_arcseconds.append(str(float(i)))   
+    
+    
 pyramid_compatible_arcseconds_old = [
     10.0,
     30.0,
@@ -44,6 +50,11 @@ pyramid_compatible_arcseconds_old = [
     14400.0,
     36000.0,
     ]
+for i in pyramid_compatible_arcseconds_old.copy():
+    pyramid_compatible_arcseconds_old.append(str(i))
+    pyramid_compatible_arcseconds_old.append(int(i))
+    pyramid_compatible_arcseconds_old.append(str(float(i)))
+
 
 pyramid_ha_per_cell_ref_paths = {}
 pyramid_ha_per_cell_ref_paths[1.0] = os.path.join('pyramids', 'ha_per_cell_1sec.tif')
@@ -57,6 +68,10 @@ pyramid_ha_per_cell_ref_paths[3600.0] = os.path.join('pyramids', 'ha_per_cell_36
 pyramid_ha_per_cell_ref_paths[7200.0] = os.path.join('pyramids', 'ha_per_cell_7200sec.tif')
 pyramid_ha_per_cell_ref_paths[14400.0] = os.path.join('pyramids', 'ha_per_cell_14400sec.tif')
 pyramid_ha_per_cell_ref_paths[36000.0] = os.path.join('pyramids', 'ha_per_cell_36000sec.tif')
+for k, v in pyramid_ha_per_cell_ref_paths.copy().items():
+    pyramid_ha_per_cell_ref_paths[str(k)] = v
+    pyramid_ha_per_cell_ref_paths[int(k)] = v
+    pyramid_ha_per_cell_ref_paths[str(int(k))] = v
 
 
 pyramid_match_ref_paths = {}
@@ -71,6 +86,11 @@ pyramid_match_ref_paths[3600.0] = os.path.join('pyramids', 'match_3600sec.tif')
 pyramid_match_ref_paths[7200.0] = os.path.join('pyramids', 'match_7200sec.tif')
 pyramid_match_ref_paths[14400.0] = os.path.join('pyramids', 'match_14400sec.tif')
 pyramid_match_ref_paths[36000.0] = os.path.join('pyramids', 'match_36000sec.tif')
+for k, v in pyramid_match_ref_paths.copy().items():
+    pyramid_match_ref_paths[str(k)] = v
+    pyramid_match_ref_paths[int(k)] = v
+    pyramid_match_ref_paths[str(int(k))] = v
+
 
 ha_per_cell_column_1sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_1sec.tif')
 ha_per_cell_column_10sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_10sec.tif')
@@ -84,6 +104,7 @@ ha_per_cell_column_7200sec_ref_path = os.path.join('pyramids', 'ha_per_cell_colu
 ha_per_cell_column_14400sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_14400sec.tif')
 ha_per_cell_column_36000sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_36000sec.tif')
 
+
 pyramid_compatible_resolution_to_arcseconds = {}
 pyramid_compatible_resolution_to_arcseconds[0.0002777777777777778] =    1.0
 pyramid_compatible_resolution_to_arcseconds[0.002777777777777778] =    10.0
@@ -96,6 +117,11 @@ pyramid_compatible_resolution_to_arcseconds[1.0] =  3600.0
 pyramid_compatible_resolution_to_arcseconds[2.0] =  7200.0
 pyramid_compatible_resolution_to_arcseconds[4.0] = 14400.0
 pyramid_compatible_resolution_to_arcseconds[10.0] = 36000.0
+for k, v in pyramid_compatible_resolution_to_arcseconds.copy().items():
+    pyramid_compatible_resolution_to_arcseconds[str(k)] = v
+    pyramid_compatible_resolution_to_arcseconds[int(k)] = v
+    pyramid_compatible_resolution_to_arcseconds[str(int(k))] = v
+
 
 pyramid_compatible_resolutions = {}
 pyramid_compatible_resolutions[1.0] =     0.0002777777777777778 # 0002777777777777778, 0002777777777777777775
@@ -109,6 +135,11 @@ pyramid_compatible_resolutions[3600.0] =  1.0
 pyramid_compatible_resolutions[7200.0] =  2.0
 pyramid_compatible_resolutions[14400.0] = 4.0
 pyramid_compatible_resolutions[36000.0] = 10.0
+for k, v in pyramid_compatible_resolutions.copy().items():
+    pyramid_compatible_resolutions[str(k)] = v
+    pyramid_compatible_resolutions[int(k)] = v
+    pyramid_compatible_resolutions[str(int(k))] = v
+
 
 # Define the bounds of what should raise an assertion that the file is close but not exactly matching one of the supported resolutions.
 pyramid_compatible_resolution_bounds = {}
@@ -123,6 +154,11 @@ pyramid_compatible_resolution_bounds[3600.0] =  (0.999, 1.001)
 pyramid_compatible_resolution_bounds[7200.0] =  (1.999, 2.001)
 pyramid_compatible_resolution_bounds[14400.0] = (3.999, 4.001)
 pyramid_compatible_resolution_bounds[36000.0] = (9.999, 10.001)
+for k, v in pyramid_compatible_resolution_bounds.copy().items():
+    pyramid_compatible_resolution_bounds[str(k)] = v
+    pyramid_compatible_resolution_bounds[int(k)] = v
+    pyramid_compatible_resolution_bounds[str(int(k))] = v
+
 
 pyramid_compatable_shapes = {}
 pyramid_compatable_shapes[1.0] = [1296000, 648000]
@@ -137,6 +173,11 @@ pyramid_compatable_shapes[3600.0] = [360, 180]
 pyramid_compatable_shapes[7200.0] = [180, 90]
 pyramid_compatable_shapes[14400.0] = [90, 45]
 pyramid_compatable_shapes[36000.0] = [36, 18]
+for k, v in pyramid_compatable_shapes.copy().items():
+    pyramid_compatable_shapes[str(k)] = v
+    pyramid_compatable_shapes[int(k)] = v
+    pyramid_compatable_shapes[str(int(k))] = v
+
 
 pyramid_compatable_shapes_to_arcseconds = {}
 pyramid_compatable_shapes_to_arcseconds[(1296000, 648000)] = 1.0
@@ -176,6 +217,11 @@ pyramid_compatible_geotransforms[3600.0] = (-180.0, 1.0, 0.0, 90.0, 0.0, -1.0)
 pyramid_compatible_geotransforms[7200.0] = (-180.0, 2.0, 0.0, 90.0, 0.0, -2.0)
 pyramid_compatible_geotransforms[14400.0] = (-180.0, 4.0, 0.0, 90.0, 0.0, -4.0)
 pyramid_compatible_geotransforms[36000.0] = (-180.0, 10.0, 0.0, 90.0, 0.0, -10.0)
+for k, v in pyramid_compatible_geotransforms.copy().items():
+    pyramid_compatible_geotransforms[str(k)] = v
+    pyramid_compatible_geotransforms[int(k)] = v
+    pyramid_compatible_geotransforms[str(int(k))] = v
+
 
 # I decided that there are two types of supported pyramid levels:
 # Main: 1, 3, 10, 300, 900, 1800 arc seconds (soon to add 333msec). All main and secondary must have overviews that represent all of the coarser set of these main levels
@@ -192,6 +238,11 @@ pyramid_compatible_overview_levels[3600.0] = [2, 4]
 pyramid_compatible_overview_levels[7200.0] = [2, 4]
 pyramid_compatible_overview_levels[14400.0] = [2, 4]
 pyramid_compatible_overview_levels[36000.0] = [2, 4]
+for k, v in pyramid_compatible_overview_levels.copy().items():
+    pyramid_compatible_overview_levels[str(k)] = v
+    pyramid_compatible_overview_levels[int(k)] = v
+    pyramid_compatible_overview_levels[str(int(k))] = v
+
 
 from osgeo import gdal, gdalconst
 
@@ -253,6 +304,11 @@ ha_per_cell_ref_paths[3600.0] = ha_per_cell_3600sec_ref_path
 ha_per_cell_ref_paths[7200.0] = ha_per_cell_7200sec_ref_path
 ha_per_cell_ref_paths[14400.0] = ha_per_cell_14400sec_ref_path
 ha_per_cell_ref_paths[36000.0] = ha_per_cell_36000sec_ref_path
+for k, v in ha_per_cell_ref_paths.copy().items():
+    ha_per_cell_ref_paths[str(k)] = v
+    ha_per_cell_ref_paths[int(k)] = v
+    ha_per_cell_ref_paths[str(int(k))] = v
+
 
 
 ha_per_cell_column_ref_paths = {}
@@ -266,6 +322,11 @@ ha_per_cell_column_ref_paths[3600.0] = ha_per_cell_column_3600sec_ref_path
 ha_per_cell_column_ref_paths[7200.0] = ha_per_cell_column_7200sec_ref_path
 ha_per_cell_column_ref_paths[14400.0] = ha_per_cell_column_14400sec_ref_path
 ha_per_cell_column_ref_paths[36000.0] = ha_per_cell_column_36000sec_ref_path
+for k, v in ha_per_cell_column_ref_paths.copy().items():
+    ha_per_cell_column_ref_paths[str(k)] = v
+    ha_per_cell_column_ref_paths[int(k)] = v
+    ha_per_cell_column_ref_paths[str(int(k))] = v
+
 
 global_bounding_box = [-180.0, -90.0, 180.0, 90.0]
 
@@ -1198,6 +1259,7 @@ def make_path_global_pyramid(
         is_id_raster=False,
         verbose=False
 ):
+    print('DEPRECATION WARNINGL: make_path_global_pyramid is deprecated. Use make_paths_cog or pog.')
     """Throw exception if input_path is not pyramid-ready. This requires that the file be global, geographic projection, and with resolution
     that is a factor/multiple of arcdegrees.
 
@@ -1275,8 +1337,9 @@ def make_path_global_pyramid(
         L.warning('Changing geotransform of ' + str(input_path) + ' to ' + str(output_geotransform) + ' from ' + str(gt))
 
     # hb.set_geotransform_to_tuple(input_path, output_geotransform)
-
-    ds = gdal.OpenEx(input_path, gdal.GA_Update)
+    if not hb.path_exists(input_path):
+        raise NameError('Unable to find input_path ' + str(input_path) + ' with absolute path ' + str(os.path.abspath(input_path)))
+    ds = gdal.OpenEx(input_path, gdal.OF_RASTER)
     md = ds.GetMetadata()
     image_structure = ds.GetMetadata('IMAGE_STRUCTURE')
     compression = image_structure.get('COMPRESSION', None)
@@ -2228,9 +2291,9 @@ def add_rows_or_cols_to_geotiff(input_path, r_above, r_below, c_left, c_right, o
     if output_path is None:
         output_dir = os.path.dirname(input_path)
         temp_path = hb.temp('.tif', 'test_add_rows_or_cols_to_geotiff', remove_temporary_files, output_dir)
-        hb.rename_with_overwrite(input_path, temp_path)
-        output_path = input_path
-        input_path = temp_path
+        # hb.rename_with_overwrite(input_path, temp_path)
+        output_path = temp_path
+        # input_path = temp_path
 
     driver = gdal.GetDriverByName('GTiff')
 

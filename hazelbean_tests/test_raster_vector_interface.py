@@ -12,42 +12,46 @@ L = hb.get_logger('raster_vector_interface')
 
 class DataStructuresTester(TestCase):
     def setUp(self):
-        self.global_5m_raster_path = 'data/ha_per_cell_5m.tif'
-        self.global_1deg_raster_path = 'data/global_1deg_floats.tif'
-        self.two_polygon_shapefile_path = 'data/two_poly_wgs84_aoi.shp'
-        self.countries_wgs84_zone_ids_path = 'data/countries_wgs84_zone_ids.tif'
-        self.ag_30km_change_wgs84_path = 'data/ag_30km_change.tif'
-        self.countries_mollweide_path = 'optional_test_data/countries_mollweide.shp'
-        self.countries_wgs84_path = 'data/countries_wgs84.shp'
-        self.hydrosheds_path = 'data/hybas_af_lev02_v1c.shp'
-
+        self.data_dir = os.path.join(os.path.dirname(__file__), "../data")
+        self.test_data_dir = os.path.join(self.data_dir, "tests")
+        self.cartographic_data_dir = os.path.join(self.data_dir, "cartographic/ee")        
+        self.pyramid_data_dir = os.path.join(self.data_dir, "pyramids")
+        self.ee_r264_ids_900sec_path = os.path.join(self.cartographic_data_dir, "ee_r264_ids_900sec.tif")
+        self.ee_r264_correspondence_vector_path = os.path.join(self.cartographic_data_dir, "ee_r264_simplified900sec.gpkg")
+        self.ee_r264_correspondence_csv_path = os.path.join(self.cartographic_data_dir, "ee_r264_correspondence.csv")
+        
+        self.maize_calories_path = os.path.join(self.data_dir, "crops/johnson/crop_calories/maize_calories_per_ha_masked.tif")
+        self.ha_per_cell_column_900sec_path = hb.get_path(hb.ha_per_cell_column_ref_paths[900])
+        self.ha_per_cell_900sec_path = hb.get_path(hb.ha_per_cell_ref_paths[900])
+        self.pyramid_match_900sec_path = hb.get_path(hb.pyramid_match_ref_paths[900])
+        
     def tearDown(self):
         pass
 
     def test_raster_calculator_hb(self):
         t1 = hb.temp(remove_at_exit=True)
-        hb.raster_calculator_hb([(self.global_1deg_raster_path, 1), (self.global_1deg_raster_path, 1)], lambda x, y: x + y, t1, 7, -9999)
+        hb.raster_calculator_hb([(self.ee_r264_ids_900sec_path, 1), (self.ee_r264_ids_900sec_path, 1)], lambda x, y: x + y, t1, 7, -9999)
 
         # LEARNING POINT, I had to be very careful here with type casting to ensure the summation methods yielded the same.
         a = np.sum(hb.as_array(t1))
-        b = np.sum(hb.as_array(self.global_1deg_raster_path).astype(np.float64)) * np.float64(2.0)
+        b = np.sum(hb.as_array(self.ee_r264_ids_900sec_path).astype(np.float64)) * np.float64(2.0)
 
         assert  a == b
 
     def test_assert_gdal_paths_in_same_projection(self):
         self.assertTrue(
             hb.assert_gdal_paths_in_same_projection([
-                self.hydrosheds_path,
-                self.global_1deg_raster_path,
-                self.ag_30km_change_wgs84_path,
+                self.ee_r264_correspondence_vector_path,
+                self.ee_r264_ids_900sec_path,
+                self.maize_calories_path,
             ], return_result=True)
         )
 
         self.assertTrue(
             hb.assert_gdal_paths_in_same_projection([
-                self.countries_wgs84_path,
-                self.global_1deg_raster_path,
-                self.ag_30km_change_wgs84_path,
+                self.ee_r264_correspondence_vector_path,
+                self.ee_r264_ids_900sec_path,
+                self.maize_calories_path,
             ], return_result=True)
         )
 
@@ -77,9 +81,10 @@ class DataStructuresTester(TestCase):
         # L.info('Time without iterblocks but using pregenerated ' + str(time.time() - start) + ' ' + str(test_result))
 
         # Test using the pregenereated
+        # id_column_label='OBJECTID',
         start = time.time()
-        results_dict = hb.zonal_statistics_flex(self.ag_30km_change_wgs84_path, self.countries_wgs84_path,
-                                                zone_ids_raster_path=zone_ids_raster_path, id_column_label='OBJECTID', verbose=False)
+        results_dict = hb.zonal_statistics_flex(self.maize_calories_path, self.ee_r264_correspondence_vector_path,
+                                                zone_ids_raster_path=zone_ids_raster_path, verbose=False)
         print('results_dict', results_dict)
         # test_result = results_dict[61]['sum']
         # test_results.append(test_result)
@@ -94,6 +99,13 @@ class DataStructuresTester(TestCase):
         zone_ids_raster_path = hb.temp('.tif', remove_at_exit=True)
         # Test using the pregenereated
         start = time.time()
-        results_dict = hb.zonal_statistics_flex(self.ag_30km_change_wgs84_path, self.countries_wgs84_path,
-                                                zone_ids_raster_path=zone_ids_raster_path, id_column_label='OBJECTID', verbose=False)
+        # id_column_label='OBJECTID'
+        results_dict = hb.zonal_statistics_flex(self.ee_r264_ids_900sec_path, self.ee_r264_correspondence_vector_path,
+                                                zone_ids_raster_path=zone_ids_raster_path, verbose=False)
         print('results_dict', results_dict)
+
+
+
+if __name__ == "__main__":
+    import unittest
+    unittest.main()

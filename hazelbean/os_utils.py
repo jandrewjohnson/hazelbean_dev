@@ -41,7 +41,7 @@ def make_run_dir(base_folder=hb.config.TEMPORARY_DIR, run_name='', just_return_s
 #     pass
 
 
-def temp(ext=None, filename_start=None, remove_at_exit=True, folder=None, suffix='', tag_along_file_extensions=['.aux.xml']):
+def temp(ext=None, filename_start=None, remove_at_exit=True, folder=None, suffix='', tag_along_file_extensions=['.aux.xml'], tag_along_file_paths=None):
     """Create a path with extension ext in a temporary dir. Can add filename prefixes or suffixes, and place in a desired folder. Can be removed at exit automatically. 
     Note, this just makes the path string, not the file itself.
     
@@ -83,6 +83,13 @@ def temp(ext=None, filename_start=None, remove_at_exit=True, folder=None, suffix
             tag_along_uri = uri + tag_along_file_extension
             if remove_at_exit:
                 remove_uri_at_exit(tag_along_uri)
+                
+    if tag_along_file_paths is not None:
+        if type(tag_along_file_paths) is str:
+            tag_along_file_paths = [tag_along_file_paths]
+        for tag_along_file_path in tag_along_file_paths:
+            if remove_at_exit:
+                remove_uri_at_exit(tag_along_file_path)
 
     return uri
 
@@ -1235,7 +1242,9 @@ def remove_temporary_files():
     for uri_to_delete in hb.config.uris_to_delete_at_exit:
         try:
             if os.path.splitext(uri_to_delete)[1] == '.shp':
-                remove_shapefile(uri_to_delete)
+                remove_shapefile(uri_to_delete) 
+            elif os.path.isdir(uri_to_delete):
+                shutil.rmtree(uri_to_delete, ignore_errors=True)
             else:
                 os.remove(uri_to_delete)
             # L.debug('Deleting temporary file: ' + str(uri_to_delete))

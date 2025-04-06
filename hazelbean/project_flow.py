@@ -24,6 +24,13 @@ L = hb.get_logger('project_flow')
 L.setLevel(logging.INFO)
 initial_logging_level = L.getEffectiveLevel()
 
+# module level get_path. Usually you want to use the project_level version
+def get_path(relative_path, *join_path_args, possible_dirs='default', prepend_possible_dirs=None, create_shortcut=False, download_destination_dir=None, strip_relative_paths_for_output=False, verbose=False):
+    
+    p = ProjectFlow()
+    got_path = p.get_path(relative_path, *join_path_args, possible_dirs=possible_dirs, prepend_possible_dirs=prepend_possible_dirs, create_shortcut=create_shortcut, download_destination_dir=download_destination_dir, strip_relative_paths_for_output=strip_relative_paths_for_output, verbose=verbose)
+    return got_path 
+    
 def op():
     pass
 
