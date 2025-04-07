@@ -678,7 +678,7 @@ def zonal_statistics(
     # Determine if we can get away with 8bit data.
         if id_min is None:
             id_min = gdf[id_column_label].min()
-            if '.' in id_min:
+            if '.' in str(id_min):
                 raise NameError('id_min is a float. This is not allowed. Please provide an integer.')
             try: 
                 id_min = int(id_min)
@@ -688,7 +688,7 @@ def zonal_statistics(
             
         if id_max is None:
             id_max = gdf[id_column_label].max()
-            if '.' in id_max:
+            if '.' in str(id_max):
                 raise NameError('id_max is a float. This is not allowed. Please provide an integer.')
             try: 
                 id_max = int(id_max)
@@ -1045,7 +1045,7 @@ def vector_super_simplify(input_vector_path, id_column_label, blur_size, output_
 
     gdf = gpd.read_file(input_vector_path)
     
-    match_raster_refpath = hb.ha_per_cell_ref_paths[blur_size]
+    match_raster_refpath = hb.get_path(hb.ha_per_cell_ref_paths[blur_size])
     
     
     processing_size_arcseconds = 10.0

@@ -8,6 +8,8 @@ import hazelbean as hb
 import pandas as pd
 import numpy as np
 
+import hazelbean.raster_vector_interface as raster_vector_interface
+
 L = hb.get_logger('raster_vector_interface')
 
 class DataStructuresTester(TestCase):
@@ -103,6 +105,16 @@ class DataStructuresTester(TestCase):
         results_dict = hb.zonal_statistics_flex(self.ee_r264_ids_900sec_path, self.ee_r264_correspondence_vector_path,
                                                 zone_ids_raster_path=zone_ids_raster_path, verbose=False)
         print('results_dict', results_dict)
+
+
+
+    def test_super_simplify(self):
+        # raster_vector_interface.raster_to_polygon(input_raster_path, output_vector_path, id_label, dissolve_on_id=True)
+        input_vector_path = self.ee_r264_correspondence_vector_path
+        id_column_label = 'ee_r264_id'
+        blur_size = 300.0 
+        output_path = 'simplified_vector.gpkg'
+        raster_vector_interface.vector_super_simplify(input_vector_path, id_column_label, blur_size, output_path, remove_temp_files=True)
 
 
 
