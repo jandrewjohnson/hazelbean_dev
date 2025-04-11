@@ -5,8 +5,9 @@ import hazelbean as hb
 import time
 import numpy as np
 import pandas as pd
+from hazelbean import config as hb_config
 
-L = hb.get_logger('netcdf')
+L = hb_config.get_logger('netcdf')
 
 
 def describe_netcdf(input_nc_path, just_metadata=False, return_as_string=False, max_to_describe=6):

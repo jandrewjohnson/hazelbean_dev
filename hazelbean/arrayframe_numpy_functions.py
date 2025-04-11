@@ -8,7 +8,7 @@ L = hb.get_logger('arrayframe_numpy_functions', logging_level='warning') # hb.ar
 
 def apply_op(op, output_path):
     input_ = 0
-    raster_calculator_flex(input_, op, output_path)
+    hb.raster_calculator_flex(input_, op, output_path)
 
 def add(a_path, b_path, output_path):
     def op(a, b):

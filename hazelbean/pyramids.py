@@ -15,9 +15,9 @@ import tempfile
 import subprocess
 
 from hazelbean import cog
+from hazelbean import config as hb_config
 
-
-L = hb.get_logger('pyramids', logging_level='info')
+L = hb_config.get_logger('pyramids', logging_level='info')
 
 # Define the resolutions compatible with pyramid calculation as key = arcseconds, value = resolution in 64 bit notation, precisely defined with the right amount of significant digits.
 pyramid_compatible_arcseconds = [

@@ -1,6 +1,8 @@
 from __future__ import division, absolute_import, print_function
 import sys, time, os
 
+from hazelbean import json_helper # This enables hb.json_helper.parse_json_with_detailed_error(5)
+
 # Set hb level options
 import pandas as pd
 

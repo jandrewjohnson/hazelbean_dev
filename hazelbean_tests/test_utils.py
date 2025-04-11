@@ -1,5 +1,8 @@
 import unittest, os, sys
-import hazelbean as hb
+import hazelbean as hb        
+import pandas as pd
+import numpy as np # Optional, as None can be used directly
+
 
 from hazelbean.cog import *
 from hazelbean.pyramids import *
@@ -24,6 +27,67 @@ class TestUtils(unittest.TestCase):
         
         r = parse_equation_to_dict(equation)
         print(r)            
+        
+    def test_parse_flex_to_python_object(self):
+        """Test parsing a flex item (int, float, string, None, string that represents a python object) element to a Python object."""
+
+        
+
+        # Data extracted from the image
+        data = {
+            'columns': [
+                'counterfactual',
+                '"year"',
+                'year, counterfactual',
+                'counterfactual',
+                'counterfactual',
+                'counterfactual',
+                '["counterfactual", "year"]',
+                '["counterfactual", "year"]',
+                'counterfactual',
+                'counterfactual'
+            ],
+            'aggregation_dict': [
+                None,  # Representing empty cell
+                None,
+                None,
+                None,
+                None,
+                None,
+                'AEZS:sum',
+                '{AEZS:"sum"}',
+                None,
+                None
+            ],
+            'filter_dict': [
+                'aggregation:v11_s26_r50, year:2050',
+                '{aggregation:v11_s26_r50 ,counterfactual: bau_ignore_es}',
+                '{aggregation:v11_s26_r50}',
+                'aggregation: v11_s26_r50, "year":2050', # Note space after colon
+                'aggregation: v11_s26_r50, "year":[2030, 2050]', # Note space after colon
+                '{"aggregation":"v11_s26_r50", "year":2050}',
+                None, # Representing empty cell
+                None,
+                '"aggregation":"v11_s26_r50", "year":2050',
+                '{"aggregation":"v11_s26_r50", "year":2050}'
+            ]
+        }
+
+        # Create the DataFrame
+        df = pd.DataFrame(data)
+        
+        # Iterate rows
+        for index, row in df.iterrows():
+            
+            # iterate columns of the row
+            for col in df.columns:
+                
+                # get the value
+                value = row[col]
+                parsed_value = hb.parse_flex_to_python_object(value)
+                
+                # print('parsed_value', row, col, value, parsed_value)
+
 
 if __name__ == "__main__":
     unittest.main()

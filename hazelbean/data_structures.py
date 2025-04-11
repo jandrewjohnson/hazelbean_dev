@@ -12,6 +12,7 @@ import yaml
 import csv
 
 import hazelbean as hb
+from hazelbean import config
 
 # import numdal as nd
 # import hazelbean as hb
@@ -52,7 +53,7 @@ def crop_csv_to_rect(csv_uri, data_rect):
     # -1 means no limit
     for n,i in enumerate(data_rect):
         if i == -1:
-            data_rect[n] = nd.config.MAX_IN_MEMORY_ARRAY_SIZE
+            data_rect[n] = hb.config.MAX_IN_MEMORY_ARRAY_SIZE
 
     new_rows = []
     with open(csv_uri, 'r', newline='') as f:
@@ -133,8 +134,8 @@ def file_to_python_object(file_uri, declare_type=None, verbose=False, return_all
 
     elif file_extension == '.xls' or file_extension == '.xlsx':
         # If XLS, convert to a temporary csv.
-        tmp_csv_uri = os.path.join(folder, file_name + '_tmp_' + nd.pretty_time() + '.csv')
-        nd.remove_uri_at_exit(tmp_csv_uri)
+        tmp_csv_uri = os.path.join(folder, file_name + '_tmp_' + hb.pretty_time() + '.csv')
+        hb.remove_uri_at_exit(tmp_csv_uri)
         xls_to_csv(file_uri, tmp_csv_uri, xls_worksheet=xls_worksheet)
         file_uri = tmp_csv_uri
 

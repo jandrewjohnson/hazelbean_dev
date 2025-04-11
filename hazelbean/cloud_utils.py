@@ -18,8 +18,8 @@ import os
 timeout_seconds = 5  # 5 seconds, for example
 socket.setdefaulttimeout(timeout_seconds)
 
-
-L = hb.get_logger('cloud_utils')
+from hazelbean import config as hb_config
+L = hb_config.get_logger('cloud_utils')
 
 def is_internet_available(timeout=1):
     try: 

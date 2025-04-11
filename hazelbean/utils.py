@@ -6,6 +6,9 @@ import numpy as np
 import json
 
 import hazelbean as hb
+
+
+
 import math
 from osgeo import gdal
 import contextlib
@@ -17,8 +20,9 @@ import subprocess
 from tqdm import tqdm
 
 import pandas as pd
+from hazelbean import config as hb_config
 
-L = hb.get_logger('hazelbean utils')
+L = hb_config.get_logger('hazelbean utils')
 
 def get_all_frames_locations_as_list():
     locations = []
@@ -656,33 +660,43 @@ def df_merge_list_of_csv_paths(csv_path_list, output_csv_path=None, on='index', 
             # merged_df = pd.merge(merged_df, new_df, how='outer', left_on=left_on, right_on=right_on, left_index=left_index, right_index=right_index)
             merged_df = df_merge(merged_df, new_df, how='outer', left_on=left_on, right_on=right_on, supress_warnings=True, verbose=False)
     if output_csv_path:
-        merged_df.to_csv(output_csv_path, index=False)
-  
+        merged_df.to_csv(output_csv_path, index=False)  
         
     return merged_df
-def df_pivot_vertical_up(df, row_indices, column_indices, values, aggregation_dict=None, filter_dict=None, non_summarized_vars_to_keep='all'):
+
+
+def df_pivot_vertical_up(df, row_indices, column_indices, values, aggregation_dict=None, filter_dict=None, non_summarized_vars_to_keep='all', require_single_values=True, aggregation_functions=None, flatten_column_multiindex=True):
     """This is turning out to be a very good funciton and i almost renamed it just pivot_vertical but I still need
-    to test if it works for non vertical data."""
+    to test if it works for non vertical data.
+    
+    TODO Clarify the difference between row_indices and non_summarized_vars_to_keep
+    """
+    
+    
+    ### One tricky thing in gtap_invest is that if you filter to just the terminal year, you don't have the baseline in the filtered data to comapre to
+    
+    # column_indices specifies which columns should be the column-indices. If there's more than 1, it will make it a multiindex, ready for reshaping.
     if column_indices is None:
         column_indices = []
     
+    # Specify which indices should be eliminated via aggregation. If it's aggregated, it drops out of what can be in the rows or columns
     if aggregation_dict is None:
         aggregation_dict = {}   
 
+    # Specify which index values should just be eliminate. For example, if you have multiple years, you might want to just plot the last year
     if filter_dict is None: 
         filter_dict = {} 
 
-        
+    # Determine which index values should be eliminated, based all the above. 
     fullydrop_filter_dict = {k: v for k, v in filter_dict.items() if type(v) != list} 
     if row_indices == 'all':
         row_indices = [i for i in df.columns if i not in column_indices and i != values and i not in aggregation_dict and i not in fullydrop_filter_dict]
         
-
-        
+    # Read the raw input
     if isinstance(df, str):
         df = pd.read_csv(df)
             
-    # Filter 
+    # Apply filter by creating a condition 
     if filter_dict:
         condition = True 
         for key, value in filter_dict.items():
@@ -698,9 +712,11 @@ def df_pivot_vertical_up(df, row_indices, column_indices, values, aggregation_di
                 raise NameError(f'Filter key {key} not in dataframe columns {df.columns}')
         df = df.loc[condition]    
 
+    # Check if filter eliminated everything.
     if df.size == 0:
         raise NameError(f'No data after filtering. Filter dict: {filter_dict}, original columns {df.columns}')
     
+    # Determine if there are duplicates. This controls whether or not you need to keep the count columns (which implies maybe an error)
     has_duplicates = False
     correct_vals = 1
     if aggregation_dict:
@@ -708,76 +724,93 @@ def df_pivot_vertical_up(df, row_indices, column_indices, values, aggregation_di
         for agg_label, operation in aggregation_dict.items():
             n_properly_aggregated = len(df[agg_label].unique())
             correct_vals *= n_properly_aggregated
-            
+    
+    # Determine which columns should be kept (even if they're neither summarized values nor indices. For example, you might have an index region_label but also just want to keep region_longname
     if non_summarized_vars_to_keep == 'all':
         non_summarized_vars_to_keep = [i for i in df.columns if i not in column_indices and i not in aggregation_dict and i not in fullydrop_filter_dict and i != values]
     elif isinstance(non_summarized_vars_to_keep, list):
         pass
     else:
         raise NameError('non_summarized_vars_to_keep must be all or a list of strings.')
-    
     non_summarized_df = df[non_summarized_vars_to_keep]
     non_summarized_df = non_summarized_df.set_index(row_indices)
-    # Set rwo indices to those in row_indices
     
-    all_agg_funcs = ['sum', 'count']        
-    df_p = df.pivot_table(index=row_indices, columns=column_indices, values=values, aggfunc=all_agg_funcs)
+    # Current logic means we'll incluse sum and count, check if count=1 for all, then drop count if so. 
+    # I might want to generalize this, but perhaps that goes in a new func.
+    all_aggregations = ['sum', 'mean', 'median', 'min', 'max', 'std', 'var', 'count', 'size', 'nunique', 'first', 'last']
+    if aggregation_functions is None:
+        if require_single_values:
+            aggregation_functions = ['sum', 'count']
+        else:
+            aggregation_functions = all_aggregations
+    elif aggregation_functions == 'all':
+        aggregation_functions = all_aggregations
+    elif isinstance(aggregation_functions, str):
+        aggregation_functions = [aggregation_functions] 
+        for func in aggregation_functions:
+            if func not in all_aggregations:
+                raise NameError('aggregation_functions must be all or one of the following: ' + str(all_aggregations))
+    else:
+        raise NameError('Shouldnt get here')
+        
+    ### DO THE PIVOT       
+    df_p = df.pivot_table(index=row_indices, columns=column_indices, values=values, aggfunc=aggregation_functions)
     
-    
-    # Flatten the multiindex
-    def op(x):
+    # Check if any of the column_indices are empty
+    for col in df_p.columns:
+        if df_p[col].isnull().any():
+            raise NameError('Column ' + str(col) + ' has nan values in the pivoted dataframe. This function is supposed to not have that. Heres the dataframe head:\n' + str(df_p.head()))
             
-        # Check if it's a flaoat and if it is, return it as an int
+    
+    ### After we pivot, we currently flatten the multiindex. not sure if this is beset.
+    # Define an op to flatten the multiindex.
+    def op(x):
         if isinstance(x, float):
             return str(int(x))
         else:
             return str(x)
     
-    a = df_p.columns.values
-    df_p.columns = ['_'.join(map(op, col[::-1])).strip() for col in df_p.columns.values]
-    
+    # Flatten multiindex columns to a single string. This is a weakness and perhasps i should figure out how to use hyphens or something so i can recover the multiindex.
+    if flatten_column_multiindex:
+        df_p.columns = ['-'.join(map(op, col[::-1])).strip() for col in df_p.columns.values]
     
     # Merge back in the non_summarized vars
     if non_summarized_df.size > 0:
         df_p = pd.merge(non_summarized_df, df_p, on=row_indices, how="inner")
 
     # Check if any count cols have more than the number of entries the agg_label suggests it should have
-
     for col in df_p.columns:
-        if col.endswith(('_count')):
+        if col.endswith(('-count')):
             if df_p[col].max() > correct_vals:
                 has_duplicates = True
-                
+               
     if not has_duplicates:
-        
-        # If there is 1 or less aggregations in the aggregation_dict, drop the other ones
-        if len(aggregation_dict) == 0:
-            # Then just take the sum
-            to_drop = [i for i in all_agg_funcs if i != 'sum']
+        if require_single_values:
+            # If there aren't duplicates and we require a single value, the only thing should be the sums that come out of the pivot cause count should be 1, mean should be the same, etc. WAIT THATS NOT TRUE
+            if len(aggregation_dict) == 0:
+                # Then just take the sum
+                to_drop = [i for i in aggregation_functions if i != 'sum']
+                
+            elif len(aggregation_dict) <= 1:
+                to_drop = [i for i in aggregation_functions if i not in aggregation_dict.values()]
+            else:
+                to_drop = []
+                
+            # Drop anything not in the dict
+            for i in to_drop:
+                df_p = df_p[[j for j in df_p.columns if not j.endswith(i)]]
             
-        elif len(aggregation_dict) <= 1:
-            to_drop = [i for i in all_agg_funcs if i not in aggregation_dict.values()]
+            if len(aggregation_dict) == 0:
+                # Then just take the sum
+                df_p = df_p.rename(columns={j: j.replace('-sum', '') for j in df_p.columns}) 
+            else:
+                to_keep = [i for i in aggregation_functions if i in aggregation_dict.values()]
+                for i in to_keep:
+                    df_p = df_p.rename(columns={j: j.replace('-' + i, '') for j in df_p.columns})
         else:
-            to_drop = []
-            
-        # Drop anything not in the dict
-        for i in to_drop:
-            df_p = df_p[[j for j in df_p.columns if not j.endswith(i)]]
-        
-        if len(aggregation_dict) == 0:
-            # Then just take the sum
-            df_p = df_p.rename(columns={j: j.replace('_sum', '') for j in df_p.columns}) 
-        else:
-            to_keep = [i for i in all_agg_funcs if i in aggregation_dict.values()]
-            for i in to_keep:
-                df_p = df_p.rename(columns={j: j.replace('_' + i, '') for j in df_p.columns})
-
-        
-
-            # # Rename sums back to just name
-        # df_p.columns = [i.replace('sum_', '').replace('_sum', '') for i in df_p.columns]
-    # # Make all indices columns
-    # df_p = df_p.reset_inex()
+            raise NotImplementedError('Not sure what to do here.')
+    else:
+        raise NotImplementedError('Not sure what to do here.')
 
     # Keep only named indices
     if df_p.index.name or isinstance(df_p.index, pd.MultiIndex):
@@ -1570,9 +1603,12 @@ def df_move_col_after_col(df, col_to_move, col_to_put_it_after):
     cols.insert(idx + 1, col_to_move)
     return df[cols]
 
-def parse_df_element_to_python_object(input_df_element, verbose=False):
+def parse_flex_to_python_object(input_df_element, verbose=False):
     
-    
+    if input_df_element == 'year, counterfactual':
+        pass
+    if input_df_element == 'aggregation:v11_s26_r50, year:2050':
+        pass
     # Check if it evaluates to none
     if hb.isnan(input_df_element):
         return None
@@ -1599,30 +1635,72 @@ def parse_df_element_to_python_object(input_df_element, verbose=False):
         # Check if it's verbatim json
         is_json = False
         if (input_df_element.startswith('{') and input_df_element.endswith('}')) or (input_df_element.startswith('[') and input_df_element.endswith(']')):
-            try:
-                s = json.loads(input_df_element)
+            
+            if input_df_element.startswith('{'):
+                split_element = input_df_element[1:-1].split(',')
+                for i in split_element:
+                    j = i.split(':')  
+                    if len(j) > 1:                   
+                        for c, k in enumerate(j): # Strip leading and trailing spaces from each element
+                            j[c] = j[c].strip()                    
+                        # add quotation marks if needed
+                        if not j[0].startswith('"') and not j[0].startswith("'"):
+                            # no .isdigit() check because json spec says it has to be a string in the keys
+                            input_df_element = input_df_element.replace(j[0], '"' + j[0] + '"')
+                        if not j[1].startswith('"') and not j[1].startswith("'"):
+                            # Check if the first element is numeric
+                            if not j[1][0].isdigit():
+                                input_df_element = input_df_element.replace(j[1], '"' + j[1] + '"')
+            
+            try:            
+                s = hb.json_helper.parse_json_with_detailed_error(input_df_element)
                 is_json = True
                 return s
             except:
                 is_json = False
+                raise NameError('Failed to parse json: ' + str(input_df_element) + ' as json. If something starts with a { or [ and ends with a } or ] it should be json, but if you have syntax error, like a missing comma or qutation mark, it will fail.')  
+            
             
         could_be_json = False
-        if not is_json:
-            new_input_df_string = '{' + input_df_element + '}'
-            try:
-                s = json.loads(new_input_df_string)
-                could_be_json = True
-                return s
-            except:
-                could_be_json = False
-            new_input_df_string = '[' + input_df_element + ']'
-            try:
-                s = json.loads(new_input_df_string)
-                could_be_json = True
-                return s
-            except:
-                could_be_json = False
-                
+        if not is_json and ',' in input_df_element and ':' not in input_df_element:
+            input_df_element = '[' + input_df_element + ']'
+            split_element = split_respecting_nesting(input_df_element[1:-1], ',')
+            for c, i in enumerate(split_element):
+                split_element[c] = i.strip()
+                if split_element[c].startswith('[') or split_element[c].startswith('{'):
+                    split_element[c] = parse_flex_to_python_object(split_element[c])
+            input_df_element = split_element    
+            
+        if not is_json and ':' in input_df_element:
+            input_df_element = '{' + input_df_element + '}'
+
+            if input_df_element.startswith('{'):
+                split_element = split_respecting_nesting(input_df_element[1:-1], ',')
+                # split_element = input_df_element[1:-1].split(',')
+                for i in split_element:
+                    j = i.split(':')  
+
+                    if len(j) > 1:                  
+                        for c, k in enumerate(j): # Strip leading and trailing spaces from each element
+                            j[c] = j[c].strip()                    
+                        # add quotation marks if needed
+                        if not j[0].startswith('"') and not j[0].startswith("'") and not j[0].startswith('[') and not j[0].startswith('{'):
+                            input_df_element = input_df_element.replace(j[0], '"' + j[0] + '"')
+                        if not j[1].startswith('"') and not j[1].startswith("'") and not j[1].startswith('[') and not j[1].startswith('{'):
+                            # Check if the first element is numeric
+                            if not j[1][0].isdigit():
+                                input_df_element = input_df_element.replace(j[1], '"' + j[1] + '"')
+                        if j[1].startswith('[') or j[1].startswith('{'):
+                            j[1] = parse_flex_to_python_object(j[1])
+                        
+        try:            
+            s = hb.json_helper.parse_json_with_detailed_error(input_df_element)
+            could_be_json = True
+            return s
+        except:
+            could_be_json = False                
+            
+
         # Then it's not jsonable
         return input_df_element
                 
@@ -1687,10 +1765,10 @@ def parse_df_element_to_python_object(input_df_element, verbose=False):
     #     if input_df_string.startswith(explicit_iterator_type):
     #         if explicit_iterator_type == '[':
     #             input_df_string = input_df_string.replace(', ', ',').replace(' ', ',')
-    #             return [parse_df_element_to_python_object(i) for i in input_df_string[1:-2].split(',')]
+    #             return [parse_flex_to_python_object(i) for i in input_df_string[1:-2].split(',')]
     #         elif explicit_iterator_type == '{':
     #             input_df_string = input_df_string.replace(', ', ',').replace(' ', ',')
-    #             return {i.split(':')[0]: parse_df_element_to_python_object(i.split(':')[1]) for i in input_df_string[1:-2].split(',')}
+    #             return {i.split(':')[0]: parse_flex_to_python_object(i.split(':')[1]) for i in input_df_string[1:-2].split(',')}
             
             
     # # Check if it's an implied iterator
@@ -1706,9 +1784,9 @@ def parse_df_element_to_python_object(input_df_element, verbose=False):
     #     split_input = input_df_string.split(implicit_iterator_types[-1])
     #     for item in split_input:
     #         if ':' in item:
-    #             return {item.split(':')[0]: parse_df_element_to_python_object(item.split(':')[1]) }
+    #             return {item.split(':')[0]: parse_flex_to_python_object(item.split(':')[1]) }
     #         else:
-    #             return [parse_df_element_to_python_object(i) for i in item]
+    #             return [parse_flex_to_python_object(i) for i in item]
             
     # # Then it's a basic type
     # try:
@@ -1765,7 +1843,7 @@ def parse_df_element_to_python_object(input_df_element, verbose=False):
     #                 split2 = i.split(':')
     #                 key = split2[0]
     #                 value = split2[1]
-    #                 value = parse_df_element_to_python_object(value)
+    #                 value = parse_flex_to_python_object(value)
     #                 to_return[key] = value
     #         elif output_type == 'int':
     #             to_return = int(i[4:-1])
@@ -1774,7 +1852,7 @@ def parse_df_element_to_python_object(input_df_element, verbose=False):
     #         elif output_type == 'str':
     #             to_return = str(i[4:-1])
     #         else:
-    #             to_return.append(parse_df_element_to_python_object(i))
+    #             to_return.append(parse_flex_to_python_object(i))
     # else:
         
     #     if ':' in input_df_string:
@@ -1815,14 +1893,40 @@ def parse_df_element_to_python_object(input_df_element, verbose=False):
     #         to_return = input_df_string
 
     # if verbose:
-    #     hb.log('parse_df_element_to_python_object:\n' + input_df_string + '\nparsed to\n' + str(to_return))
+    #     hb.log('parse_flex_to_python_object:\n' + input_df_string + '\nparsed to\n' + str(to_return))
     # return to_return
 
 
 
     
+def split_respecting_nesting(s, delimiter):
+    parts = []
+    bracket_level = 0
+    brace_level = 0
+    start_index = 0
+    
+    for i, char in enumerate(s):
+        if char == '[':
+            bracket_level += 1
+        elif char == ']':
+            bracket_level -= 1 # Consider error check: level shouldn't go below 0
+        elif char == '{':
+            brace_level += 1
+        elif char == '}':
+            brace_level -= 1 # Consider error check: level shouldn't go below 0
+        elif char == delimiter and bracket_level == 0 and brace_level == 0:
+            # Found a top-level comma
+            parts.append(s[start_index:i].strip()) # Add the segment, stripping whitespace
+            start_index = i + 1 # Start the next segment after the comma
+    
+    # Add the last part (from the last comma to the end)
+    parts.append(s[start_index:].strip()) 
+    
+    # Filter out potentially empty strings if the input starts/ends with commas
+    # or has consecutive top-level commas (though not in the example)
+    # parts = [p for p in parts if p] # Optional: remove empty strings if needed
 
-
+    return parts
     
     
     
