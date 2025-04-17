@@ -760,7 +760,7 @@ def clip_raster_by_vector(input_path, output_path, clip_vector_path, resample_me
                            output_data_type=None, nodata_target=None, all_touched=False, verbose=False, ensure_fits=False,
                            gtiff_creation_options=hb.DEFAULT_GTIFF_CREATION_OPTIONS):
 
-    print ('DEPRECATED: clip_raster_by_vector.')
+    # WARNING!!!  ('DEPRECATED: clip_raster_by_vector.')
     base_raster_path_list = [input_path]
     clip_temp_path = hb.temp('.tif', 'clip_temp', True)
     target_raster_path_list = [clip_temp_path]
@@ -1279,8 +1279,8 @@ def save_array_as_geotiff(array, out_uri, geotiff_uri_to_match=None, ds_to_match
 def extract_features_in_shapefile_by_attribute(input_path, output_path, column_name, column_filter):
     gdf = gpd.read_file(input_path)
     
-    hb.log('column_name: ' + str(column_name))
-    hb.log('column_filter: ' + str(column_filter))
+    # hb.log('column_name: ' + str(column_name), level=100)
+    # hb.log('column_filter: ' + str(column_filter), level=100)
     
     gdf_out = gdf.loc[gdf[column_name] == column_filter]
     

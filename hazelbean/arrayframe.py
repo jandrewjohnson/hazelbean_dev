@@ -41,7 +41,7 @@ class ArrayFrame(object):
         else:
             # If path is set, then we can get all attributes from the DS
             a = hb.path_exists(path)
-            print(a)
+
             self.ds = gdal.OpenEx(path, gdal.GA_Update, open_options=["IGNORE_COG_LAYOUT_BREAK=YES"])
             self.band = self.ds.GetRasterBand(1)
             self.num_cols = self.ds.RasterXSize

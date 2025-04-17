@@ -45,7 +45,7 @@ def align_and_resize_raster_stack_ensuring_fit(
         src_ndv=None,
         dst_ndv=None,
 ):
-    print ('DEPRECATED!!! align_and_resize_raster_stack_ensuring_fit is deprecated. Use resample_to_match')
+    # WARNING!! ('DEPRECATED!!! align_and_resize_raster_stack_ensuring_fit is deprecated. Use resample_to_match')
 
 
 
@@ -307,7 +307,7 @@ def warp_raster_HAZELBEAN_REPLACEMENT(
         None
     """
 
-    print ('DEPRECATED!!! warp_raster_HAZELBEAN_REPLACEMENT isdeprecated. use resample_list_to_match')
+    # WARNING print ('DEPRECATED!!! warp_raster_HAZELBEAN_REPLACEMENT isdeprecated. use resample_list_to_match')
 
 
 

@@ -833,7 +833,7 @@ def zonal_statistics(
 
         df_sums = pd.DataFrame(data={output_column_prefix + '_sums': sums})
         df_sums['id'] = df_sums.index
-        df = hb.df_merge(u_df, df_sums, how='outer', left_on=0, right_on='id', supress_warnings=True)
+        df = hb.df_merge(u_df, df_sums, how='outer', left_on=0, right_on='id', supress_warnings=True, verbose=False)
         # df_sums = pd.DataFrame(index=unique_zone_ids, data={output_column_prefix + '_sums': sums})
         # df = pd.DataFrame(index=unique_zone_ids, data={output_column_prefix + '_sums': sums[1: ]}) # PREVIOUSLY HAD THIS LINE! PROBABLY BROKEN ELSEWHERE
 
