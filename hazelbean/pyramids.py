@@ -1843,6 +1843,8 @@ def load_geotiff_chunk_by_cr_size(input_path, cr_size, stride_rate=None, datatyp
     """Convenience function to load a chunk of an array given explicit row and column info."""
 
     ds = gdal.OpenEx(input_path)
+    # C:\Users\jajohns\Files\seals\projects\custom_coarse_algorithm_20250418_104912\intermediate\restoration\coarse_simplified_projected_ha_difference_from_previous_year\ssp2\rcp45\luh2-message\bau\2030\urban_2030_2017_ha_diff_ssp2_rcp45_luh2-message_bau.tif
+    # C:\Users\jajohns\Files\seals\projects\custom_coarse_algorithm_20250418_104912\intermediate\restoration\coarse_simplified_projected_ha_difference_from_previous_year\ssp2\rcp45\luh2-message\policy\2030\urban_2030_2017_ha_diff_ssp2_rcp45_luh2-message_policy.tif"
     # C:\Users\jajohns\Files\Research\cge\seals\projects\test_seals_magpie\intermediate\magpie_as_seals7_proportion\rcp45_ssp2\2050\SSP2_BiodivPol_ClimPol_NCPpol_LPJmL5\magpie_crop_2050_2015_ha_difference.tif 
     if ds is None:
         mod_path = os.path.split(input_path)[0].replace('/', '\\')

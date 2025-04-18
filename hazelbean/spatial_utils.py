@@ -2914,7 +2914,7 @@ def reclassify_raster_hb(input_flex, rules, output_path, output_data_type=None, 
 
             dict_datatype = set([type(i) for i in rules.values()])
             if len(dict_datatype) > 1:
-                hb.log('Mixed datatypes given to rules dict: ' + str(rules) + '. types: ' + str(dict_datatype))
+                hb.log('Mixed datatypes given to rules dict: ' + str(rules) + '. types: ' + str(dict_datatype)[0:2])
                 # raise NameError('Mixed datatypes given to rules dict: ' + str(rules) + '. types: ' + str(dict_datatype))
             else:
                 dict_datatype = str(list(dict_datatype)[0])

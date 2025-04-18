@@ -218,7 +218,7 @@ tests/optional_test_data
 .vscode/launch.json
 .vscode/settings.json
 
-!/data/*
+# !/data/*
 !/data/cartographic/ee/ee_r264_ids_300sec.tif
 
 !/data/cartographic/ee/ee_r264_simplified900sec.gpkg
@@ -258,3 +258,4 @@ tests/optional_test_data
 
 hazelbean/calculation_core/cython_functions.c
 hazelbean/calculation_core/cython_functions.c
+data/mask_20250418_100350_599cvt.tif
