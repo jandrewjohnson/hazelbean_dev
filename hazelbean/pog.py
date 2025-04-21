@@ -10,7 +10,7 @@ from hazelbean.pog import *
 
 def is_path_pog(path, check_tiled=True, full_check=True, raise_exceptions=False, verbose=False):
     
-    is_pyramid = hb.is_path_global_pyramid(path, verbose=True)
+    is_pyramid = hb.is_path_global_pyramid(path, verbose=verbose)
     is_cog = hb.is_path_cog(path, check_tiled=check_tiled, full_check=full_check, raise_exceptions=raise_exceptions, verbose=verbose)
 
     return is_pyramid and is_cog
@@ -49,8 +49,12 @@ def make_path_pog(input_raster_path, output_raster_path=None, output_data_type=N
     
     if output_data_type is not None:
         if output_data_type != input_data_type:
+            if verbose:
+                hb.log(f"Changing data type from {input_data_type} to {output_data_type} for {input_raster_path}")
             gdal.Translate(temp_copy_path, input_raster_path, outputType=hb.gdal_number_to_gdal_type[output_data_type], callback=hb.make_gdal_callback(f"Translating to expand to global extent on {temp_copy_path}"))
         else:
+            if verbose:
+                hb.log(f"Data type is already {output_data_type} for {input_raster_path}, so just copying.")
             hb.path_copy(input_raster_path, temp_copy_path) # Can just copy it direclty without accessing the raster.        
     
     # Get the resolution from the src_ds
@@ -71,7 +75,8 @@ def make_path_pog(input_raster_path, output_raster_path=None, output_data_type=N
     match_path = os.path.join(user_dir, 'Files', 'base_data', hb.ha_per_cell_ref_paths[arcseconds])
     if gt != gt_pyramid:
         resample_temp_path = hb.temp('.tif', 'resample', True, tag_along_file_extensions=['.aux.xml'])
-
+        if verbose:
+            hb.log(f"Resampling {temp_copy_path} to match {match_path}...")
         hb.resample_to_match(
             temp_copy_path,
             match_path,
@@ -94,16 +99,18 @@ def make_path_pog(input_raster_path, output_raster_path=None, output_data_type=N
         hb.swap_filenames(resample_temp_path, temp_copy_path)
         
     if not hb.raster_path_has_stats(temp_copy_path, approx_ok=False):
+        if verbose:
+            hb.log(f"Adding stats to {temp_copy_path}...")
         hb.add_stats_to_geotiff_with_gdal(temp_copy_path, approx_ok=False, force=True, verbose=verbose)
     
     # Open the source raster in UPDATE MODE so it writes the overviews as internal
     # gdal.PushErrorHandler('CPLQuietErrorHandler')
+    if verbose:
+        hb.log(f"Opening {temp_copy_path} for overview building...")
     src_ds = gdal.OpenEx(temp_copy_path, gdal.GA_Update)
     # gdal.PopErrorHandler()
     if not src_ds:
         raise ValueError(f"Unable to open raster: {temp_copy_path}")
-
-
 
     # Remove existing overviews (if any)
     src_ds.BuildOverviews(None, [])     
@@ -113,12 +120,17 @@ def make_path_pog(input_raster_path, output_raster_path=None, output_data_type=N
     
     # Set the overview levels based on the pyramid arcseconds
     overview_levels = hb.pyramid_compatible_overview_levels[arcseconds]
+    
+    if verbose:
+        hb.log(f"Building overviews for {temp_copy_path} with levels {overview_levels}...")
     src_ds.BuildOverviews(overview_resampling_method.upper(), overview_levels)
 
     # Close the dataset to ensure overviews are saved
     del src_ds    
     
     # Reopen it to use it as a copy target
+    if verbose:
+        hb.log(f"Reopening {temp_copy_path} for COG creation...")
     src_ds = gdal.OpenEx(temp_copy_path, gdal.GA_ReadOnly)
     
     # Define creation options for COG
@@ -142,6 +154,8 @@ def make_path_pog(input_raster_path, output_raster_path=None, output_data_type=N
             band.SetNoDataValue(ndv)
             
     # Actually create the COG
+    if verbose:
+        hb.log(f"Creating COG at {output_raster_path}...")
     dst_ds = cog_driver.CreateCopy(
         output_raster_path,
         src_ds,
