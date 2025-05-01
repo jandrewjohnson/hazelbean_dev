@@ -89,20 +89,35 @@ type_string_to_ogr_field_type = {
 }
 
 gdal_number_to_gdal_type = {
-    1: gdalconst.GDT_Byte,
-    2: gdalconst.GDT_UInt16,
-    3: gdalconst.GDT_Int16,
-    4: gdalconst.GDT_UInt32,
-    5: gdalconst.GDT_Int32,
-    6: gdalconst.GDT_Float32,
-    7: gdalconst.GDT_Float64,
-    8: gdalconst.GDT_CInt16,
-    9: gdalconst.GDT_CInt32,
-    10: gdalconst.GDT_CFloat32,
-    11: gdalconst.GDT_CFloat64,
-    12: gdalconst.GDT_UInt64,
-    13: gdalconst.GDT_Int64,
+    1: gdal.GDT_Byte,
+    2: gdal.GDT_UInt16,
+    3: gdal.GDT_Int16,
+    4: gdal.GDT_UInt32,
+    5: gdal.GDT_Int32,
+    6: gdal.GDT_Float32,
+    7: gdal.GDT_Float64,
+    8: gdal.GDT_CInt16,
+    9: gdal.GDT_CInt32,
+    10: gdal.GDT_CFloat32,
+    11: gdal.GDT_CFloat64,
+    12: gdal.GDT_UInt64,
+    13: gdal.GDT_Int64,
 }
+# gdal_number_to_gdal_type = {
+#     1: gdalconst.GDT_Byte,
+#     2: gdalconst.GDT_UInt16,
+#     3: gdalconst.GDT_Int16,
+#     4: gdalconst.GDT_UInt32,
+#     5: gdalconst.GDT_Int32,
+#     6: gdalconst.GDT_Float32,
+#     7: gdalconst.GDT_Float64,
+#     8: gdalconst.GDT_CInt16,
+#     9: gdalconst.GDT_CInt32,
+#     10: gdalconst.GDT_CFloat32,
+#     11: gdalconst.GDT_CFloat64,
+#     12: gdalconst.GDT_UInt64,
+#     13: gdalconst.GDT_Int64,
+# }
 
 gdal_number_to_gdal_name = {
     1: 'Byte',
@@ -5809,9 +5824,7 @@ def add_stats_to_geotiff_with_gdal(geotiff_path, approx_ok=False, force=True, ve
             band.SetMetadataItem("STATISTICS_APPROXIMATE", "YES")
             
         if verbose:
-            print(
-                f"\nBand {band_index} stats: "
-                f"min={stats[0]:.4f}, max={stats[1]:.4f}, mean={stats[2]:.4f}, stddev={stats[3]:.4f}"
+            hb.log( f"Band {band_index} from path {geotiff_path} has stats: min={stats[0]:.4f}, max={stats[1]:.4f}, mean={stats[2]:.4f}, stddev={stats[3]:.4f}"
             )
 
         band.FlushCache()

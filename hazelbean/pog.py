@@ -16,7 +16,7 @@ def is_path_pog(path, check_tiled=True, full_check=True, raise_exceptions=False,
     return is_pyramid and is_cog
 
   
-def make_path_pog(input_raster_path, output_raster_path=None, output_data_type=None, ndv=None, overview_resampling_method=None, compression="ZSTD", blocksize=512, verbose=False):
+def make_path_pog(input_raster_path, output_raster_path=None, output_data_type='auto', ndv=None, overview_resampling_method=None, compression="ZSTD", blocksize=512, verbose=False):
     """ Create a Pog (pyramidal cog) from input_raster_path. Writes in-place if output_raster_path is not set. Chooses correct values for 
     everything else if not set."""
     
@@ -29,45 +29,55 @@ def make_path_pog(input_raster_path, output_raster_path=None, output_data_type=N
         
         return
     # Make a local copy at a temp file to process on to avoid corrupting the original
-    temp_copy_path = hb.temp('.tif', 'copy', True, tag_along_file_extensions=['.aux.xml'])
+    input_dir = os.path.dirname(input_raster_path)
+    temp_copy_path = hb.temp('.tif', 'copy', True, folder=input_dir, tag_along_file_extensions=['.aux.xml'])
     
     # Ensure output directory exists
     os.makedirs(os.path.dirname(temp_copy_path), exist_ok=True)       
     
+    
     input_data_type = hb.get_datatype_from_uri(input_raster_path)
-    if output_data_type == 'auto':
-        if input_data_type in [1, 2, 3, 4, 5, 12, 13]:
-            output_data_type = 13
-        elif input_data_type in [6]:
-            output_data_type = 6
-        elif input_data_type in [7, 8, 9, 10, 11]:
-            output_data_type = 7
+    
+    ### WARNING: Forcing data type optimizations is a bad idea! Increment up the following number to represent the number of failed attempts to try it: attempts = 2
+    # OUTDATED POG SPECIFIC HERE. Note the draconian forcing here of bytes into int64s
+    # WAIT! Although gdal does support int64, the geotiff driver does not. It internally converts to float64 as a result.
+    # One option would be to use ... dammit...
+    # input_data_type = hb.get_datatype_from_uri(input_raster_path)
+    # if output_data_type == 'auto':
+    #     if input_data_type in [1, 2, 3, 4, 5, 12, 13]:
+    #         output_data_type = 5
+    #         output_data_type_object = gdal.GDT_Int32
+    #     elif input_data_type in [6]:
+    #         output_data_type = 6
+    #         output_data_type_object = gdal.GDT_Float32
+    #     elif input_data_type in [7, 8, 9, 10, 11]:
+    #         output_data_type = 7
+    #         output_data_type_object = gdal.GDT_Float64
     
     if output_data_type is None:
         output_data_type = input_data_type 
 
-    
-    if output_data_type is not None:
-        if output_data_type != input_data_type:
-            if verbose:
-                hb.log(f"Changing data type from {input_data_type} to {output_data_type} for {input_raster_path}")
-            gdal.Translate(temp_copy_path, input_raster_path, outputType=hb.gdal_number_to_gdal_type[output_data_type], callback=hb.make_gdal_callback(f"Translating to expand to global extent on {temp_copy_path}"))
-        else:
-            if verbose:
-                hb.log(f"Data type is already {output_data_type} for {input_raster_path}, so just copying.")
-            hb.path_copy(input_raster_path, temp_copy_path) # Can just copy it direclty without accessing the raster.        
-    
+    if output_data_type != input_data_type:
+        if verbose:            
+            hb.log(f"Changing data type from {input_data_type} to {output_data_type} for {input_raster_path}")
+        output_data_type = hb.gdal_number_to_gdal_type[output_data_type]
+        gdal.Translate(temp_copy_path, input_raster_path, outputType=output_data_type, options=['-co', 'COMPRESS=ZSTD'], callback=hb.make_gdal_callback(f"Translating to expand to global extent on {temp_copy_path}"))
+    else:
+        if verbose:
+            hb.log(f"Data type is already {output_data_type} for {input_raster_path}, so just copying.")
+        hb.path_copy(input_raster_path, temp_copy_path) # Can just copy it direclty without accessing the raster.        
+
     # Get the resolution from the src_ds
     degrees = hb.get_cell_size_from_path(temp_copy_path, force_to_pyramid=True)
-
     arcseconds = hb.get_cell_size_from_path_in_arcseconds(temp_copy_path, force_to_pyramid=True)
     
     original_output_raster_path = output_raster_path
     if output_raster_path is None:        
-        output_raster_path = hb.temp('.tif', hb.file_root(input_raster_path), remove_at_exit=False, folder=os.path.dirname(input_raster_path), tag_along_file_extensions=['.aux.xml'])
+        output_raster_path = hb.temp('.tif', hb.file_root(input_raster_path) + '_displaced_by_make_path_pog', remove_at_exit=False, folder=os.path.dirname(input_raster_path), tag_along_file_extensions=['.aux.xml'])
         
     ndv = hb.no_data_values_by_gdal_type[output_data_type][0] # NOTE AWKWARD INCLUSINO OF zero as second option to work with faster_zonal_stats
     
+    # POG SPECIFIC DIFFERENCE HERE: Handles the case where the raster is not global.
     gt = hb.get_geotransform_path(input_raster_path)    
     gt_pyramid = hb.get_global_geotransform_from_resolution(degrees)
     
@@ -98,6 +108,8 @@ def make_path_pog(input_raster_path, output_raster_path=None, output_data_type=N
         )
         hb.swap_filenames(resample_temp_path, temp_copy_path)
         
+        
+     
     if not hb.raster_path_has_stats(temp_copy_path, approx_ok=False):
         if verbose:
             hb.log(f"Adding stats to {temp_copy_path}...")
@@ -123,7 +135,7 @@ def make_path_pog(input_raster_path, output_raster_path=None, output_data_type=N
     
     if verbose:
         hb.log(f"Building overviews for {temp_copy_path} with levels {overview_levels}...")
-    src_ds.BuildOverviews(overview_resampling_method.upper(), overview_levels)
+    src_ds.BuildOverviews(overview_resampling_method.upper(), overview_levels, hb.make_gdal_callback(f'Building overviews for {temp_copy_path}'))
 
     # Close the dataset to ensure overviews are saved
     del src_ds    
