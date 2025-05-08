@@ -4,17 +4,68 @@ description = "Collection of geospatial algorithms, parallel computation utiliti
 readme = "README.md"
 requires-python = ">=3.6"  # TODO: verify; assuming 3.6 b/c fstrings
 license = { file = "LICENSE" }
+authors = [
+        {name = "Justin Andrew Johnson"}
+]
 maintainers = [
         {name = "Justin Andrew Johnson"}
 ]
-keywords = ["gis", "economics", "land use"]
+keywords = ["gis", "geospatial", "economics", "land use"]
 classifiers = [
         "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Science/Research",
         "Programming Language :: Cython",
         "Programming Language :: Python :: 3",
 ]
-dynamic = ["version", "dependencies"]
+dynamic = ["version"]
+dependencies = [
+    "Pyro4",
+    "aenum",
+    "anytree",
+    "cython",
+    "dask",
+    "descartes",
+    "gdal",
+    "geopandas",
+    "google-api-python-client",
+    "google-auth",
+    "google-auth-oauthlib",
+    "google-cloud-datastore",
+    "google-cloud-storage",
+    "markdown",
+    "matplotlib",
+    "netcdf4",
+    "numpy",
+    "openpyxl",
+    "pandas",
+    "pillow",
+    "pygeoprocessing",
+    "python-pptx",
+    "pyyaml",
+    "qtawesome",
+    "qtpy",
+    "rioxarray",
+    "scikit-learn",
+    "scipy",
+    "seaborn",
+    "setuptools>=70.0.0",
+    "setuptools_scm",
+    "shapely",
+    "sip",
+    "six",
+    "statsmodels",
+    "taskgraph",
+    "tqdm",
+    "winshell; sys_platform=='win32'",
+    "xarray",
+    "xlrd",
+]
+
+[project.optional-dependencies]
+# to install with InVEST: pip install hazelbean[natcap.invest]
+natcap.invest = [
+    "natcap.invest==3.11.0"
+]
 
 [project.urls]
 homepage = "https://github.com/jandrewjohnson/hazelbean_dev"
