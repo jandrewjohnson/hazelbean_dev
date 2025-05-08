@@ -62,8 +62,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# to install with InVEST: pip install hazelbean[natcap.invest]
-natcap.invest = [
+# to install with InVEST: pip install hazelbean[invest]
+invest = [
     "natcap.invest==3.11.0"
 ]
 
