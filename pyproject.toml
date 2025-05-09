@@ -19,12 +19,6 @@ classifiers = [
 ]
 dynamic = ["version", "dependencies"]
 
-[project.optional-dependencies]
-# to install with InVEST: pip install hazelbean[invest]
-invest = [
-    "natcap.invest==3.11.0"
-]
-
 [project.urls]
 homepage = "https://github.com/jandrewjohnson/hazelbean_dev"
 

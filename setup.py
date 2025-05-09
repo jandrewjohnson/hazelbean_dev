@@ -35,6 +35,7 @@ setup(
       "matplotlib",
       "netcdf4",
       "numpy",
+      "natcap.invest",
       "openpyxl",
       "pandas",
       "pillow",
