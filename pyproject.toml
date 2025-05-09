@@ -4,10 +4,13 @@ description = "Collection of geospatial algorithms, parallel computation utiliti
 readme = "README.md"
 requires-python = ">=3.6"  # TODO: verify; assuming 3.6 b/c fstrings
 license = { file = "LICENSE" }
+authors = [
+        {name = "Justin Andrew Johnson"}
+]
 maintainers = [
         {name = "Justin Andrew Johnson"}
 ]
-keywords = ["gis", "economics", "land use"]
+keywords = ["gis", "geospatial", "economics", "land use"]
 classifiers = [
         "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Science/Research",
