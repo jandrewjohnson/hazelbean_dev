@@ -1153,15 +1153,27 @@ def swap_filenames(left_uri, right_uri):
     os.rename(right_uri, left_uri)
     os.rename(left_temp_uri, right_uri)
 
-def displace_file(src_path, to_displace_path, displaced_path=None, displaced_string=None, delete_original=False):
+def displace_file(src_path, to_displace_path, displaced_path=None, displaced_string=None, delete_original=False, raise_on_fails=False):
     # Copies to_displace_path to displaced_path, then moves src_path to to_displace_path, then deletes displaced_path if delete_original is True.
     if displaced_string is None:
         displaced_string = 'displaced'
     if not displaced_path:
         displaced_path = hb.rsuri(to_displace_path, displaced_string)
-    os.rename(to_displace_path, displaced_path)
-    os.rename(src_path, to_displace_path)
-
+    
+    if raise_on_fails:
+        os.rename(to_displace_path, displaced_path)
+        os.rename(src_path, to_displace_path)
+    else:
+        try:
+            os.rename(to_displace_path, displaced_path)
+        except:
+            hb.log('Failed to rename ' + to_displace_path + ' to ' + str(displaced_path))
+            
+        try:        
+            os.rename(src_path, to_displace_path)
+        except:
+            hb.log('Failed to rename ' + src_path + ' to ' + str(to_displace_path))
+        
     if delete_original:
         os.remove(displaced_path)
 

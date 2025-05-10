@@ -198,7 +198,73 @@ class DataStructuresTester(TestCase):
             # 
             # print('Created', output_path)
 
+    def test_reclassify_raster_hb(self):
+        # input_flex, rules, output_path, output_data_type=None, array_threshold=10000, match_path=None, output_ndv=None, invoke_full_callback=False, verbose=False):
+        # self.data_dir = os.path.join(os.path.dirname(__file__), "../data")
+        # self.test_data_dir = os.path.join(self.data_dir, "tests")
+        # self.cartographic_data_dir = os.path.join(self.data_dir, "cartographic/ee")        
+        # self.pyramid_data_dir = os.path.join(self.data_dir, "pyramids")
+        # self.ee_r264_ids_900sec_path = os.path.join(self.cartographic_data_dir, "ee_r264_ids_900sec.tif")
+        # self.ee_r264_correspondence_vector_path = os.path.join(self.cartographic_data_dir, "ee_r264_simplified900sec.gpkg")
+        # self.ee_r264_correspondence_csv_path = os.path.join(self.cartographic_data_dir, "ee_r264_correspondence.csv")
+        
+        # self.maize_calories_path = os.path.join(self.data_dir, "crops/johnson/crop_calories/maize_calories_per_ha_masked.tif")
+        # self.ha_per_cell_column_900sec_path = hb.get_path(hb.ha_per_cell_column_ref_paths[900])
+        # self.ha_per_cell_900sec_path = hb.get_path(hb.ha_per_cell_ref_paths[900])
+        # self.pyramid_match_900sec_path = hb.get_path(hb.pyramid_match_ref_paths[900])
+        # self.global_1deg_raster_path = os.path.join(self.pyramid_data_dir, "ha_per_cell_3600sec.tif")
+        # user_dir = os.path.expanduser("~")
+        # self.output_dir = os.path.join(user_dir, "temp")     
+        # rules = {241: 33}   
+        rules = {235: 34}   
+        output_path = hb.temp('.tif', 'reclassify', False, self.output_dir)
+        # output_path = hb.temp('.tif', 'reclassify', delete_on_finish, self.output_dir)
+        hb.reclassify_raster_hb(self.ee_r264_ids_900sec_path, 
+                                rules,
+                                output_path, 
+                                # output_data_type=6, 
+                                # array_threshold=10000, 
+                                # match_path=self.ha_per_cell_900sec_path, 
+                                # output_ndv=-9999, 
+                                # invoke_full_callback=False, 
+                                # verbose=True
+                                )
+        
+        
 
+    def test_reclassify_raster_arrayframe(self):
+        # input_flex, rules, output_path, output_data_type=None, array_threshold=10000, match_path=None, output_ndv=None, invoke_full_callback=False, verbose=False):
+        # self.data_dir = os.path.join(os.path.dirname(__file__), "../data")
+        # self.test_data_dir = os.path.join(self.data_dir, "tests")
+        # self.cartographic_data_dir = os.path.join(self.data_dir, "cartographic/ee")        
+        # self.pyramid_data_dir = os.path.join(self.data_dir, "pyramids")
+        # self.ee_r264_ids_900sec_path = os.path.join(self.cartographic_data_dir, "ee_r264_ids_900sec.tif")
+        # self.ee_r264_correspondence_vector_path = os.path.join(self.cartographic_data_dir, "ee_r264_simplified900sec.gpkg")
+        # self.ee_r264_correspondence_csv_path = os.path.join(self.cartographic_data_dir, "ee_r264_correspondence.csv")
+        
+        # self.maize_calories_path = os.path.join(self.data_dir, "crops/johnson/crop_calories/maize_calories_per_ha_masked.tif")
+        # self.ha_per_cell_column_900sec_path = hb.get_path(hb.ha_per_cell_column_ref_paths[900])
+        # self.ha_per_cell_900sec_path = hb.get_path(hb.ha_per_cell_ref_paths[900])
+        # self.pyramid_match_900sec_path = hb.get_path(hb.pyramid_match_ref_paths[900])
+        # self.global_1deg_raster_path = os.path.join(self.pyramid_data_dir, "ha_per_cell_3600sec.tif")
+        # user_dir = os.path.expanduser("~")
+        # self.output_dir = os.path.join(user_dir, "temp")     
+        # rules = {241: 33}   
+        rules = {235: 34}   
+        output_path = hb.temp('.tif', 'reclassify', False, self.output_dir)
+        # output_path = hb.temp('.tif', 'reclassify', delete_on_finish, self.output_dir)
+        hb.reclassify_raster_arrayframe(self.ee_r264_ids_900sec_path, 
+                                rules,
+                                output_path, 
+                                # output_data_type=6, 
+                                # array_threshold=10000, 
+                                # match_path=self.ha_per_cell_900sec_path, 
+                                # output_ndv=-9999, 
+                                # invoke_full_callback=False, 
+                                # verbose=True
+                                )
+        
+        
 if __name__ == "__main__":
     unittest.main()
 

@@ -522,7 +522,7 @@ def resample_to_match(input_path,
         dst_ndv = hb.get_ndv_from_path(match_path)
     else:
         dst_ndv = ndv
-        # correct_ndv = hb.get_correct_ndv_from_flex(output_data_type, is_id=True)
+        # correct_ndv = hb.get_correct_ndv_from_dtype_flex(output_data_type, is_id=True)
         # if output_data_type < 5:
         #     dst_ndv = 255
         # else:

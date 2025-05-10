@@ -16,25 +16,51 @@ def is_path_pog(path, check_tiled=True, full_check=True, raise_exceptions=False,
     return is_pyramid and is_cog
 
   
-def make_path_pog(input_raster_path, output_raster_path=None, output_data_type='auto', ndv=None, overview_resampling_method=None, compression="ZSTD", blocksize=512, verbose=False):
+def make_path_pog(input_raster_path, output_raster_path=None, output_data_type=None, ndv=None, overview_resampling_method=None, compression="ZSTD", blocksize=512, force_rewrite=False, value_reclassification_dict=None, ndv_above=None, ndv_below=None, verbose=False):
     """ Create a Pog (pyramidal cog) from input_raster_path. Writes in-place if output_raster_path is not set. Chooses correct values for 
     everything else if not set."""
-    
+
     # Check if input exists
     if not hb.path_exists(input_raster_path, verbose=verbose):
         raise FileNotFoundError(f"Input raster does not exist: {input_raster_path} at abs path {hb.path_abs(input_raster_path)}")
     
-    if is_path_pog(input_raster_path, verbose):
-        hb.log(f"Raster is already a POG: {input_raster_path}")
+    # Do a fast check to see if it's pog.
+    needs_censoring = False
+    if not hb.is_path_global_pyramid(input_raster_path, verbose):
+        if verbose:
+            hb.log(f"Raster is not a global pyramid. {input_raster_path}")            
+    else:        
+        if ndv_above is not None or ndv_below is not None:
+            stats_by_band = hb.get_stats_from_geotiff(input_raster_path)            
+            if ndv_above < stats_by_band[1]['max']:
+                if verbose:
+                    hb.log(f"Raster is not a global pyramid because it has values above the ndv_above threshold. {input_raster_path}")
+                needs_censoring = True
+            if ndv_below > stats_by_band[1]['min']:
+                if verbose:
+                    hb.log(f"Raster is not a global pyramid because it has values below the ndv_below threshold. {input_raster_path}")
+                needs_censoring = True  
+
+        needs_reclassification = False
+        if value_reclassification_dict is not None:
+            needs_reclassification = True
+                
+        # Do a full check to see if the input is already a POG. If so, skip it.    
+        if is_path_pog(input_raster_path, verbose) and not force_rewrite and not needs_censoring and not needs_reclassification:
+            if verbose:
+                hb.log(f"Raster is already a POG: {input_raster_path}")
+            return
         
-        return
     # Make a local copy at a temp file to process on to avoid corrupting the original
     input_dir = os.path.dirname(input_raster_path)
     temp_copy_path = hb.temp('.tif', 'copy', True, folder=input_dir, tag_along_file_extensions=['.aux.xml'])
+    temp_translate_path = hb.temp('.tif', 'translate', True, folder=input_dir, tag_along_file_extensions=['.aux.xml'])
     
     # Ensure output directory exists
-    os.makedirs(os.path.dirname(temp_copy_path), exist_ok=True)       
-    
+    try:
+        os.makedirs(os.path.dirname(temp_copy_path), exist_ok=True)       
+    except:
+        pass
     
     input_data_type = hb.get_datatype_from_uri(input_raster_path)
     
@@ -61,22 +87,29 @@ def make_path_pog(input_raster_path, output_raster_path=None, output_data_type='
         if verbose:            
             hb.log(f"Changing data type from {input_data_type} to {output_data_type} for {input_raster_path}")
         output_data_type = hb.gdal_number_to_gdal_type[output_data_type]
-        gdal.Translate(temp_copy_path, input_raster_path, outputType=output_data_type, options=['-co', 'COMPRESS=ZSTD'], callback=hb.make_gdal_callback(f"Translating to expand to global extent on {temp_copy_path}"))
+        gdal.Translate(temp_translate_path, input_raster_path, outputType=output_data_type, options=['-co', 'COMPRESS=ZSTD'], callback=hb.make_gdal_callback(f"Translating to change datatype on {hb.path_filename(input_raster_path)} to {temp_translate_path} to be datatype {output_data_type}."))
+        current_path = temp_translate_path
     else:
         if verbose:
-            hb.log(f"Data type is already {output_data_type} for {input_raster_path}, so just copying.")
+            hb.log(f"Data type is already {output_data_type} for {input_raster_path}, so just copying to {temp_copy_path}.")
         hb.path_copy(input_raster_path, temp_copy_path) # Can just copy it direclty without accessing the raster.        
+        current_path = temp_copy_path
 
     # Get the resolution from the src_ds
-    degrees = hb.get_cell_size_from_path(temp_copy_path, force_to_pyramid=True)
-    arcseconds = hb.get_cell_size_from_path_in_arcseconds(temp_copy_path, force_to_pyramid=True)
+    degrees = hb.get_cell_size_from_path(current_path, force_to_pyramid=True)
+    arcseconds = hb.get_cell_size_from_path_in_arcseconds(current_path, force_to_pyramid=True)
     
     original_output_raster_path = output_raster_path
     if output_raster_path is None:        
-        output_raster_path = hb.temp('.tif', hb.file_root(input_raster_path) + '_displaced_by_make_path_pog', remove_at_exit=False, folder=os.path.dirname(input_raster_path), tag_along_file_extensions=['.aux.xml'])
+        output_raster_path = hb.temp('.tif', 'pog', remove_at_exit=False, folder=os.path.dirname(input_raster_path), tag_along_file_extensions=['.aux.xml'])
         
     ndv = hb.no_data_values_by_gdal_type[output_data_type][0] # NOTE AWKWARD INCLUSINO OF zero as second option to work with faster_zonal_stats
     
+    if output_data_type <= 5 or output_data_type == 12 or output_data_type == 13:
+        resample_method = 'nearest'
+    else:
+        resample_method = 'bilinear'
+        
     # POG SPECIFIC DIFFERENCE HERE: Handles the case where the raster is not global.
     gt = hb.get_geotransform_path(input_raster_path)    
     gt_pyramid = hb.get_global_geotransform_from_resolution(degrees)
@@ -84,17 +117,17 @@ def make_path_pog(input_raster_path, output_raster_path=None, output_data_type='
     user_dir = pathlib.Path.home()
     match_path = os.path.join(user_dir, 'Files', 'base_data', hb.ha_per_cell_ref_paths[arcseconds])
     if gt != gt_pyramid:
-        resample_temp_path = hb.temp('.tif', 'resample', True, tag_along_file_extensions=['.aux.xml'])
+        resample_temp_path = hb.temp('.tif', 'resample', True, folder=os.path.dirname(input_raster_path), tag_along_file_extensions=['.aux.xml'])
         if verbose:
-            hb.log(f"Resampling {temp_copy_path} to match {match_path}...")
+            hb.log(f"Resampling {current_path} to match {match_path}. Saving at {resample_temp_path}.")
         hb.resample_to_match(
             temp_copy_path,
             match_path,
             resample_temp_path,
-            resample_method='bilinear',
+            resample_method=resample_method,
             output_data_type=output_data_type,
             src_ndv=None,
-            ndv=None,
+            ndv=ndv,
             s_srs_wkt=None,
             compress=True,
             ensure_fits=False,
@@ -106,23 +139,41 @@ def make_path_pog(input_raster_path, output_raster_path=None, output_data_type='
             bb_override=None,
             verbose=False, 
         )
-        hb.swap_filenames(resample_temp_path, temp_copy_path)
-        
-        
+        current_path = resample_temp_path
+    
+    if (ndv_above is not None or ndv_below is not None) and needs_censoring:
+        censor_temp_path = hb.temp('.tif', 'censor', True, folder=os.path.dirname(input_raster_path), tag_along_file_extensions=['.aux.xml'])
+        if ndv_above and not ndv_below:
+            def op(x):
+                return np.where(x > ndv_above, ndv, x)
+        elif ndv_below and not ndv_above:
+            def op(x):
+                return np.where(x < ndv_below, ndv, x)
+        elif ndv_above and ndv_below:
+            def op(x):
+                return np.where((x > ndv_above) | (x < ndv_below), ndv, x)
+            
+        hb.log(f"Censoring {current_path} with ndv_above={ndv_above} and ndv_below={ndv_below}. Saving at {censor_temp_path}.")
+        hb.raster_calculator_flex(current_path, op, censor_temp_path, output_data_type=output_data_type, ndv=ndv, compression=compression, verbose=verbose)
+        current_path = censor_temp_path
+    
+    if value_reclassification_dict is not None:
+        reclassify_temp_path = hb.temp('.tif', 'reclassify', True, '.', tag_along_file_extensions=['.aux.xml'])
+
+        hb.log(f"Reclassifying {current_path} with {value_reclassification_dict}. Saving at")
+        hb.reclassify_raster_hb(current_path, value_reclassification_dict, reclassify_temp_path)
      
-    if not hb.raster_path_has_stats(temp_copy_path, approx_ok=False):
+    if not hb.raster_path_has_stats(current_path, approx_ok=False):
         if verbose:
-            hb.log(f"Adding stats to {temp_copy_path}...")
-        hb.add_stats_to_geotiff_with_gdal(temp_copy_path, approx_ok=False, force=True, verbose=verbose)
+            hb.log(f"Adding stats to {current_path}.")
+        hb.add_stats_to_geotiff_with_gdal(current_path, approx_ok=False, force=True, verbose=verbose)
     
     # Open the source raster in UPDATE MODE so it writes the overviews as internal
-    # gdal.PushErrorHandler('CPLQuietErrorHandler')
     if verbose:
-        hb.log(f"Opening {temp_copy_path} for overview building...")
-    src_ds = gdal.OpenEx(temp_copy_path, gdal.GA_Update)
-    # gdal.PopErrorHandler()
+        hb.log(f"Opening {current_path} for overview building.")
+    src_ds = gdal.OpenEx(current_path, gdal.GA_Update, open_options=["IGNORE_COG_LAYOUT_BREAK=YES"])
     if not src_ds:
-        raise ValueError(f"Unable to open raster: {temp_copy_path}")
+        raise ValueError(f"Unable to open raster: {current_path}")
 
     # Remove existing overviews (if any)
     src_ds.BuildOverviews(None, [])     
@@ -134,16 +185,16 @@ def make_path_pog(input_raster_path, output_raster_path=None, output_data_type='
     overview_levels = hb.pyramid_compatible_overview_levels[arcseconds]
     
     if verbose:
-        hb.log(f"Building overviews for {temp_copy_path} with levels {overview_levels}...")
-    src_ds.BuildOverviews(overview_resampling_method.upper(), overview_levels, hb.make_gdal_callback(f'Building overviews for {temp_copy_path}'))
+        hb.log(f"Building overviews for {current_path} with levels {overview_levels}...")
+    src_ds.BuildOverviews(overview_resampling_method.upper(), overview_levels, hb.make_gdal_callback(f'Building overviews for {current_path}'))
 
     # Close the dataset to ensure overviews are saved
     del src_ds    
     
     # Reopen it to use it as a copy target
     if verbose:
-        hb.log(f"Reopening {temp_copy_path} for COG creation...")
-    src_ds = gdal.OpenEx(temp_copy_path, gdal.GA_ReadOnly)
+        hb.log(f"Reopening {current_path} for COG creation...")
+    src_ds = gdal.OpenEx(current_path, gdal.GA_ReadOnly)
     
     # Define creation options for COG
     creation_options = [
@@ -166,8 +217,9 @@ def make_path_pog(input_raster_path, output_raster_path=None, output_data_type='
             band.SetNoDataValue(ndv)
             
     # Actually create the COG
-    if verbose:
-        hb.log(f"Creating COG at {output_raster_path}...")
+    force_verbose = True
+    if verbose or force_verbose:
+        hb.log(f"Creating COG at {output_raster_path}. Abs path: {os.path.abspath(output_raster_path)}, Norm path: {os.path.normpath(output_raster_path)}")
     dst_ds = cog_driver.CreateCopy(
         output_raster_path,
         src_ds,
@@ -176,11 +228,11 @@ def make_path_pog(input_raster_path, output_raster_path=None, output_data_type='
     )        
     dst_ds = None
     
-    if original_output_raster_path is None:
-        hb.swap_filenames(output_raster_path, input_raster_path)        
-
     if not is_path_pog(output_raster_path, verbose=verbose) and verbose:
         hb.log(f"Failed to create COG: {output_raster_path} at abs path {hb.path_abs(output_raster_path)}")
+    
+    if original_output_raster_path is None:
+        hb.displace_file(output_raster_path, input_raster_path)        
 
 
     
@@ -240,10 +292,6 @@ def write_pog_of_value_from_scratch(output_path, value, arcsecond_resolution, ou
     variance = (total_sq_sum / total_count - mean ** 2) if total_count else 0
     variance = max(variance, 0)  # safeguard against negative variance
     stddev = np.sqrt(variance)
-
-    # Set statistics directly
-    # bTODOO ensure this works with ints   
-    band.SetStatistics(float(global_min), float(global_max), float(mean), float(stddev))
         
     # Build Overviews
     tmp_ds.GetRasterBand(1).SetNoDataValue(ndv)    
@@ -259,6 +307,9 @@ def write_pog_of_value_from_scratch(output_path, value, arcsecond_resolution, ou
     
     tmp_ds.FlushCache()
     del tmp_ds  # Close temp dataset
+    
+    # Add statistics to the temp dataset
+    hb.add_stats_to_geotiff_with_gdal(temp_path, approx_ok=False, force=True, verbose=verbose)
 
     # Step 2: Convert temporary GTiff to COG using CreateCopy
     cog_driver = gdal.GetDriverByName('COG')
@@ -346,10 +397,6 @@ def write_pog_of_value_from_match(output_path, match_path, value, output_data_ty
     variance = (total_sq_sum / total_count - mean ** 2) if total_count else 0
     variance = max(variance, 0)  # safeguard against negative variance
     stddev = np.sqrt(variance)
-
-    # Set statistics directly
-    # bTODOO ensure this works with ints   
-    band.SetStatistics(float(global_min), float(global_max), float(mean), float(stddev))
         
     # Build Overviews
     tmp_ds.GetRasterBand(1).SetNoDataValue(ndv)    
@@ -366,6 +413,9 @@ def write_pog_of_value_from_match(output_path, match_path, value, output_data_ty
     tmp_ds.FlushCache()
     del tmp_ds  # Close temp dataset
 
+    # Set statistics, ensuring they are not approximate
+    hb.add_stats_to_geotiff_with_gdal(temp_path, approx_ok=False, force=True, verbose=verbose)
+    
     # Step 2: Convert temporary GTiff to COG using CreateCopy
     cog_driver = gdal.GetDriverByName('COG')
     cog_creation_options = [

@@ -169,7 +169,8 @@ gdal_name_to_gdal_number = {
 gdal_number_to_numpy_type = {
     1: np.uint8,
     2: np.uint16,
-    3: np.int16,
+    3: np.int32,
+    # 3: np.int16, # HACK to fix the reclassification bug.
     4: np.uint32,
     5: np.int32,
     6: np.float32,
@@ -266,9 +267,9 @@ except:
     }
 resampling_methods = RESAMPLE_DICT
 
-def get_correct_ndv_from_flex(input_object, is_id=False):
+def get_correct_ndv_from_dtype_flex(input_object, is_id=False):
     # is_id means we will be using the EE devestack approach of having 0 be the ndv for UINT types IF it is an id_layer. This
-    # allows faster lookup.
+    # allows faster lookup. HOWEVER, i'm thinking that instead the standard should just be that id rasters should never have a ndv present.
 
     try:
         int(input_object)
@@ -287,9 +288,15 @@ def get_correct_ndv_from_flex(input_object, is_id=False):
         raise ValueError('Could not find a no data value for ' + str(input_object))
 
     if not is_id:
-        return current[0]
+        if type(current) is list:
+            return current[0]
+        else: 
+            return current
     else:
-        return current[1]
+        if type(current) is list:
+            return current[1]
+        else: 
+            return current
 
 MAX_UINT8 = 255
 MAX_UINT16 = 65535
@@ -298,6 +305,19 @@ MAX_UINT64 = 18446744073709551615
 MAX_INT16 = 32767
 MAX_INT32 = 2147483647
 MAX_INT64 = 9223372036854775807
+
+no_data_values_by_numpy_type_NON_LIST = {
+    np.uint8: MAX_UINT8,
+    np.byte: MAX_UINT8,
+    np.uint16: MAX_UINT16,
+    np.int16: -9999,
+    np.uint32: MAX_UINT32,
+    np.int32: -9999,
+    np.float32: -9999.0,
+    np.float64: -9999.0,
+    np.uint64: MAX_UINT64,
+    np.int64: -9999,
+}
 
 no_data_values_by_numpy_type = {
     np.uint8: [MAX_UINT8, 0],
@@ -1373,6 +1393,7 @@ def get_wkt_from_path(input_path):
 
 
 def get_shape_from_dataset_path(dataset_path):
+    # Row, Column. Y, X.
 
     dataset = gdal.Open(dataset_path)
     if dataset == None:
@@ -2703,9 +2724,408 @@ def cast_to_np64(a):
         else:
             return np.float64(float(a))
 
+def reclassify_raster_hb(input_raster_path, rules, output_raster_path, output_data_type=None, array_threshold=200000, match_path=None, output_ndv=None, invoke_full_callback=False, verbose=False):
+    # Replacement for reclassify_raster_arrayframe, once tested and working, consider renaming to not have hb.
+    # NOTE: array_threshold value is currently hardcoded in cython to 200000, so do not change.
+    """NOTE: The rules dict NEEDS to have the existing values that remain unchanged included, otherwise they get written to zero
+    match_path required in the event that input_flex is not a path.
+    array_threshold # If the max value in the rules is less than this, it will convert to an array where position indicates rules key. 10x faster at 255 length."""
+    from hazelbean import calculation_core
+    from hazelbean.calculation_core import cython_functions
 
-def reclassify_raster_hb(input_flex, rules, output_path, output_data_type=None, array_threshold=10000, match_path=None, output_ndv=None, invoke_full_callback=False, verbose=False):
-    # BROKEN, fails on Memory View is not Initialized.  Use reclassify_raster instead until fixed
+    from hazelbean.calculation_core.cython_functions import calc_change_matrix_of_two_int_arrays
+    from hazelbean.calculation_core.cython_functions import reclassify_uint8_to_uint8_by_dict
+    from hazelbean.calculation_core.cython_functions import reclassify_uint8_to_int_by_dict
+    from hazelbean.calculation_core.cython_functions import reclassify_uint8_to_float32_by_dict
+    from hazelbean.calculation_core.cython_functions import reclassify_uint8_to_float64_by_dict
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_uint8_by_dict
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_int_by_dict
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_float32_by_dict
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_float32_by_dict
+    from hazelbean.calculation_core.cython_functions import reclassify_uint8_to_uint8_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_uint8_to_int_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_uint8_to_float32_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_uint8_to_float64_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_uint8_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_int_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_float32_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_float64_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_uint8_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_int_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_float32_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_float64_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_uint8_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_int_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_float32_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_float64_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_uint8_to_uint8_by_dict
+    from hazelbean.calculation_core.cython_functions import reclassify_uint8_to_int_by_dict
+    from hazelbean.calculation_core.cython_functions import reclassify_uint8_to_float32_by_dict
+    from hazelbean.calculation_core.cython_functions import reclassify_uint8_to_float64_by_dict
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_uint8_by_dict
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_int_by_dict
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_float32_by_dict
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_float64_by_dict
+    from hazelbean.calculation_core.cython_functions import reclassify_uint8_to_uint8_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_uint8_to_int_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_uint8_to_float32_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_uint8_to_float64_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_uint8_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_int_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_float32_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_float64_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_float64_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_float64_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_float64_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int64_to_float32_by_dict
+    from hazelbean.calculation_core.cython_functions import reclassify_int64_to_float32_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int64_to_float64_by_dict
+    from hazelbean.calculation_core.cython_functions import reclassify_int64_to_float64_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int64_to_uint8_by_dict
+    from hazelbean.calculation_core.cython_functions import reclassify_int64_to_uint8_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int64_to_int_by_dict
+    from hazelbean.calculation_core.cython_functions import reclassify_int64_to_int64_by_dict
+
+    # Determine output data type based on type of rules.
+    if output_data_type is None:
+        # TODOO Simplify numpy vs python types across code base.        
+        #  'uint16': 2,
+        # 'int16': 3,
+        # 'uint32': 4,
+        # 'int32': 5,
+        # 'float32': 6,
+        # 'float64': 7,
+        # 'uint64': 12,
+        # 'int64': 13,
+        if type(rules) is np.ndarray:
+            if rules[0].dtype == np.uint8:
+                output_data_type = 1
+            elif rules[0].dtype == np.uint16:
+                output_data_type = 2
+            elif rules[0].dtype == np.int16:
+                output_data_type = 3
+            elif rules[0].dtype == np.uint32:
+                output_data_type = 4
+            elif type(rules[0]) == np.int32:
+                output_data_type = 5
+            elif type(rules[0]) == np.float32:
+                output_data_type = 6
+            elif type(rules[0]) == np.float64:
+                output_data_type = 7
+            elif type(rules[0]) == np.uint64:
+                output_data_type = 12
+            elif type(rules[0]) == np.int64:
+                output_data_type = 13
+        elif type(rules[list(rules)[0]]) is int:
+            output_data_type = 5
+        elif type(rules[list(rules)[0]]) is float:
+            output_data_type = 7
+        elif type(rules[list(rules)[0]]) == np.uint8:
+            output_data_type = 1
+        elif type(rules[list(rules)[0]]) == np.uint16:
+            output_data_type = 2
+        elif type(rules[list(rules)[0]]) == np.int16:
+            output_data_type = 3
+        elif type(rules[list(rules)[0]]) == np.uint32:
+            output_data_type = 4
+        elif type(rules[list(rules)[0]]) == np.int32:
+            output_data_type = 5
+        elif type(rules[list(rules)[0]]) == np.float32:
+            output_data_type = 6
+        elif type(rules[list(rules)[0]]) == np.float64:
+            output_data_type = 7
+        elif type(rules[list(rules)[0]]) == np.uint64:
+            output_data_type = 12
+        elif type(rules[list(rules)[0]]) == np.int64:
+            output_data_type = 13
+            
+
+    # Figure out the correct ndv based on the datatype
+    if output_ndv is None:
+        output_ndv = hb.get_correct_ndv_from_dtype_flex(output_data_type)
+
+    # Add the NDV to the rules
+    rules[output_ndv] = output_ndv
+
+    if isinstance(rules, dict):
+        L.debug('Rules dict is a dict. Testing to see if it can be made into an array for performance.')
+        min_key = int(min(rules.keys()))
+        max_key = int(max(rules.keys()))
+        min_value = min(rules.values())
+        max_value = max(rules.values())
+
+        if min_key < -array_threshold/2:
+            raise NameError('The minimum key in the rules dict is less than the array threshold. This will cause problems. Please fix this.')
+        if max_key > array_threshold/2:
+            raise NameError('The maximum key in the rules dict is greater than the array threshold. This will cause problems. Please fix this.')
+
+        
+        
+        # START HERE: Implement this shift so that negative indices work.
+        # If all the keys are negative (e.g. when you are reclassifying a single negative ndv value), this can get wonky.
+        # Turns out this was because negative indices given to numpy arrays, which fundamentally start at zero, implements reverse indexing
+        # so -9999 would be the 9999th from the end. Need to do a pre calc shift.
+        
+        
+        
+        ### NOTE!!!! There is a nuanced performance trick here: it seems like you would want the rules to be np.zeros, but actually
+        # it should be arange(). Unmodified, the arange says position 6 maps to 6, etc. zeros would say 6 maps to 0.
+        # old_rules = rules
+        # if output_data_type == 1:
+        #     rules = np.zeros(255 + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+        # elif output_data_type == 2:
+        #     rules = np.zeros(65535 + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+        # elif output_data_type == 3:
+        #     rules = np.zeros(np.iinfo(np.int16).min + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+        # elif output_data_type == 4:
+        #     rules = np.zeros(array_threshold + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type]) 
+        # elif output_data_type == 5:
+        #     rules = np.zeros(array_threshold + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+        # elif output_data_type == 6 or output_data_type == 7:
+        #     rules = np.zeros(array_threshold + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+        # elif output_data_type == 12:
+        #     rules = np.zeros(array_threshold + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type]) 
+        # elif output_data_type == 13:
+        #     rules = np.zeros(array_threshold + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+
+        old_rules = rules
+        if output_data_type == 1:
+            rules = np.arange(255 + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+        elif output_data_type == 2:
+            rules = np.arange(65535 + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+        elif output_data_type == 3:
+            rules = np.arange(65535 + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+        elif output_data_type == 4:
+            rules = np.arange(array_threshold + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type]) 
+        elif output_data_type == 5:
+            positive_sequence  = np.arange(array_threshold/2 + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+            negative_sequence  = np.arange(-array_threshold/2, 0, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+            rules = np.concatenate((positive_sequence, negative_sequence))
+        elif output_data_type == 6 or output_data_type == 7:
+            rules = np.arange(array_threshold + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+        elif output_data_type == 12:
+            rules = np.arange(array_threshold + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type]) 
+        elif output_data_type == 13:
+            rules = np.arange(array_threshold + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+            
+        # old_rules = rules
+        # if output_data_type == 1:
+        #     rules = np.arange(255 + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+        # elif output_data_type == 2:
+        #     rules = np.arange(65535 + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+        # elif output_data_type == 3:
+        #     rules = np.arange(np.iinfo(np.int16).min, np.iinfo(np.int16).max + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+        # elif output_data_type == 4:
+        #     rules = np.arange(-(array_threshold/2), array_threshold/2 + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type]) 
+        # elif output_data_type == 5:
+        #     rules = np.arange(array_threshold + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+        # elif output_data_type == 6 or output_data_type == 7:
+        #     rules = np.arange(array_threshold + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+        # elif output_data_type == 12:
+        #     rules = np.arange(-(array_threshold/2), array_threshold/2 + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type]) 
+        # elif output_data_type == 13:
+        #     rules = np.arange(array_threshold + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+
+        # Populate the array from dict values
+        ### HILARIOUS optimization here. Rather than subtract the keys to go negative, just USE the negative indexing built into numpy
+        # so that -9999 is the 9999th from the end. 
+        for k, v in old_rules.items():
+            if k < array_threshold/2:
+                rules[int(k)] = v       
+            else:
+                rules[array_threshold - int(k)] = v
+                 
+        print(rules[0:10])
+        print(rules[-10:])
+        print(rules[-10001:-9995])
+        print(rules[9995:10001])
+        # print(rules[-])
+        5
+    elif isinstance(rules, np.ndarray):
+        L.debug('Making rules as arrays is about 10x faster. You already did that!')
+    else:
+        raise NameError('Wrong type of rules given. You gave: ' + str(rules))  
+        
+    # Based on the rule-dtype and array dtype, call the correct optimized cython function
+    geotiff_creation_options = hb.DEFAULT_GTIFF_CREATION_OPTIONS    
+    input_ds = gdal.OpenEx(input_raster_path)
+    raster_info = hb.get_raster_info_hb(input_raster_path)
+    data_type = raster_info['data_type']
+
+    L.debug('Calculating reclassification with rules as a dictionary.')
+    # base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.int32), 'raw')]
+    # TODOO, I don't support 16 bit ints, but those are frequently used. Expand this to include support for this.
+    
+    # START HERE: I'm nearly certain this isn't working because the input raster type is 3 but the rules are 5
+    if data_type == 1:
+        if output_data_type == 1:
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.uint8), 'raw')] # Only uint8 allows non int rules ## WTF DID I MEAN HEARE
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_uint8_to_uint8_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=1,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+        if 2 <= output_data_type <= 5:
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.int32), 'raw')]
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_uint8_to_int_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=1,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+        if output_data_type == 6:
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.float32), 'raw')]
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_uint8_to_float32_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=1,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+        if output_data_type == 7:
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.float64), 'raw')]
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_uint8_to_float64_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=1,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+        if 12 <= output_data_type <= 13:
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.int64), 'raw')]
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_uint8_to_int64_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=1,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+    elif 2 <= data_type <= 5:
+        if output_data_type == 1:
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.uint8), 'raw')]
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int_to_uint8_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=5,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+        elif 2 <= output_data_type <= 5:
+            # base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.int8), 'raw')]
+            
+            
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.int32), 'raw')]
+
+
+
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int_to_int_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=5,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+        elif output_data_type == 6:
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.float32), 'raw')]
+            # TODOO TODOOO, fast memory efficient reclassification doen't work because raster_calculator by default casts to the output type so can't pass a different type to cython.
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int_to_float32_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=5,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+        elif output_data_type == 7:
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.float64), 'raw')]
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int_to_float64_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=5,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+        elif 12 <= output_data_type <= 13:
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.float64), 'raw')]
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int_to_int64_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=5,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+    elif data_type == 6:
+        # raise NameError('reclassify unable to handle floats yet. Unimplemented. ALSO NOTE, if you attempt to fix this later, the rules as array method DOES NOT WORK FOR FLOATS BECAUSE OF THE INDICES NEED TO BE FLOATS, so have to use the dict() method.. ' + str(input_flex))
+        if output_data_type == 1:
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.uint8), 'raw')]
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int_to_uint8_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=6,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+        elif 2 <= output_data_type <= 5:
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.int8), 'raw')]
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int_to_int_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=6,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+        elif output_data_type == 6:
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.float32), 'raw')]
+            # TODOO TODOOO, fast memory efficient reclassification doen't work because raster_calculator by default casts to the output type so can't pass a different type to cython.
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int_to_float32_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=6,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+        elif output_data_type == 7:
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.float64), 'raw')]
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int_to_float64_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=6,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+        elif 12 <= output_data_type <= 13:
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.int64), 'raw')]
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int_to_int64_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=6,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+
+    elif data_type == 7:
+        # raise NameError('reclassify unable to handle floats yet. Unimplemented. ALSO NOTE, if you attempt to fix this later, the rules as array method DOES NOT WORK FOR FLOATS BECAUSE OF THE INDICES NEED TO BE FLOATS, so have to use the dict() method.. ' + str(input_flex))
+        # raise NameError('reclassify unable to handle floats yet. Unimplemented. ALSO NOTE, if you attempt to fix this later, the rules as array method DOES NOT WORK FOR FLOATS BECAUSE OF THE INDICES NEED TO BE FLOATS, so have to use the dict() method.. ' + str(input_flex))
+        if output_data_type == 1:
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.uint8), 'raw')]
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int_to_uint8_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=7,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+        elif 2 <= output_data_type <= 5:
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.int8), 'raw')]
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int_to_int_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=7,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+        elif output_data_type == 6:
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.float32), 'raw')]
+            # TODOO TODOOO, fast memory efficient reclassification doen't work because raster_calculator by default casts to the output type so can't pass a different type to cython.
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int_to_float32_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=7,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+        elif output_data_type == 7:
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.float64), 'raw')]
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int_to_float64_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=7,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+    elif 12 <= data_type <= 13:
+        if output_data_type == 1:
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.uint8), 'raw')]
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int64_to_uint8_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=13,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+        elif 2 <= output_data_type <= 5:
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.int8), 'raw')]
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int64_to_int_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=13,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+        elif output_data_type == 6:
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.float32), 'raw')]
+            # TODOO TODOOO, fast memory efficient reclassification doen't work because raster_calculator by default casts to the output type so can't pass a different type to cython.
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int64_to_float32_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=13,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+        elif output_data_type == 7:
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.float64), 'raw')]
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int64_to_float64_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=13,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+        elif 12 <= output_data_type <= 13:
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.int64), 'raw')]
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int64_to_int64_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=13,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+
+        else:
+            raise NameError('Cannot interpret input_flex')
+
+def reclassify_raster_arrayframe(input_flex, rules, output_path, output_data_type=None, array_threshold=10000, match_path=None, output_ndv=None, invoke_full_callback=False, verbose=False):
+    # LEGACY CODE based on arrayframes, which I am moving away from. They were cool, but caused problems like slow REPR resolvement in debug mode. Maye in a different life.
     """NOTE: The rules dict NEEDS to have the existing values that remain unchanged included, otherwise they get written to zero
     match_path required in the event that input_flex is not a path.
     array_threshold # If the max value in the rules is less than this, it will convert to an array where position indicates rules key. 10x faster at 255 length."""
@@ -2775,6 +3195,15 @@ def reclassify_raster_hb(input_flex, rules, output_path, output_data_type=None, 
         # TODOO Finish this logic
         # output_data_type = 6
         # TODOO Simplify numpy vs python types across code base.
+        
+    #         'uint16': 2,
+    # 'int16': 3,
+    # 'uint32': 4,
+    # 'int32': 5,
+    # 'float32': 6,
+    # 'float64': 7,
+    # 'uint64': 12,
+    # 'int64': 13,
         if type(rules) is np.ndarray:
             if rules[0].dtype == np.uint8:
                 output_data_type = 1
@@ -2790,6 +3219,12 @@ def reclassify_raster_hb(input_flex, rules, output_path, output_data_type=None, 
             output_data_type = 7
         elif type(rules[list(rules)[0]]) == np.uint8:
             output_data_type = 1
+        elif type(rules[list(rules)[0]]) == np.uint16:
+            output_data_type = 2
+        elif type(rules[list(rules)[0]]) == np.int16:
+            output_data_type = 3
+        elif type(rules[list(rules)[0]]) == np.uint32:
+            output_data_type = 4
         elif type(rules[list(rules)[0]]) == np.int32:
             output_data_type = 5
         elif type(rules[list(rules)[0]]) == np.float32:
@@ -2800,11 +3235,12 @@ def reclassify_raster_hb(input_flex, rules, output_path, output_data_type=None, 
     # Figure out the correct ndv based on the datatype
     if output_ndv is None:
 
-        ids_are_all_positive = True
+        ids_are_all_positive = False
         if ids_are_all_positive:
             output_ndv = 0
         else:
-            output_ndv = hb.default_no_data_values_by_gdal_number[output_data_type]
+            output_ndv = hb.get_correct_ndv_from_dtype_flex(output_data_type)
+            # output_ndv = hb.default_no_data_values_by_gdal_number[output_data_type]
 
         # if match_path is not None:
 
@@ -2863,7 +3299,8 @@ def reclassify_raster_hb(input_flex, rules, output_path, output_data_type=None, 
             # but i know this messed something else up so build test suite.
             if max_key <= 255 and max_value <= 255:
                 # NOTE BIG CHANGE and awkward code. it doesn't matter how long it is for the OUTPUT type.
-                rules = np.arange(int(math.ceil(max_key)) + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+                # rules = np.arange(int(math.ceil(max_key)) + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+                rules = np.arange(int(math.ceil(array_threshold)) + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
                 # rules = np.zeros(max_key + 1, dtype=np.uint8)
                 for k, v in old_rules.items():
                     rules[int(k)] = v
@@ -2872,7 +3309,8 @@ def reclassify_raster_hb(input_flex, rules, output_path, output_data_type=None, 
                     # except:
                     #     L.info('failed to put into array for ', k, v, 'which maaaaay be okay but it will default to ndv in the output then. Might be able to fix this by having a default nan value')
             else:
-                rules = np.arange(int(math.ceil(max_key)) + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+                # rules = np.arange(int(math.ceil(max_key)) + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+                rules = np.arange(int(math.ceil(array_threshold)) + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
                 for k, v in old_rules.items():
                     if k != output_ndv:
                         rules[int(k)] = v
@@ -2886,7 +3324,7 @@ def reclassify_raster_hb(input_flex, rules, output_path, output_data_type=None, 
         L.debug('Making rules as arrays is about 10x faster. You already did that!')
     else:
         raise NameError('Wrong type of rules given. You gave: ' + str(rules))
-
+    ### WHY do i do this twice?!?
     if output_data_type is None:
         if isinstance(rules, dict):
             if isinstance(rules[list(rules)[0]], int):
@@ -3091,7 +3529,13 @@ def reclassify_raster_hb(input_flex, rules, output_path, output_data_type=None, 
                                             gtiff_creation_options=geotiff_creation_options,
                                             calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
                 elif 2 <= output_data_type <= 5:
-                    base_raster_path_band = [(input_flex.path, 1), (rules.astype(np.int8), 'raw')]
+                    # base_raster_path_band = [(input_flex.path, 1), (rules.astype(np.int8), 'raw')]
+                    
+                    
+                    base_raster_path_band = [(input_flex.path, 1), (rules, 'raw')]
+
+
+
                     hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int_to_int_by_array, output_path,
                                             output_data_type, output_ndv, read_datatype=5,
                                             gtiff_creation_options=geotiff_creation_options,
@@ -4833,7 +5277,7 @@ def extract_datasource_table_by_key(datasource_uri, key_field):
 
 
 def get_geotransform_path(input_path):
-
+    # (origin_x, pixel_width, rotation_x, origin_y, rotation_y, pixel_height)
     if os.path.exists(input_path):
         ds = gdal.OpenEx(input_path)
         layer = ds.GetLayer()

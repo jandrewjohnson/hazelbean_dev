@@ -4,12 +4,12 @@
 {
     "distutils": {
         "depends": [],
-        "name": "hazelbean.calculation_core.aspect_ratio_array_functions",
+        "name": "aspect_ratio_array_functions",
         "sources": [
-            "hazelbean/calculation_core/aspect_ratio_array_functions.pyx"
+            "aspect_ratio_array_functions.pyx"
         ]
     },
-    "module_name": "hazelbean.calculation_core.aspect_ratio_array_functions"
+    "module_name": "aspect_ratio_array_functions"
 }
 END: Cython Metadata */
 
@@ -1229,8 +1229,8 @@ static CYTHON_INLINE float __PYX_NAN() {
   #endif
 #endif
 
-#define __PYX_HAVE__hazelbean__calculation_core__aspect_ratio_array_functions
-#define __PYX_HAVE_API__hazelbean__calculation_core__aspect_ratio_array_functions
+#define __PYX_HAVE__aspect_ratio_array_functions
+#define __PYX_HAVE_API__aspect_ratio_array_functions
 /* Early includes */
 #include <math.h>
 #include <string.h>
@@ -1513,7 +1513,7 @@ static const char *__pyx_filename;
 /* #### Code section: filename_table ### */
 
 static const char *__pyx_f[] = {
-  "hazelbean\\\\calculation_core\\\\aspect_ratio_array_functions.pyx",
+  "aspect_ratio_array_functions.pyx",
   "__init__.cython-30.pxd",
   "type.pxd",
 };
@@ -1560,7 +1560,7 @@ typedef struct {
 
 /* #### Code section: numeric_typedefs ### */
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":787
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":787
  * # in Cython to enable them only on the right systems.
  * 
  * ctypedef npy_int8       int8_t             # <<<<<<<<<<<<<<
@@ -1569,7 +1569,7 @@ typedef struct {
  */
 typedef npy_int8 __pyx_t_5numpy_int8_t;
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":788
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":788
  * 
  * ctypedef npy_int8       int8_t
  * ctypedef npy_int16      int16_t             # <<<<<<<<<<<<<<
@@ -1578,7 +1578,7 @@ typedef npy_int8 __pyx_t_5numpy_int8_t;
  */
 typedef npy_int16 __pyx_t_5numpy_int16_t;
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":789
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":789
  * ctypedef npy_int8       int8_t
  * ctypedef npy_int16      int16_t
  * ctypedef npy_int32      int32_t             # <<<<<<<<<<<<<<
@@ -1587,7 +1587,7 @@ typedef npy_int16 __pyx_t_5numpy_int16_t;
  */
 typedef npy_int32 __pyx_t_5numpy_int32_t;
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":790
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":790
  * ctypedef npy_int16      int16_t
  * ctypedef npy_int32      int32_t
  * ctypedef npy_int64      int64_t             # <<<<<<<<<<<<<<
@@ -1596,7 +1596,7 @@ typedef npy_int32 __pyx_t_5numpy_int32_t;
  */
 typedef npy_int64 __pyx_t_5numpy_int64_t;
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":794
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":794
  * #ctypedef npy_int128     int128_t
  * 
  * ctypedef npy_uint8      uint8_t             # <<<<<<<<<<<<<<
@@ -1605,7 +1605,7 @@ typedef npy_int64 __pyx_t_5numpy_int64_t;
  */
 typedef npy_uint8 __pyx_t_5numpy_uint8_t;
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":795
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":795
  * 
  * ctypedef npy_uint8      uint8_t
  * ctypedef npy_uint16     uint16_t             # <<<<<<<<<<<<<<
@@ -1614,7 +1614,7 @@ typedef npy_uint8 __pyx_t_5numpy_uint8_t;
  */
 typedef npy_uint16 __pyx_t_5numpy_uint16_t;
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":796
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":796
  * ctypedef npy_uint8      uint8_t
  * ctypedef npy_uint16     uint16_t
  * ctypedef npy_uint32     uint32_t             # <<<<<<<<<<<<<<
@@ -1623,7 +1623,7 @@ typedef npy_uint16 __pyx_t_5numpy_uint16_t;
  */
 typedef npy_uint32 __pyx_t_5numpy_uint32_t;
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":797
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":797
  * ctypedef npy_uint16     uint16_t
  * ctypedef npy_uint32     uint32_t
  * ctypedef npy_uint64     uint64_t             # <<<<<<<<<<<<<<
@@ -1632,7 +1632,7 @@ typedef npy_uint32 __pyx_t_5numpy_uint32_t;
  */
 typedef npy_uint64 __pyx_t_5numpy_uint64_t;
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":801
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":801
  * #ctypedef npy_uint128    uint128_t
  * 
  * ctypedef npy_float32    float32_t             # <<<<<<<<<<<<<<
@@ -1641,7 +1641,7 @@ typedef npy_uint64 __pyx_t_5numpy_uint64_t;
  */
 typedef npy_float32 __pyx_t_5numpy_float32_t;
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":802
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":802
  * 
  * ctypedef npy_float32    float32_t
  * ctypedef npy_float64    float64_t             # <<<<<<<<<<<<<<
@@ -1650,7 +1650,7 @@ typedef npy_float32 __pyx_t_5numpy_float32_t;
  */
 typedef npy_float64 __pyx_t_5numpy_float64_t;
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":809
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":809
  * ctypedef double complex complex128_t
  * 
  * ctypedef npy_longlong   longlong_t             # <<<<<<<<<<<<<<
@@ -1659,7 +1659,7 @@ typedef npy_float64 __pyx_t_5numpy_float64_t;
  */
 typedef npy_longlong __pyx_t_5numpy_longlong_t;
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":810
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":810
  * 
  * ctypedef npy_longlong   longlong_t
  * ctypedef npy_ulonglong  ulonglong_t             # <<<<<<<<<<<<<<
@@ -1668,7 +1668,7 @@ typedef npy_longlong __pyx_t_5numpy_longlong_t;
  */
 typedef npy_ulonglong __pyx_t_5numpy_ulonglong_t;
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":812
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":812
  * ctypedef npy_ulonglong  ulonglong_t
  * 
  * ctypedef npy_intp       intp_t             # <<<<<<<<<<<<<<
@@ -1677,7 +1677,7 @@ typedef npy_ulonglong __pyx_t_5numpy_ulonglong_t;
  */
 typedef npy_intp __pyx_t_5numpy_intp_t;
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":813
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":813
  * 
  * ctypedef npy_intp       intp_t
  * ctypedef npy_uintp      uintp_t             # <<<<<<<<<<<<<<
@@ -1686,7 +1686,7 @@ typedef npy_intp __pyx_t_5numpy_intp_t;
  */
 typedef npy_uintp __pyx_t_5numpy_uintp_t;
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":815
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":815
  * ctypedef npy_uintp      uintp_t
  * 
  * ctypedef npy_double     float_t             # <<<<<<<<<<<<<<
@@ -1695,7 +1695,7 @@ typedef npy_uintp __pyx_t_5numpy_uintp_t;
  */
 typedef npy_double __pyx_t_5numpy_float_t;
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":816
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":816
  * 
  * ctypedef npy_double     float_t
  * ctypedef npy_double     double_t             # <<<<<<<<<<<<<<
@@ -1704,7 +1704,7 @@ typedef npy_double __pyx_t_5numpy_float_t;
  */
 typedef npy_double __pyx_t_5numpy_double_t;
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":817
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":817
  * ctypedef npy_double     float_t
  * ctypedef npy_double     double_t
  * ctypedef npy_longdouble longdouble_t             # <<<<<<<<<<<<<<
@@ -1713,41 +1713,41 @@ typedef npy_double __pyx_t_5numpy_double_t;
  */
 typedef npy_longdouble __pyx_t_5numpy_longdouble_t;
 
-/* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":36
+/* "aspect_ratio_array_functions.pyx":36
  * DTYPEFLOAT32 = np.float32
  * # ctypedef np.int_t DTYPEINT_t
  * ctypedef np.int64_t DTYPEINT64_t             # <<<<<<<<<<<<<<
  * ctypedef np.int32_t DTYPEINT32_t
  * ctypedef np.float32_t DTYPEFLOAT32_t
  */
-typedef __pyx_t_5numpy_int64_t __pyx_t_9hazelbean_16calculation_core_28aspect_ratio_array_functions_DTYPEINT64_t;
+typedef __pyx_t_5numpy_int64_t __pyx_t_28aspect_ratio_array_functions_DTYPEINT64_t;
 
-/* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":37
+/* "aspect_ratio_array_functions.pyx":37
  * # ctypedef np.int_t DTYPEINT_t
  * ctypedef np.int64_t DTYPEINT64_t
  * ctypedef np.int32_t DTYPEINT32_t             # <<<<<<<<<<<<<<
  * ctypedef np.float32_t DTYPEFLOAT32_t
  * ctypedef np.float64_t DTYPEFLOAT64_t
  */
-typedef __pyx_t_5numpy_int32_t __pyx_t_9hazelbean_16calculation_core_28aspect_ratio_array_functions_DTYPEINT32_t;
+typedef __pyx_t_5numpy_int32_t __pyx_t_28aspect_ratio_array_functions_DTYPEINT32_t;
 
-/* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":38
+/* "aspect_ratio_array_functions.pyx":38
  * ctypedef np.int64_t DTYPEINT64_t
  * ctypedef np.int32_t DTYPEINT32_t
  * ctypedef np.float32_t DTYPEFLOAT32_t             # <<<<<<<<<<<<<<
  * ctypedef np.float64_t DTYPEFLOAT64_t
  * 
  */
-typedef __pyx_t_5numpy_float32_t __pyx_t_9hazelbean_16calculation_core_28aspect_ratio_array_functions_DTYPEFLOAT32_t;
+typedef __pyx_t_5numpy_float32_t __pyx_t_28aspect_ratio_array_functions_DTYPEFLOAT32_t;
 
-/* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":39
+/* "aspect_ratio_array_functions.pyx":39
  * ctypedef np.int32_t DTYPEINT32_t
  * ctypedef np.float32_t DTYPEFLOAT32_t
  * ctypedef np.float64_t DTYPEFLOAT64_t             # <<<<<<<<<<<<<<
  * 
  * @cython.cdivision(True)
  */
-typedef __pyx_t_5numpy_float64_t __pyx_t_9hazelbean_16calculation_core_28aspect_ratio_array_functions_DTYPEFLOAT64_t;
+typedef __pyx_t_5numpy_float64_t __pyx_t_28aspect_ratio_array_functions_DTYPEFLOAT64_t;
 /* #### Code section: complex_type_declarations ### */
 /* Declarations.proto */
 #if CYTHON_CCOMPLEX && (1) && (!0 || __cplusplus)
@@ -1789,7 +1789,7 @@ static CYTHON_INLINE __pyx_t_long_double_complex __pyx_t_long_double_complex_fro
 
 /*--- Type declarations ---*/
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1113
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1113
  * 
  * # Iterator API added in v1.6
  * ctypedef int (*NpyIter_IterNextFunc)(NpyIter* it) noexcept nogil             # <<<<<<<<<<<<<<
@@ -1798,7 +1798,7 @@ static CYTHON_INLINE __pyx_t_long_double_complex __pyx_t_long_double_complex_fro
  */
 typedef int (*__pyx_t_5numpy_NpyIter_IterNextFunc)(NpyIter *);
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1114
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1114
  * # Iterator API added in v1.6
  * ctypedef int (*NpyIter_IterNextFunc)(NpyIter* it) noexcept nogil
  * ctypedef void (*NpyIter_GetMultiIndexFunc)(NpyIter* it, npy_intp* outcoords) noexcept nogil             # <<<<<<<<<<<<<<
@@ -2689,17 +2689,17 @@ static CYTHON_INLINE char *__pyx_f_5numpy_7ndarray_4data_data(PyArrayObject *__p
 
 /* Module declarations from "numpy" */
 
-/* Module declarations from "hazelbean.calculation_core.aspect_ratio_array_functions" */
+/* Module declarations from "aspect_ratio_array_functions" */
 /* #### Code section: typeinfo ### */
 static __Pyx_TypeInfo __Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t = { "float64_t", NULL, sizeof(__pyx_t_5numpy_float64_t), { 0 }, 0, 'R', 0, 0 };
 static __Pyx_TypeInfo __Pyx_TypeInfo_nn___pyx_t_5numpy_int64_t = { "int64_t", NULL, sizeof(__pyx_t_5numpy_int64_t), { 0 }, 0, __PYX_IS_UNSIGNED(__pyx_t_5numpy_int64_t) ? 'U' : 'I', __PYX_IS_UNSIGNED(__pyx_t_5numpy_int64_t), 0 };
 static __Pyx_TypeInfo __Pyx_TypeInfo_nn___pyx_t_5numpy_int32_t = { "int32_t", NULL, sizeof(__pyx_t_5numpy_int32_t), { 0 }, 0, __PYX_IS_UNSIGNED(__pyx_t_5numpy_int32_t) ? 'U' : 'I', __PYX_IS_UNSIGNED(__pyx_t_5numpy_int32_t), 0 };
 /* #### Code section: before_global_var ### */
-#define __Pyx_MODULE_NAME "hazelbean.calculation_core.aspect_ratio_array_functions"
-extern int __pyx_module_is_main_hazelbean__calculation_core__aspect_ratio_array_functions;
-int __pyx_module_is_main_hazelbean__calculation_core__aspect_ratio_array_functions = 0;
+#define __Pyx_MODULE_NAME "aspect_ratio_array_functions"
+extern int __pyx_module_is_main_aspect_ratio_array_functions;
+int __pyx_module_is_main_aspect_ratio_array_functions = 0;
 
-/* Implementation of "hazelbean.calculation_core.aspect_ratio_array_functions" */
+/* Implementation of "aspect_ratio_array_functions" */
 /* #### Code section: global_var ### */
 static PyObject *__pyx_builtin_range;
 static PyObject *__pyx_builtin_ImportError;
@@ -2762,19 +2762,19 @@ static const char __pyx_k_current_proportion[] = "current_proportion";
 static const char __pyx_k_upscale_using_mean[] = "upscale_using_mean";
 static const char __pyx_k_naive_downscale_byte[] = "naive_downscale_byte";
 static const char __pyx_k_upscale_retaining_sum[] = "upscale_retaining_sum";
+static const char __pyx_k_aspect_ratio_array_functions[] = "aspect_ratio_array_functions";
 static const char __pyx_k_coarse_res_proporition_array[] = "coarse_res_proporition_array";
 static const char __pyx_k_fine_res_cells_per_coarse_cell[] = "fine_res_cells_per_coarse_cell";
+static const char __pyx_k_aspect_ratio_array_functions_pyx[] = "aspect_ratio_array_functions.pyx";
 static const char __pyx_k_cython_calc_proportion_of_coarse[] = "cython_calc_proportion_of_coarse_res_with_valid_fine_res";
-static const char __pyx_k_hazelbean_calculation_core_aspec[] = "hazelbean\\calculation_core\\aspect_ratio_array_functions.pyx";
 static const char __pyx_k_numpy__core_multiarray_failed_to[] = "numpy._core.multiarray failed to import";
 static const char __pyx_k_numpy__core_umath_failed_to_impo[] = "numpy._core.umath failed to import";
-static const char __pyx_k_hazelbean_calculation_core_aspec_2[] = "hazelbean.calculation_core.aspect_ratio_array_functions";
 /* #### Code section: decls ### */
-static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_functions_cython_calc_proportion_of_coarse_res_with_valid_fine_res(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_coarse_res_array, PyArrayObject *__pyx_v_fine_res_array); /* proto */
-static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_functions_2naive_downscale(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_coarse_res_array, PY_LONG_LONG __pyx_v_downscale_factor); /* proto */
-static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_functions_4naive_downscale_byte(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_coarse_res_array, PY_LONG_LONG __pyx_v_downscale_factor); /* proto */
-static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_functions_6upscale_retaining_sum(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_high_res_array, PY_LONG_LONG __pyx_v_upscale_factor); /* proto */
-static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_functions_8upscale_using_mean(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_high_res_array, PY_LONG_LONG __pyx_v_upscale_factor); /* proto */
+static PyObject *__pyx_pf_28aspect_ratio_array_functions_cython_calc_proportion_of_coarse_res_with_valid_fine_res(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_coarse_res_array, PyArrayObject *__pyx_v_fine_res_array); /* proto */
+static PyObject *__pyx_pf_28aspect_ratio_array_functions_2naive_downscale(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_coarse_res_array, PY_LONG_LONG __pyx_v_downscale_factor); /* proto */
+static PyObject *__pyx_pf_28aspect_ratio_array_functions_4naive_downscale_byte(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_coarse_res_array, PY_LONG_LONG __pyx_v_downscale_factor); /* proto */
+static PyObject *__pyx_pf_28aspect_ratio_array_functions_6upscale_retaining_sum(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_high_res_array, PY_LONG_LONG __pyx_v_upscale_factor); /* proto */
+static PyObject *__pyx_pf_28aspect_ratio_array_functions_8upscale_using_mean(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_high_res_array, PY_LONG_LONG __pyx_v_upscale_factor); /* proto */
 /* #### Code section: late_includes ### */
 /* #### Code section: module_state ### */
 typedef struct {
@@ -2852,6 +2852,8 @@ typedef struct {
   PyObject *__pyx_n_s__3;
   PyObject *__pyx_kp_u__4;
   PyObject *__pyx_n_s_aspect_ratio;
+  PyObject *__pyx_n_s_aspect_ratio_array_functions;
+  PyObject *__pyx_kp_s_aspect_ratio_array_functions_pyx;
   PyObject *__pyx_n_s_asyncio_coroutines;
   PyObject *__pyx_n_s_byte;
   PyObject *__pyx_n_s_cc;
@@ -2876,8 +2878,6 @@ typedef struct {
   PyObject *__pyx_n_s_fr;
   PyObject *__pyx_n_s_fr_end;
   PyObject *__pyx_n_s_fr_start;
-  PyObject *__pyx_kp_s_hazelbean_calculation_core_aspec;
-  PyObject *__pyx_n_s_hazelbean_calculation_core_aspec_2;
   PyObject *__pyx_n_s_high_res_array;
   PyObject *__pyx_n_s_import;
   PyObject *__pyx_n_s_initializing;
@@ -2985,6 +2985,8 @@ static int __pyx_m_clear(PyObject *m) {
   Py_CLEAR(clear_module_state->__pyx_n_s__3);
   Py_CLEAR(clear_module_state->__pyx_kp_u__4);
   Py_CLEAR(clear_module_state->__pyx_n_s_aspect_ratio);
+  Py_CLEAR(clear_module_state->__pyx_n_s_aspect_ratio_array_functions);
+  Py_CLEAR(clear_module_state->__pyx_kp_s_aspect_ratio_array_functions_pyx);
   Py_CLEAR(clear_module_state->__pyx_n_s_asyncio_coroutines);
   Py_CLEAR(clear_module_state->__pyx_n_s_byte);
   Py_CLEAR(clear_module_state->__pyx_n_s_cc);
@@ -3009,8 +3011,6 @@ static int __pyx_m_clear(PyObject *m) {
   Py_CLEAR(clear_module_state->__pyx_n_s_fr);
   Py_CLEAR(clear_module_state->__pyx_n_s_fr_end);
   Py_CLEAR(clear_module_state->__pyx_n_s_fr_start);
-  Py_CLEAR(clear_module_state->__pyx_kp_s_hazelbean_calculation_core_aspec);
-  Py_CLEAR(clear_module_state->__pyx_n_s_hazelbean_calculation_core_aspec_2);
   Py_CLEAR(clear_module_state->__pyx_n_s_high_res_array);
   Py_CLEAR(clear_module_state->__pyx_n_s_import);
   Py_CLEAR(clear_module_state->__pyx_n_s_initializing);
@@ -3096,6 +3096,8 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
   Py_VISIT(traverse_module_state->__pyx_n_s__3);
   Py_VISIT(traverse_module_state->__pyx_kp_u__4);
   Py_VISIT(traverse_module_state->__pyx_n_s_aspect_ratio);
+  Py_VISIT(traverse_module_state->__pyx_n_s_aspect_ratio_array_functions);
+  Py_VISIT(traverse_module_state->__pyx_kp_s_aspect_ratio_array_functions_pyx);
   Py_VISIT(traverse_module_state->__pyx_n_s_asyncio_coroutines);
   Py_VISIT(traverse_module_state->__pyx_n_s_byte);
   Py_VISIT(traverse_module_state->__pyx_n_s_cc);
@@ -3120,8 +3122,6 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
   Py_VISIT(traverse_module_state->__pyx_n_s_fr);
   Py_VISIT(traverse_module_state->__pyx_n_s_fr_end);
   Py_VISIT(traverse_module_state->__pyx_n_s_fr_start);
-  Py_VISIT(traverse_module_state->__pyx_kp_s_hazelbean_calculation_core_aspec);
-  Py_VISIT(traverse_module_state->__pyx_n_s_hazelbean_calculation_core_aspec_2);
   Py_VISIT(traverse_module_state->__pyx_n_s_high_res_array);
   Py_VISIT(traverse_module_state->__pyx_n_s_import);
   Py_VISIT(traverse_module_state->__pyx_n_s_initializing);
@@ -3239,6 +3239,8 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
 #define __pyx_n_s__3 __pyx_mstate_global->__pyx_n_s__3
 #define __pyx_kp_u__4 __pyx_mstate_global->__pyx_kp_u__4
 #define __pyx_n_s_aspect_ratio __pyx_mstate_global->__pyx_n_s_aspect_ratio
+#define __pyx_n_s_aspect_ratio_array_functions __pyx_mstate_global->__pyx_n_s_aspect_ratio_array_functions
+#define __pyx_kp_s_aspect_ratio_array_functions_pyx __pyx_mstate_global->__pyx_kp_s_aspect_ratio_array_functions_pyx
 #define __pyx_n_s_asyncio_coroutines __pyx_mstate_global->__pyx_n_s_asyncio_coroutines
 #define __pyx_n_s_byte __pyx_mstate_global->__pyx_n_s_byte
 #define __pyx_n_s_cc __pyx_mstate_global->__pyx_n_s_cc
@@ -3263,8 +3265,6 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
 #define __pyx_n_s_fr __pyx_mstate_global->__pyx_n_s_fr
 #define __pyx_n_s_fr_end __pyx_mstate_global->__pyx_n_s_fr_end
 #define __pyx_n_s_fr_start __pyx_mstate_global->__pyx_n_s_fr_start
-#define __pyx_kp_s_hazelbean_calculation_core_aspec __pyx_mstate_global->__pyx_kp_s_hazelbean_calculation_core_aspec
-#define __pyx_n_s_hazelbean_calculation_core_aspec_2 __pyx_mstate_global->__pyx_n_s_hazelbean_calculation_core_aspec_2
 #define __pyx_n_s_high_res_array __pyx_mstate_global->__pyx_n_s_high_res_array
 #define __pyx_n_s_import __pyx_mstate_global->__pyx_n_s_import
 #define __pyx_n_s_initializing __pyx_mstate_global->__pyx_n_s_initializing
@@ -3306,7 +3306,7 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
 #define __pyx_codeobj__12 __pyx_mstate_global->__pyx_codeobj__12
 /* #### Code section: module_code ### */
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":287
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":287
  * 
  *         @property
  *         cdef inline npy_intp itemsize(self) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -3317,7 +3317,7 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
 static CYTHON_INLINE npy_intp __pyx_f_5numpy_5dtype_8itemsize_itemsize(PyArray_Descr *__pyx_v_self) {
   npy_intp __pyx_r;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":288
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":288
  *         @property
  *         cdef inline npy_intp itemsize(self) noexcept nogil:
  *             return PyDataType_ELSIZE(self)             # <<<<<<<<<<<<<<
@@ -3327,7 +3327,7 @@ static CYTHON_INLINE npy_intp __pyx_f_5numpy_5dtype_8itemsize_itemsize(PyArray_D
   __pyx_r = PyDataType_ELSIZE(__pyx_v_self);
   goto __pyx_L0;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":287
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":287
  * 
  *         @property
  *         cdef inline npy_intp itemsize(self) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -3340,7 +3340,7 @@ static CYTHON_INLINE npy_intp __pyx_f_5numpy_5dtype_8itemsize_itemsize(PyArray_D
   return __pyx_r;
 }
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":291
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":291
  * 
  *         @property
  *         cdef inline npy_intp alignment(self) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -3351,7 +3351,7 @@ static CYTHON_INLINE npy_intp __pyx_f_5numpy_5dtype_8itemsize_itemsize(PyArray_D
 static CYTHON_INLINE npy_intp __pyx_f_5numpy_5dtype_9alignment_alignment(PyArray_Descr *__pyx_v_self) {
   npy_intp __pyx_r;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":292
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":292
  *         @property
  *         cdef inline npy_intp alignment(self) noexcept nogil:
  *             return PyDataType_ALIGNMENT(self)             # <<<<<<<<<<<<<<
@@ -3361,7 +3361,7 @@ static CYTHON_INLINE npy_intp __pyx_f_5numpy_5dtype_9alignment_alignment(PyArray
   __pyx_r = PyDataType_ALIGNMENT(__pyx_v_self);
   goto __pyx_L0;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":291
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":291
  * 
  *         @property
  *         cdef inline npy_intp alignment(self) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -3374,7 +3374,7 @@ static CYTHON_INLINE npy_intp __pyx_f_5numpy_5dtype_9alignment_alignment(PyArray
   return __pyx_r;
 }
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":297
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":297
  *         # for this using PyDataType_HASFIELDS.
  *         @property
  *         cdef inline object fields(self):             # <<<<<<<<<<<<<<
@@ -3388,7 +3388,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_5dtype_6fields_fields(PyArray_Desc
   PyObject *__pyx_t_1;
   __Pyx_RefNannySetupContext("fields", 1);
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":298
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":298
  *         @property
  *         cdef inline object fields(self):
  *             return <object>PyDataType_FIELDS(self)             # <<<<<<<<<<<<<<
@@ -3401,7 +3401,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_5dtype_6fields_fields(PyArray_Desc
   __pyx_r = ((PyObject *)__pyx_t_1);
   goto __pyx_L0;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":297
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":297
  *         # for this using PyDataType_HASFIELDS.
  *         @property
  *         cdef inline object fields(self):             # <<<<<<<<<<<<<<
@@ -3416,7 +3416,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_5dtype_6fields_fields(PyArray_Desc
   return __pyx_r;
 }
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":301
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":301
  * 
  *         @property
  *         cdef inline tuple names(self):             # <<<<<<<<<<<<<<
@@ -3430,7 +3430,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_5dtype_5names_names(PyArray_Descr 
   PyObject *__pyx_t_1;
   __Pyx_RefNannySetupContext("names", 1);
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":302
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":302
  *         @property
  *         cdef inline tuple names(self):
  *             return <tuple>PyDataType_NAMES(self)             # <<<<<<<<<<<<<<
@@ -3443,7 +3443,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_5dtype_5names_names(PyArray_Descr 
   __pyx_r = ((PyObject*)__pyx_t_1);
   goto __pyx_L0;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":301
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":301
  * 
  *         @property
  *         cdef inline tuple names(self):             # <<<<<<<<<<<<<<
@@ -3458,7 +3458,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_5dtype_5names_names(PyArray_Descr 
   return __pyx_r;
 }
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":308
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":308
  *         # this field via the inline helper method PyDataType_SHAPE.
  *         @property
  *         cdef inline PyArray_ArrayDescr* subarray(self) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -3469,7 +3469,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_5dtype_5names_names(PyArray_Descr 
 static CYTHON_INLINE PyArray_ArrayDescr *__pyx_f_5numpy_5dtype_8subarray_subarray(PyArray_Descr *__pyx_v_self) {
   PyArray_ArrayDescr *__pyx_r;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":309
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":309
  *         @property
  *         cdef inline PyArray_ArrayDescr* subarray(self) noexcept nogil:
  *             return PyDataType_SUBARRAY(self)             # <<<<<<<<<<<<<<
@@ -3479,7 +3479,7 @@ static CYTHON_INLINE PyArray_ArrayDescr *__pyx_f_5numpy_5dtype_8subarray_subarra
   __pyx_r = PyDataType_SUBARRAY(__pyx_v_self);
   goto __pyx_L0;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":308
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":308
  *         # this field via the inline helper method PyDataType_SHAPE.
  *         @property
  *         cdef inline PyArray_ArrayDescr* subarray(self) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -3492,7 +3492,7 @@ static CYTHON_INLINE PyArray_ArrayDescr *__pyx_f_5numpy_5dtype_8subarray_subarra
   return __pyx_r;
 }
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":312
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":312
  * 
  *         @property
  *         cdef inline npy_uint64 flags(self) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -3503,7 +3503,7 @@ static CYTHON_INLINE PyArray_ArrayDescr *__pyx_f_5numpy_5dtype_8subarray_subarra
 static CYTHON_INLINE npy_uint64 __pyx_f_5numpy_5dtype_5flags_flags(PyArray_Descr *__pyx_v_self) {
   npy_uint64 __pyx_r;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":314
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":314
  *         cdef inline npy_uint64 flags(self) noexcept nogil:
  *             """The data types flags."""
  *             return PyDataType_FLAGS(self)             # <<<<<<<<<<<<<<
@@ -3513,7 +3513,7 @@ static CYTHON_INLINE npy_uint64 __pyx_f_5numpy_5dtype_5flags_flags(PyArray_Descr
   __pyx_r = PyDataType_FLAGS(__pyx_v_self);
   goto __pyx_L0;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":312
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":312
  * 
  *         @property
  *         cdef inline npy_uint64 flags(self) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -3526,7 +3526,7 @@ static CYTHON_INLINE npy_uint64 __pyx_f_5numpy_5dtype_5flags_flags(PyArray_Descr
   return __pyx_r;
 }
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":324
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":324
  * 
  *         @property
  *         cdef inline int numiter(self) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -3537,7 +3537,7 @@ static CYTHON_INLINE npy_uint64 __pyx_f_5numpy_5dtype_5flags_flags(PyArray_Descr
 static CYTHON_INLINE int __pyx_f_5numpy_9broadcast_7numiter_numiter(PyArrayMultiIterObject *__pyx_v_self) {
   int __pyx_r;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":326
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":326
  *         cdef inline int numiter(self) noexcept nogil:
  *             """The number of arrays that need to be broadcast to the same shape."""
  *             return PyArray_MultiIter_NUMITER(self)             # <<<<<<<<<<<<<<
@@ -3547,7 +3547,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_9broadcast_7numiter_numiter(PyArrayMulti
   __pyx_r = PyArray_MultiIter_NUMITER(__pyx_v_self);
   goto __pyx_L0;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":324
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":324
  * 
  *         @property
  *         cdef inline int numiter(self) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -3560,7 +3560,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_9broadcast_7numiter_numiter(PyArrayMulti
   return __pyx_r;
 }
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":329
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":329
  * 
  *         @property
  *         cdef inline npy_intp size(self) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -3571,7 +3571,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_9broadcast_7numiter_numiter(PyArrayMulti
 static CYTHON_INLINE npy_intp __pyx_f_5numpy_9broadcast_4size_size(PyArrayMultiIterObject *__pyx_v_self) {
   npy_intp __pyx_r;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":331
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":331
  *         cdef inline npy_intp size(self) noexcept nogil:
  *             """The total broadcasted size."""
  *             return PyArray_MultiIter_SIZE(self)             # <<<<<<<<<<<<<<
@@ -3581,7 +3581,7 @@ static CYTHON_INLINE npy_intp __pyx_f_5numpy_9broadcast_4size_size(PyArrayMultiI
   __pyx_r = PyArray_MultiIter_SIZE(__pyx_v_self);
   goto __pyx_L0;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":329
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":329
  * 
  *         @property
  *         cdef inline npy_intp size(self) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -3594,7 +3594,7 @@ static CYTHON_INLINE npy_intp __pyx_f_5numpy_9broadcast_4size_size(PyArrayMultiI
   return __pyx_r;
 }
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":334
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":334
  * 
  *         @property
  *         cdef inline npy_intp index(self) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -3605,7 +3605,7 @@ static CYTHON_INLINE npy_intp __pyx_f_5numpy_9broadcast_4size_size(PyArrayMultiI
 static CYTHON_INLINE npy_intp __pyx_f_5numpy_9broadcast_5index_index(PyArrayMultiIterObject *__pyx_v_self) {
   npy_intp __pyx_r;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":336
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":336
  *         cdef inline npy_intp index(self) noexcept nogil:
  *             """The current (1-d) index into the broadcasted result."""
  *             return PyArray_MultiIter_INDEX(self)             # <<<<<<<<<<<<<<
@@ -3615,7 +3615,7 @@ static CYTHON_INLINE npy_intp __pyx_f_5numpy_9broadcast_5index_index(PyArrayMult
   __pyx_r = PyArray_MultiIter_INDEX(__pyx_v_self);
   goto __pyx_L0;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":334
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":334
  * 
  *         @property
  *         cdef inline npy_intp index(self) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -3628,7 +3628,7 @@ static CYTHON_INLINE npy_intp __pyx_f_5numpy_9broadcast_5index_index(PyArrayMult
   return __pyx_r;
 }
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":339
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":339
  * 
  *         @property
  *         cdef inline int nd(self) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -3639,7 +3639,7 @@ static CYTHON_INLINE npy_intp __pyx_f_5numpy_9broadcast_5index_index(PyArrayMult
 static CYTHON_INLINE int __pyx_f_5numpy_9broadcast_2nd_nd(PyArrayMultiIterObject *__pyx_v_self) {
   int __pyx_r;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":341
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":341
  *         cdef inline int nd(self) noexcept nogil:
  *             """The number of dimensions in the broadcasted result."""
  *             return PyArray_MultiIter_NDIM(self)             # <<<<<<<<<<<<<<
@@ -3649,7 +3649,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_9broadcast_2nd_nd(PyArrayMultiIterObject
   __pyx_r = PyArray_MultiIter_NDIM(__pyx_v_self);
   goto __pyx_L0;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":339
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":339
  * 
  *         @property
  *         cdef inline int nd(self) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -3662,7 +3662,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_9broadcast_2nd_nd(PyArrayMultiIterObject
   return __pyx_r;
 }
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":344
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":344
  * 
  *         @property
  *         cdef inline npy_intp* dimensions(self) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -3673,7 +3673,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_9broadcast_2nd_nd(PyArrayMultiIterObject
 static CYTHON_INLINE npy_intp *__pyx_f_5numpy_9broadcast_10dimensions_dimensions(PyArrayMultiIterObject *__pyx_v_self) {
   npy_intp *__pyx_r;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":346
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":346
  *         cdef inline npy_intp* dimensions(self) noexcept nogil:
  *             """The shape of the broadcasted result."""
  *             return PyArray_MultiIter_DIMS(self)             # <<<<<<<<<<<<<<
@@ -3683,7 +3683,7 @@ static CYTHON_INLINE npy_intp *__pyx_f_5numpy_9broadcast_10dimensions_dimensions
   __pyx_r = PyArray_MultiIter_DIMS(__pyx_v_self);
   goto __pyx_L0;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":344
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":344
  * 
  *         @property
  *         cdef inline npy_intp* dimensions(self) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -3696,7 +3696,7 @@ static CYTHON_INLINE npy_intp *__pyx_f_5numpy_9broadcast_10dimensions_dimensions
   return __pyx_r;
 }
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":349
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":349
  * 
  *         @property
  *         cdef inline void** iters(self) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -3707,7 +3707,7 @@ static CYTHON_INLINE npy_intp *__pyx_f_5numpy_9broadcast_10dimensions_dimensions
 static CYTHON_INLINE void **__pyx_f_5numpy_9broadcast_5iters_iters(PyArrayMultiIterObject *__pyx_v_self) {
   void **__pyx_r;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":352
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":352
  *             """An array of iterator objects that holds the iterators for the arrays to be broadcast together.
  *             On return, the iterators are adjusted for broadcasting."""
  *             return PyArray_MultiIter_ITERS(self)             # <<<<<<<<<<<<<<
@@ -3717,7 +3717,7 @@ static CYTHON_INLINE void **__pyx_f_5numpy_9broadcast_5iters_iters(PyArrayMultiI
   __pyx_r = PyArray_MultiIter_ITERS(__pyx_v_self);
   goto __pyx_L0;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":349
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":349
  * 
  *         @property
  *         cdef inline void** iters(self) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -3730,7 +3730,7 @@ static CYTHON_INLINE void **__pyx_f_5numpy_9broadcast_5iters_iters(PyArrayMultiI
   return __pyx_r;
 }
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":367
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":367
  * 
  *         @property
  *         cdef inline PyObject* base(self) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -3741,7 +3741,7 @@ static CYTHON_INLINE void **__pyx_f_5numpy_9broadcast_5iters_iters(PyArrayMultiI
 static CYTHON_INLINE PyObject *__pyx_f_5numpy_7ndarray_4base_base(PyArrayObject *__pyx_v_self) {
   PyObject *__pyx_r;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":370
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":370
  *             """Returns a borrowed reference to the object owning the data/memory.
  *             """
  *             return PyArray_BASE(self)             # <<<<<<<<<<<<<<
@@ -3751,7 +3751,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_7ndarray_4base_base(PyArrayObject 
   __pyx_r = PyArray_BASE(__pyx_v_self);
   goto __pyx_L0;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":367
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":367
  * 
  *         @property
  *         cdef inline PyObject* base(self) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -3764,7 +3764,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_7ndarray_4base_base(PyArrayObject 
   return __pyx_r;
 }
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":373
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":373
  * 
  *         @property
  *         cdef inline dtype descr(self):             # <<<<<<<<<<<<<<
@@ -3778,7 +3778,7 @@ static CYTHON_INLINE PyArray_Descr *__pyx_f_5numpy_7ndarray_5descr_descr(PyArray
   PyArray_Descr *__pyx_t_1;
   __Pyx_RefNannySetupContext("descr", 1);
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":376
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":376
  *             """Returns an owned reference to the dtype of the array.
  *             """
  *             return <dtype>PyArray_DESCR(self)             # <<<<<<<<<<<<<<
@@ -3791,7 +3791,7 @@ static CYTHON_INLINE PyArray_Descr *__pyx_f_5numpy_7ndarray_5descr_descr(PyArray
   __pyx_r = ((PyArray_Descr *)__pyx_t_1);
   goto __pyx_L0;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":373
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":373
  * 
  *         @property
  *         cdef inline dtype descr(self):             # <<<<<<<<<<<<<<
@@ -3806,7 +3806,7 @@ static CYTHON_INLINE PyArray_Descr *__pyx_f_5numpy_7ndarray_5descr_descr(PyArray
   return __pyx_r;
 }
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":379
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":379
  * 
  *         @property
  *         cdef inline int ndim(self) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -3817,7 +3817,7 @@ static CYTHON_INLINE PyArray_Descr *__pyx_f_5numpy_7ndarray_5descr_descr(PyArray
 static CYTHON_INLINE int __pyx_f_5numpy_7ndarray_4ndim_ndim(PyArrayObject *__pyx_v_self) {
   int __pyx_r;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":382
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":382
  *             """Returns the number of dimensions in the array.
  *             """
  *             return PyArray_NDIM(self)             # <<<<<<<<<<<<<<
@@ -3827,7 +3827,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_7ndarray_4ndim_ndim(PyArrayObject *__pyx
   __pyx_r = PyArray_NDIM(__pyx_v_self);
   goto __pyx_L0;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":379
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":379
  * 
  *         @property
  *         cdef inline int ndim(self) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -3840,7 +3840,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_7ndarray_4ndim_ndim(PyArrayObject *__pyx
   return __pyx_r;
 }
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":385
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":385
  * 
  *         @property
  *         cdef inline npy_intp *shape(self) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -3851,7 +3851,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_7ndarray_4ndim_ndim(PyArrayObject *__pyx
 static CYTHON_INLINE npy_intp *__pyx_f_5numpy_7ndarray_5shape_shape(PyArrayObject *__pyx_v_self) {
   npy_intp *__pyx_r;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":390
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":390
  *             Can return NULL for 0-dimensional arrays.
  *             """
  *             return PyArray_DIMS(self)             # <<<<<<<<<<<<<<
@@ -3861,7 +3861,7 @@ static CYTHON_INLINE npy_intp *__pyx_f_5numpy_7ndarray_5shape_shape(PyArrayObjec
   __pyx_r = PyArray_DIMS(__pyx_v_self);
   goto __pyx_L0;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":385
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":385
  * 
  *         @property
  *         cdef inline npy_intp *shape(self) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -3874,7 +3874,7 @@ static CYTHON_INLINE npy_intp *__pyx_f_5numpy_7ndarray_5shape_shape(PyArrayObjec
   return __pyx_r;
 }
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":393
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":393
  * 
  *         @property
  *         cdef inline npy_intp *strides(self) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -3885,7 +3885,7 @@ static CYTHON_INLINE npy_intp *__pyx_f_5numpy_7ndarray_5shape_shape(PyArrayObjec
 static CYTHON_INLINE npy_intp *__pyx_f_5numpy_7ndarray_7strides_strides(PyArrayObject *__pyx_v_self) {
   npy_intp *__pyx_r;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":397
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":397
  *             The number of elements matches the number of dimensions of the array (ndim).
  *             """
  *             return PyArray_STRIDES(self)             # <<<<<<<<<<<<<<
@@ -3895,7 +3895,7 @@ static CYTHON_INLINE npy_intp *__pyx_f_5numpy_7ndarray_7strides_strides(PyArrayO
   __pyx_r = PyArray_STRIDES(__pyx_v_self);
   goto __pyx_L0;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":393
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":393
  * 
  *         @property
  *         cdef inline npy_intp *strides(self) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -3908,7 +3908,7 @@ static CYTHON_INLINE npy_intp *__pyx_f_5numpy_7ndarray_7strides_strides(PyArrayO
   return __pyx_r;
 }
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":400
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":400
  * 
  *         @property
  *         cdef inline npy_intp size(self) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -3919,7 +3919,7 @@ static CYTHON_INLINE npy_intp *__pyx_f_5numpy_7ndarray_7strides_strides(PyArrayO
 static CYTHON_INLINE npy_intp __pyx_f_5numpy_7ndarray_4size_size(PyArrayObject *__pyx_v_self) {
   npy_intp __pyx_r;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":403
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":403
  *             """Returns the total size (in number of elements) of the array.
  *             """
  *             return PyArray_SIZE(self)             # <<<<<<<<<<<<<<
@@ -3929,7 +3929,7 @@ static CYTHON_INLINE npy_intp __pyx_f_5numpy_7ndarray_4size_size(PyArrayObject *
   __pyx_r = PyArray_SIZE(__pyx_v_self);
   goto __pyx_L0;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":400
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":400
  * 
  *         @property
  *         cdef inline npy_intp size(self) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -3942,7 +3942,7 @@ static CYTHON_INLINE npy_intp __pyx_f_5numpy_7ndarray_4size_size(PyArrayObject *
   return __pyx_r;
 }
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":406
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":406
  * 
  *         @property
  *         cdef inline char* data(self) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -3953,7 +3953,7 @@ static CYTHON_INLINE npy_intp __pyx_f_5numpy_7ndarray_4size_size(PyArrayObject *
 static CYTHON_INLINE char *__pyx_f_5numpy_7ndarray_4data_data(PyArrayObject *__pyx_v_self) {
   char *__pyx_r;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":412
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":412
  *             of `PyArray_DATA()` instead, which returns a 'void*'.
  *             """
  *             return PyArray_BYTES(self)             # <<<<<<<<<<<<<<
@@ -3963,7 +3963,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy_7ndarray_4data_data(PyArrayObject *__p
   __pyx_r = PyArray_BYTES(__pyx_v_self);
   goto __pyx_L0;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":406
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":406
  * 
  *         @property
  *         cdef inline char* data(self) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -3976,7 +3976,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy_7ndarray_4data_data(PyArrayObject *__p
   return __pyx_r;
 }
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":824
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":824
  * ctypedef long double complex clongdouble_t
  * 
  * cdef inline object PyArray_MultiIterNew1(a):             # <<<<<<<<<<<<<<
@@ -3993,7 +3993,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyArray_MultiIterNew1(PyObject *__
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("PyArray_MultiIterNew1", 1);
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":825
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":825
  * 
  * cdef inline object PyArray_MultiIterNew1(a):
  *     return PyArray_MultiIterNew(1, <void*>a)             # <<<<<<<<<<<<<<
@@ -4007,7 +4007,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyArray_MultiIterNew1(PyObject *__
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":824
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":824
  * ctypedef long double complex clongdouble_t
  * 
  * cdef inline object PyArray_MultiIterNew1(a):             # <<<<<<<<<<<<<<
@@ -4026,7 +4026,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyArray_MultiIterNew1(PyObject *__
   return __pyx_r;
 }
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":827
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":827
  *     return PyArray_MultiIterNew(1, <void*>a)
  * 
  * cdef inline object PyArray_MultiIterNew2(a, b):             # <<<<<<<<<<<<<<
@@ -4043,7 +4043,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyArray_MultiIterNew2(PyObject *__
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("PyArray_MultiIterNew2", 1);
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":828
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":828
  * 
  * cdef inline object PyArray_MultiIterNew2(a, b):
  *     return PyArray_MultiIterNew(2, <void*>a, <void*>b)             # <<<<<<<<<<<<<<
@@ -4057,7 +4057,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyArray_MultiIterNew2(PyObject *__
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":827
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":827
  *     return PyArray_MultiIterNew(1, <void*>a)
  * 
  * cdef inline object PyArray_MultiIterNew2(a, b):             # <<<<<<<<<<<<<<
@@ -4076,7 +4076,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyArray_MultiIterNew2(PyObject *__
   return __pyx_r;
 }
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":830
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":830
  *     return PyArray_MultiIterNew(2, <void*>a, <void*>b)
  * 
  * cdef inline object PyArray_MultiIterNew3(a, b, c):             # <<<<<<<<<<<<<<
@@ -4093,7 +4093,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyArray_MultiIterNew3(PyObject *__
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("PyArray_MultiIterNew3", 1);
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":831
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":831
  * 
  * cdef inline object PyArray_MultiIterNew3(a, b, c):
  *     return PyArray_MultiIterNew(3, <void*>a, <void*>b, <void*> c)             # <<<<<<<<<<<<<<
@@ -4107,7 +4107,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyArray_MultiIterNew3(PyObject *__
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":830
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":830
  *     return PyArray_MultiIterNew(2, <void*>a, <void*>b)
  * 
  * cdef inline object PyArray_MultiIterNew3(a, b, c):             # <<<<<<<<<<<<<<
@@ -4126,7 +4126,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyArray_MultiIterNew3(PyObject *__
   return __pyx_r;
 }
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":833
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":833
  *     return PyArray_MultiIterNew(3, <void*>a, <void*>b, <void*> c)
  * 
  * cdef inline object PyArray_MultiIterNew4(a, b, c, d):             # <<<<<<<<<<<<<<
@@ -4143,7 +4143,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyArray_MultiIterNew4(PyObject *__
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("PyArray_MultiIterNew4", 1);
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":834
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":834
  * 
  * cdef inline object PyArray_MultiIterNew4(a, b, c, d):
  *     return PyArray_MultiIterNew(4, <void*>a, <void*>b, <void*>c, <void*> d)             # <<<<<<<<<<<<<<
@@ -4157,7 +4157,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyArray_MultiIterNew4(PyObject *__
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":833
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":833
  *     return PyArray_MultiIterNew(3, <void*>a, <void*>b, <void*> c)
  * 
  * cdef inline object PyArray_MultiIterNew4(a, b, c, d):             # <<<<<<<<<<<<<<
@@ -4176,7 +4176,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyArray_MultiIterNew4(PyObject *__
   return __pyx_r;
 }
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":836
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":836
  *     return PyArray_MultiIterNew(4, <void*>a, <void*>b, <void*>c, <void*> d)
  * 
  * cdef inline object PyArray_MultiIterNew5(a, b, c, d, e):             # <<<<<<<<<<<<<<
@@ -4193,7 +4193,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyArray_MultiIterNew5(PyObject *__
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("PyArray_MultiIterNew5", 1);
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":837
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":837
  * 
  * cdef inline object PyArray_MultiIterNew5(a, b, c, d, e):
  *     return PyArray_MultiIterNew(5, <void*>a, <void*>b, <void*>c, <void*> d, <void*> e)             # <<<<<<<<<<<<<<
@@ -4207,7 +4207,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyArray_MultiIterNew5(PyObject *__
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":836
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":836
  *     return PyArray_MultiIterNew(4, <void*>a, <void*>b, <void*>c, <void*> d)
  * 
  * cdef inline object PyArray_MultiIterNew5(a, b, c, d, e):             # <<<<<<<<<<<<<<
@@ -4226,7 +4226,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyArray_MultiIterNew5(PyObject *__
   return __pyx_r;
 }
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":839
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":839
  *     return PyArray_MultiIterNew(5, <void*>a, <void*>b, <void*>c, <void*> d, <void*> e)
  * 
  * cdef inline tuple PyDataType_SHAPE(dtype d):             # <<<<<<<<<<<<<<
@@ -4241,7 +4241,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyDataType_SHAPE(PyArray_Descr *__
   PyObject *__pyx_t_2;
   __Pyx_RefNannySetupContext("PyDataType_SHAPE", 1);
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":840
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":840
  * 
  * cdef inline tuple PyDataType_SHAPE(dtype d):
  *     if PyDataType_HASSUBARRAY(d):             # <<<<<<<<<<<<<<
@@ -4251,7 +4251,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyDataType_SHAPE(PyArray_Descr *__
   __pyx_t_1 = PyDataType_HASSUBARRAY(__pyx_v_d);
   if (__pyx_t_1) {
 
-    /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":841
+    /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":841
  * cdef inline tuple PyDataType_SHAPE(dtype d):
  *     if PyDataType_HASSUBARRAY(d):
  *         return <tuple>d.subarray.shape             # <<<<<<<<<<<<<<
@@ -4264,7 +4264,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyDataType_SHAPE(PyArray_Descr *__
     __pyx_r = ((PyObject*)__pyx_t_2);
     goto __pyx_L0;
 
-    /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":840
+    /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":840
  * 
  * cdef inline tuple PyDataType_SHAPE(dtype d):
  *     if PyDataType_HASSUBARRAY(d):             # <<<<<<<<<<<<<<
@@ -4273,7 +4273,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyDataType_SHAPE(PyArray_Descr *__
  */
   }
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":843
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":843
  *         return <tuple>d.subarray.shape
  *     else:
  *         return ()             # <<<<<<<<<<<<<<
@@ -4287,7 +4287,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyDataType_SHAPE(PyArray_Descr *__
     goto __pyx_L0;
   }
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":839
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":839
  *     return PyArray_MultiIterNew(5, <void*>a, <void*>b, <void*>c, <void*> d, <void*> e)
  * 
  * cdef inline tuple PyDataType_SHAPE(dtype d):             # <<<<<<<<<<<<<<
@@ -4302,7 +4302,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyDataType_SHAPE(PyArray_Descr *__
   return __pyx_r;
 }
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1027
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1027
  *     int _import_umath() except -1
  * 
  * cdef inline void set_array_base(ndarray arr, object base) except *:             # <<<<<<<<<<<<<<
@@ -4316,7 +4316,7 @@ static CYTHON_INLINE void __pyx_f_5numpy_set_array_base(PyArrayObject *__pyx_v_a
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1028
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1028
  * 
  * cdef inline void set_array_base(ndarray arr, object base) except *:
  *     Py_INCREF(base) # important to do this before stealing the reference below!             # <<<<<<<<<<<<<<
@@ -4325,7 +4325,7 @@ static CYTHON_INLINE void __pyx_f_5numpy_set_array_base(PyArrayObject *__pyx_v_a
  */
   Py_INCREF(__pyx_v_base);
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1029
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1029
  * cdef inline void set_array_base(ndarray arr, object base) except *:
  *     Py_INCREF(base) # important to do this before stealing the reference below!
  *     PyArray_SetBaseObject(arr, base)             # <<<<<<<<<<<<<<
@@ -4334,7 +4334,7 @@ static CYTHON_INLINE void __pyx_f_5numpy_set_array_base(PyArrayObject *__pyx_v_a
  */
   __pyx_t_1 = PyArray_SetBaseObject(__pyx_v_arr, __pyx_v_base); if (unlikely(__pyx_t_1 == ((int)-1))) __PYX_ERR(1, 1029, __pyx_L1_error)
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1027
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1027
  *     int _import_umath() except -1
  * 
  * cdef inline void set_array_base(ndarray arr, object base) except *:             # <<<<<<<<<<<<<<
@@ -4349,7 +4349,7 @@ static CYTHON_INLINE void __pyx_f_5numpy_set_array_base(PyArrayObject *__pyx_v_a
   __pyx_L0:;
 }
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1031
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1031
  *     PyArray_SetBaseObject(arr, base)
  * 
  * cdef inline object get_array_base(ndarray arr):             # <<<<<<<<<<<<<<
@@ -4364,7 +4364,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_get_array_base(PyArrayObject *__py
   int __pyx_t_1;
   __Pyx_RefNannySetupContext("get_array_base", 1);
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1032
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1032
  * 
  * cdef inline object get_array_base(ndarray arr):
  *     base = PyArray_BASE(arr)             # <<<<<<<<<<<<<<
@@ -4373,7 +4373,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_get_array_base(PyArrayObject *__py
  */
   __pyx_v_base = PyArray_BASE(__pyx_v_arr);
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1033
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1033
  * cdef inline object get_array_base(ndarray arr):
  *     base = PyArray_BASE(arr)
  *     if base is NULL:             # <<<<<<<<<<<<<<
@@ -4383,7 +4383,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_get_array_base(PyArrayObject *__py
   __pyx_t_1 = (__pyx_v_base == NULL);
   if (__pyx_t_1) {
 
-    /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1034
+    /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1034
  *     base = PyArray_BASE(arr)
  *     if base is NULL:
  *         return None             # <<<<<<<<<<<<<<
@@ -4394,7 +4394,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_get_array_base(PyArrayObject *__py
     __pyx_r = Py_None; __Pyx_INCREF(Py_None);
     goto __pyx_L0;
 
-    /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1033
+    /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1033
  * cdef inline object get_array_base(ndarray arr):
  *     base = PyArray_BASE(arr)
  *     if base is NULL:             # <<<<<<<<<<<<<<
@@ -4403,7 +4403,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_get_array_base(PyArrayObject *__py
  */
   }
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1035
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1035
  *     if base is NULL:
  *         return None
  *     return <object>base             # <<<<<<<<<<<<<<
@@ -4415,7 +4415,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_get_array_base(PyArrayObject *__py
   __pyx_r = ((PyObject *)__pyx_v_base);
   goto __pyx_L0;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1031
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1031
  *     PyArray_SetBaseObject(arr, base)
  * 
  * cdef inline object get_array_base(ndarray arr):             # <<<<<<<<<<<<<<
@@ -4430,7 +4430,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_get_array_base(PyArrayObject *__py
   return __pyx_r;
 }
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1039
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1039
  * # Versions of the import_* functions which are more suitable for
  * # Cython code.
  * cdef inline int import_array() except -1:             # <<<<<<<<<<<<<<
@@ -4454,7 +4454,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_array(void) {
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("import_array", 1);
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1040
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1040
  * # Cython code.
  * cdef inline int import_array() except -1:
  *     try:             # <<<<<<<<<<<<<<
@@ -4470,7 +4470,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_array(void) {
     __Pyx_XGOTREF(__pyx_t_3);
     /*try:*/ {
 
-      /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1041
+      /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1041
  * cdef inline int import_array() except -1:
  *     try:
  *         __pyx_import_array()             # <<<<<<<<<<<<<<
@@ -4479,7 +4479,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_array(void) {
  */
       __pyx_t_4 = _import_array(); if (unlikely(__pyx_t_4 == ((int)-1))) __PYX_ERR(1, 1041, __pyx_L3_error)
 
-      /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1040
+      /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1040
  * # Cython code.
  * cdef inline int import_array() except -1:
  *     try:             # <<<<<<<<<<<<<<
@@ -4493,7 +4493,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_array(void) {
     goto __pyx_L8_try_end;
     __pyx_L3_error:;
 
-    /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1042
+    /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1042
  *     try:
  *         __pyx_import_array()
  *     except Exception:             # <<<<<<<<<<<<<<
@@ -4508,7 +4508,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_array(void) {
       __Pyx_XGOTREF(__pyx_t_6);
       __Pyx_XGOTREF(__pyx_t_7);
 
-      /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1043
+      /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1043
  *         __pyx_import_array()
  *     except Exception:
  *         raise ImportError("numpy._core.multiarray failed to import")             # <<<<<<<<<<<<<<
@@ -4523,7 +4523,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_array(void) {
     }
     goto __pyx_L5_except_error;
 
-    /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1040
+    /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1040
  * # Cython code.
  * cdef inline int import_array() except -1:
  *     try:             # <<<<<<<<<<<<<<
@@ -4539,7 +4539,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_array(void) {
     __pyx_L8_try_end:;
   }
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1039
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1039
  * # Versions of the import_* functions which are more suitable for
  * # Cython code.
  * cdef inline int import_array() except -1:             # <<<<<<<<<<<<<<
@@ -4562,7 +4562,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_array(void) {
   return __pyx_r;
 }
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1045
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1045
  *         raise ImportError("numpy._core.multiarray failed to import")
  * 
  * cdef inline int import_umath() except -1:             # <<<<<<<<<<<<<<
@@ -4586,7 +4586,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_umath(void) {
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("import_umath", 1);
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1046
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1046
  * 
  * cdef inline int import_umath() except -1:
  *     try:             # <<<<<<<<<<<<<<
@@ -4602,7 +4602,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_umath(void) {
     __Pyx_XGOTREF(__pyx_t_3);
     /*try:*/ {
 
-      /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1047
+      /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1047
  * cdef inline int import_umath() except -1:
  *     try:
  *         _import_umath()             # <<<<<<<<<<<<<<
@@ -4611,7 +4611,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_umath(void) {
  */
       __pyx_t_4 = _import_umath(); if (unlikely(__pyx_t_4 == ((int)-1))) __PYX_ERR(1, 1047, __pyx_L3_error)
 
-      /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1046
+      /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1046
  * 
  * cdef inline int import_umath() except -1:
  *     try:             # <<<<<<<<<<<<<<
@@ -4625,7 +4625,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_umath(void) {
     goto __pyx_L8_try_end;
     __pyx_L3_error:;
 
-    /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1048
+    /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1048
  *     try:
  *         _import_umath()
  *     except Exception:             # <<<<<<<<<<<<<<
@@ -4640,7 +4640,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_umath(void) {
       __Pyx_XGOTREF(__pyx_t_6);
       __Pyx_XGOTREF(__pyx_t_7);
 
-      /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1049
+      /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1049
  *         _import_umath()
  *     except Exception:
  *         raise ImportError("numpy._core.umath failed to import")             # <<<<<<<<<<<<<<
@@ -4655,7 +4655,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_umath(void) {
     }
     goto __pyx_L5_except_error;
 
-    /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1046
+    /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1046
  * 
  * cdef inline int import_umath() except -1:
  *     try:             # <<<<<<<<<<<<<<
@@ -4671,7 +4671,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_umath(void) {
     __pyx_L8_try_end:;
   }
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1045
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1045
  *         raise ImportError("numpy._core.multiarray failed to import")
  * 
  * cdef inline int import_umath() except -1:             # <<<<<<<<<<<<<<
@@ -4694,7 +4694,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_umath(void) {
   return __pyx_r;
 }
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1051
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1051
  *         raise ImportError("numpy._core.umath failed to import")
  * 
  * cdef inline int import_ufunc() except -1:             # <<<<<<<<<<<<<<
@@ -4718,7 +4718,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_ufunc(void) {
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("import_ufunc", 1);
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1052
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1052
  * 
  * cdef inline int import_ufunc() except -1:
  *     try:             # <<<<<<<<<<<<<<
@@ -4734,7 +4734,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_ufunc(void) {
     __Pyx_XGOTREF(__pyx_t_3);
     /*try:*/ {
 
-      /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1053
+      /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1053
  * cdef inline int import_ufunc() except -1:
  *     try:
  *         _import_umath()             # <<<<<<<<<<<<<<
@@ -4743,7 +4743,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_ufunc(void) {
  */
       __pyx_t_4 = _import_umath(); if (unlikely(__pyx_t_4 == ((int)-1))) __PYX_ERR(1, 1053, __pyx_L3_error)
 
-      /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1052
+      /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1052
  * 
  * cdef inline int import_ufunc() except -1:
  *     try:             # <<<<<<<<<<<<<<
@@ -4757,7 +4757,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_ufunc(void) {
     goto __pyx_L8_try_end;
     __pyx_L3_error:;
 
-    /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1054
+    /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1054
  *     try:
  *         _import_umath()
  *     except Exception:             # <<<<<<<<<<<<<<
@@ -4772,7 +4772,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_ufunc(void) {
       __Pyx_XGOTREF(__pyx_t_6);
       __Pyx_XGOTREF(__pyx_t_7);
 
-      /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1055
+      /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1055
  *         _import_umath()
  *     except Exception:
  *         raise ImportError("numpy._core.umath failed to import")             # <<<<<<<<<<<<<<
@@ -4787,7 +4787,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_ufunc(void) {
     }
     goto __pyx_L5_except_error;
 
-    /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1052
+    /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1052
  * 
  * cdef inline int import_ufunc() except -1:
  *     try:             # <<<<<<<<<<<<<<
@@ -4803,7 +4803,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_ufunc(void) {
     __pyx_L8_try_end:;
   }
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1051
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1051
  *         raise ImportError("numpy._core.umath failed to import")
  * 
  * cdef inline int import_ufunc() except -1:             # <<<<<<<<<<<<<<
@@ -4826,7 +4826,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_ufunc(void) {
   return __pyx_r;
 }
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1058
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1058
  * 
  * 
  * cdef inline bint is_timedelta64_object(object obj) noexcept:             # <<<<<<<<<<<<<<
@@ -4837,7 +4837,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_ufunc(void) {
 static CYTHON_INLINE int __pyx_f_5numpy_is_timedelta64_object(PyObject *__pyx_v_obj) {
   int __pyx_r;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1070
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1070
  *     bool
  *     """
  *     return PyObject_TypeCheck(obj, &PyTimedeltaArrType_Type)             # <<<<<<<<<<<<<<
@@ -4847,7 +4847,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_is_timedelta64_object(PyObject *__pyx_v_
   __pyx_r = PyObject_TypeCheck(__pyx_v_obj, (&PyTimedeltaArrType_Type));
   goto __pyx_L0;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1058
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1058
  * 
  * 
  * cdef inline bint is_timedelta64_object(object obj) noexcept:             # <<<<<<<<<<<<<<
@@ -4860,7 +4860,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_is_timedelta64_object(PyObject *__pyx_v_
   return __pyx_r;
 }
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1073
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1073
  * 
  * 
  * cdef inline bint is_datetime64_object(object obj) noexcept:             # <<<<<<<<<<<<<<
@@ -4871,7 +4871,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_is_timedelta64_object(PyObject *__pyx_v_
 static CYTHON_INLINE int __pyx_f_5numpy_is_datetime64_object(PyObject *__pyx_v_obj) {
   int __pyx_r;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1085
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1085
  *     bool
  *     """
  *     return PyObject_TypeCheck(obj, &PyDatetimeArrType_Type)             # <<<<<<<<<<<<<<
@@ -4881,7 +4881,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_is_datetime64_object(PyObject *__pyx_v_o
   __pyx_r = PyObject_TypeCheck(__pyx_v_obj, (&PyDatetimeArrType_Type));
   goto __pyx_L0;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1073
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1073
  * 
  * 
  * cdef inline bint is_datetime64_object(object obj) noexcept:             # <<<<<<<<<<<<<<
@@ -4894,7 +4894,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_is_datetime64_object(PyObject *__pyx_v_o
   return __pyx_r;
 }
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1088
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1088
  * 
  * 
  * cdef inline npy_datetime get_datetime64_value(object obj) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -4905,7 +4905,7 @@ static CYTHON_INLINE int __pyx_f_5numpy_is_datetime64_object(PyObject *__pyx_v_o
 static CYTHON_INLINE npy_datetime __pyx_f_5numpy_get_datetime64_value(PyObject *__pyx_v_obj) {
   npy_datetime __pyx_r;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1095
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1095
  *     also needed.  That can be found using `get_datetime64_unit`.
  *     """
  *     return (<PyDatetimeScalarObject*>obj).obval             # <<<<<<<<<<<<<<
@@ -4915,7 +4915,7 @@ static CYTHON_INLINE npy_datetime __pyx_f_5numpy_get_datetime64_value(PyObject *
   __pyx_r = ((PyDatetimeScalarObject *)__pyx_v_obj)->obval;
   goto __pyx_L0;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1088
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1088
  * 
  * 
  * cdef inline npy_datetime get_datetime64_value(object obj) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -4928,7 +4928,7 @@ static CYTHON_INLINE npy_datetime __pyx_f_5numpy_get_datetime64_value(PyObject *
   return __pyx_r;
 }
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1098
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1098
  * 
  * 
  * cdef inline npy_timedelta get_timedelta64_value(object obj) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -4939,7 +4939,7 @@ static CYTHON_INLINE npy_datetime __pyx_f_5numpy_get_datetime64_value(PyObject *
 static CYTHON_INLINE npy_timedelta __pyx_f_5numpy_get_timedelta64_value(PyObject *__pyx_v_obj) {
   npy_timedelta __pyx_r;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1102
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1102
  *     returns the int64 value underlying scalar numpy timedelta64 object
  *     """
  *     return (<PyTimedeltaScalarObject*>obj).obval             # <<<<<<<<<<<<<<
@@ -4949,7 +4949,7 @@ static CYTHON_INLINE npy_timedelta __pyx_f_5numpy_get_timedelta64_value(PyObject
   __pyx_r = ((PyTimedeltaScalarObject *)__pyx_v_obj)->obval;
   goto __pyx_L0;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1098
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1098
  * 
  * 
  * cdef inline npy_timedelta get_timedelta64_value(object obj) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -4962,7 +4962,7 @@ static CYTHON_INLINE npy_timedelta __pyx_f_5numpy_get_timedelta64_value(PyObject
   return __pyx_r;
 }
 
-/* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1105
+/* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1105
  * 
  * 
  * cdef inline NPY_DATETIMEUNIT get_datetime64_unit(object obj) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -4973,7 +4973,7 @@ static CYTHON_INLINE npy_timedelta __pyx_f_5numpy_get_timedelta64_value(PyObject
 static CYTHON_INLINE NPY_DATETIMEUNIT __pyx_f_5numpy_get_datetime64_unit(PyObject *__pyx_v_obj) {
   NPY_DATETIMEUNIT __pyx_r;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1109
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1109
  *     returns the unit part of the dtype for a numpy datetime64 object.
  *     """
  *     return <NPY_DATETIMEUNIT>(<PyDatetimeScalarObject*>obj).obmeta.base             # <<<<<<<<<<<<<<
@@ -4983,7 +4983,7 @@ static CYTHON_INLINE NPY_DATETIMEUNIT __pyx_f_5numpy_get_datetime64_unit(PyObjec
   __pyx_r = ((NPY_DATETIMEUNIT)((PyDatetimeScalarObject *)__pyx_v_obj)->obmeta.base);
   goto __pyx_L0;
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1105
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1105
  * 
  * 
  * cdef inline NPY_DATETIMEUNIT get_datetime64_unit(object obj) noexcept nogil:             # <<<<<<<<<<<<<<
@@ -4996,7 +4996,7 @@ static CYTHON_INLINE NPY_DATETIMEUNIT __pyx_f_5numpy_get_datetime64_unit(PyObjec
   return __pyx_r;
 }
 
-/* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":41
+/* "aspect_ratio_array_functions.pyx":41
  * ctypedef np.float64_t DTYPEFLOAT64_t
  * 
  * @cython.cdivision(True)             # <<<<<<<<<<<<<<
@@ -5005,16 +5005,16 @@ static CYTHON_INLINE NPY_DATETIMEUNIT __pyx_f_5numpy_get_datetime64_unit(PyObjec
  */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_9hazelbean_16calculation_core_28aspect_ratio_array_functions_1cython_calc_proportion_of_coarse_res_with_valid_fine_res(PyObject *__pyx_self, 
+static PyObject *__pyx_pw_28aspect_ratio_array_functions_1cython_calc_proportion_of_coarse_res_with_valid_fine_res(PyObject *__pyx_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
 #else
 PyObject *__pyx_args, PyObject *__pyx_kwds
 #endif
 ); /*proto*/
-PyDoc_STRVAR(__pyx_doc_9hazelbean_16calculation_core_28aspect_ratio_array_functions_cython_calc_proportion_of_coarse_res_with_valid_fine_res, "cython_calc_proportion_of_coarse_res_with_valid_fine_res(ndarray coarse_res_array, ndarray fine_res_array)");
-static PyMethodDef __pyx_mdef_9hazelbean_16calculation_core_28aspect_ratio_array_functions_1cython_calc_proportion_of_coarse_res_with_valid_fine_res = {"cython_calc_proportion_of_coarse_res_with_valid_fine_res", (PyCFunction)(void*)(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_9hazelbean_16calculation_core_28aspect_ratio_array_functions_1cython_calc_proportion_of_coarse_res_with_valid_fine_res, __Pyx_METH_FASTCALL|METH_KEYWORDS, __pyx_doc_9hazelbean_16calculation_core_28aspect_ratio_array_functions_cython_calc_proportion_of_coarse_res_with_valid_fine_res};
-static PyObject *__pyx_pw_9hazelbean_16calculation_core_28aspect_ratio_array_functions_1cython_calc_proportion_of_coarse_res_with_valid_fine_res(PyObject *__pyx_self, 
+PyDoc_STRVAR(__pyx_doc_28aspect_ratio_array_functions_cython_calc_proportion_of_coarse_res_with_valid_fine_res, "cython_calc_proportion_of_coarse_res_with_valid_fine_res(ndarray coarse_res_array, ndarray fine_res_array)");
+static PyMethodDef __pyx_mdef_28aspect_ratio_array_functions_1cython_calc_proportion_of_coarse_res_with_valid_fine_res = {"cython_calc_proportion_of_coarse_res_with_valid_fine_res", (PyCFunction)(void*)(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_28aspect_ratio_array_functions_1cython_calc_proportion_of_coarse_res_with_valid_fine_res, __Pyx_METH_FASTCALL|METH_KEYWORDS, __pyx_doc_28aspect_ratio_array_functions_cython_calc_proportion_of_coarse_res_with_valid_fine_res};
+static PyObject *__pyx_pw_28aspect_ratio_array_functions_1cython_calc_proportion_of_coarse_res_with_valid_fine_res(PyObject *__pyx_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
 #else
@@ -5099,13 +5099,13 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
       __Pyx_Arg_XDECREF_FASTCALL(values[__pyx_temp]);
     }
   }
-  __Pyx_AddTraceback("hazelbean.calculation_core.aspect_ratio_array_functions.cython_calc_proportion_of_coarse_res_with_valid_fine_res", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("aspect_ratio_array_functions.cython_calc_proportion_of_coarse_res_with_valid_fine_res", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
   if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_coarse_res_array), __pyx_ptype_5numpy_ndarray, 1, "coarse_res_array", 0))) __PYX_ERR(0, 45, __pyx_L1_error)
   if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_fine_res_array), __pyx_ptype_5numpy_ndarray, 1, "fine_res_array", 0))) __PYX_ERR(0, 46, __pyx_L1_error)
-  __pyx_r = __pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_functions_cython_calc_proportion_of_coarse_res_with_valid_fine_res(__pyx_self, __pyx_v_coarse_res_array, __pyx_v_fine_res_array);
+  __pyx_r = __pyx_pf_28aspect_ratio_array_functions_cython_calc_proportion_of_coarse_res_with_valid_fine_res(__pyx_self, __pyx_v_coarse_res_array, __pyx_v_fine_res_array);
 
   /* function exit code */
   goto __pyx_L0;
@@ -5122,7 +5122,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_functions_cython_calc_proportion_of_coarse_res_with_valid_fine_res(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_coarse_res_array, PyArrayObject *__pyx_v_fine_res_array) {
+static PyObject *__pyx_pf_28aspect_ratio_array_functions_cython_calc_proportion_of_coarse_res_with_valid_fine_res(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_coarse_res_array, PyArrayObject *__pyx_v_fine_res_array) {
   PY_LONG_LONG __pyx_v_num_coarse_rows;
   PY_LONG_LONG __pyx_v_num_coarse_cols;
   PY_LONG_LONG __pyx_v_num_fine_rows;
@@ -5186,7 +5186,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
   }
   __pyx_pybuffernd_fine_res_array.diminfo[0].strides = __pyx_pybuffernd_fine_res_array.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_fine_res_array.diminfo[0].shape = __pyx_pybuffernd_fine_res_array.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_fine_res_array.diminfo[1].strides = __pyx_pybuffernd_fine_res_array.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_fine_res_array.diminfo[1].shape = __pyx_pybuffernd_fine_res_array.rcbuffer->pybuffer.shape[1];
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":48
+  /* "aspect_ratio_array_functions.pyx":48
  *                                                       np.ndarray[np.int64_t, ndim=2] fine_res_array,
  *     ):
  *     cdef long long num_coarse_rows = coarse_res_array.shape[0]             # <<<<<<<<<<<<<<
@@ -5195,7 +5195,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
  */
   __pyx_v_num_coarse_rows = (__pyx_f_5numpy_7ndarray_5shape_shape(((PyArrayObject *)__pyx_v_coarse_res_array))[0]);
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":49
+  /* "aspect_ratio_array_functions.pyx":49
  *     ):
  *     cdef long long num_coarse_rows = coarse_res_array.shape[0]
  *     cdef long long num_coarse_cols = coarse_res_array.shape[1]             # <<<<<<<<<<<<<<
@@ -5204,7 +5204,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
  */
   __pyx_v_num_coarse_cols = (__pyx_f_5numpy_7ndarray_5shape_shape(((PyArrayObject *)__pyx_v_coarse_res_array))[1]);
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":50
+  /* "aspect_ratio_array_functions.pyx":50
  *     cdef long long num_coarse_rows = coarse_res_array.shape[0]
  *     cdef long long num_coarse_cols = coarse_res_array.shape[1]
  *     cdef long long num_fine_rows = fine_res_array.shape[0]             # <<<<<<<<<<<<<<
@@ -5213,7 +5213,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
  */
   __pyx_v_num_fine_rows = (__pyx_f_5numpy_7ndarray_5shape_shape(((PyArrayObject *)__pyx_v_fine_res_array))[0]);
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":51
+  /* "aspect_ratio_array_functions.pyx":51
  *     cdef long long num_coarse_cols = coarse_res_array.shape[1]
  *     cdef long long num_fine_rows = fine_res_array.shape[0]
  *     cdef long long num_fine_cols = fine_res_array.shape[1]             # <<<<<<<<<<<<<<
@@ -5222,7 +5222,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
  */
   __pyx_v_num_fine_cols = (__pyx_f_5numpy_7ndarray_5shape_shape(((PyArrayObject *)__pyx_v_fine_res_array))[1]);
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":54
+  /* "aspect_ratio_array_functions.pyx":54
  *     cdef long long fr, fc, cr, cc # Different row col indices
  * 
  *     cdef long long aspect_ratio = <long long>(num_fine_rows / num_coarse_rows)             # <<<<<<<<<<<<<<
@@ -5231,7 +5231,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
  */
   __pyx_v_aspect_ratio = ((PY_LONG_LONG)(__pyx_v_num_fine_rows / __pyx_v_num_coarse_rows));
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":55
+  /* "aspect_ratio_array_functions.pyx":55
  * 
  *     cdef long long aspect_ratio = <long long>(num_fine_rows / num_coarse_rows)
  *     cdef long long fine_res_cells_per_coarse_cell = <long long>(aspect_ratio * aspect_ratio)             # <<<<<<<<<<<<<<
@@ -5240,7 +5240,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
  */
   __pyx_v_fine_res_cells_per_coarse_cell = ((PY_LONG_LONG)(__pyx_v_aspect_ratio * __pyx_v_aspect_ratio));
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":57
+  /* "aspect_ratio_array_functions.pyx":57
  *     cdef long long fine_res_cells_per_coarse_cell = <long long>(aspect_ratio * aspect_ratio)
  * 
  *     cdef np.ndarray[np.float64_t, ndim=2] coarse_res_proporition_array = np.empty([num_coarse_rows, num_coarse_cols], dtype=np.float64)             # <<<<<<<<<<<<<<
@@ -5297,7 +5297,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
   __pyx_v_coarse_res_proporition_array = ((PyArrayObject *)__pyx_t_5);
   __pyx_t_5 = 0;
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":58
+  /* "aspect_ratio_array_functions.pyx":58
  * 
  *     cdef np.ndarray[np.float64_t, ndim=2] coarse_res_proporition_array = np.empty([num_coarse_rows, num_coarse_cols], dtype=np.float64)
  *     cdef double current_proportion = 0.0             # <<<<<<<<<<<<<<
@@ -5306,7 +5306,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
  */
   __pyx_v_current_proportion = 0.0;
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":60
+  /* "aspect_ratio_array_functions.pyx":60
  *     cdef double current_proportion = 0.0
  * 
  *     for cr in range(num_coarse_rows):             # <<<<<<<<<<<<<<
@@ -5318,7 +5318,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
   for (__pyx_t_9 = 0; __pyx_t_9 < __pyx_t_8; __pyx_t_9+=1) {
     __pyx_v_cr = __pyx_t_9;
 
-    /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":61
+    /* "aspect_ratio_array_functions.pyx":61
  * 
  *     for cr in range(num_coarse_rows):
  *         for cc in range(num_coarse_cols):             # <<<<<<<<<<<<<<
@@ -5330,7 +5330,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
     for (__pyx_t_12 = 0; __pyx_t_12 < __pyx_t_11; __pyx_t_12+=1) {
       __pyx_v_cc = __pyx_t_12;
 
-      /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":62
+      /* "aspect_ratio_array_functions.pyx":62
  *     for cr in range(num_coarse_rows):
  *         for cc in range(num_coarse_cols):
  *             current_proportion = np.sum(fine_res_array[cr * aspect_ratio: (cr + 1) * aspect_ratio, cc * aspect_ratio: (cc + 1) * aspect_ratio]) / fine_res_cells_per_coarse_cell             # <<<<<<<<<<<<<<
@@ -5402,7 +5402,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
       __Pyx_DECREF(__pyx_t_13); __pyx_t_13 = 0;
       __pyx_v_current_proportion = __pyx_t_15;
 
-      /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":63
+      /* "aspect_ratio_array_functions.pyx":63
  *         for cc in range(num_coarse_cols):
  *             current_proportion = np.sum(fine_res_array[cr * aspect_ratio: (cr + 1) * aspect_ratio, cc * aspect_ratio: (cc + 1) * aspect_ratio]) / fine_res_cells_per_coarse_cell
  *             coarse_res_proporition_array[cr, cc] = current_proportion             # <<<<<<<<<<<<<<
@@ -5426,7 +5426,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
     }
   }
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":65
+  /* "aspect_ratio_array_functions.pyx":65
  *             coarse_res_proporition_array[cr, cc] = current_proportion
  * 
  *     return coarse_res_proporition_array             # <<<<<<<<<<<<<<
@@ -5438,7 +5438,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
   __pyx_r = ((PyObject *)__pyx_v_coarse_res_proporition_array);
   goto __pyx_L0;
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":41
+  /* "aspect_ratio_array_functions.pyx":41
  * ctypedef np.float64_t DTYPEFLOAT64_t
  * 
  * @cython.cdivision(True)             # <<<<<<<<<<<<<<
@@ -5462,7 +5462,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
     __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_coarse_res_proporition_array.rcbuffer->pybuffer);
     __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_fine_res_array.rcbuffer->pybuffer);
   __Pyx_ErrRestore(__pyx_type, __pyx_value, __pyx_tb);}
-  __Pyx_AddTraceback("hazelbean.calculation_core.aspect_ratio_array_functions.cython_calc_proportion_of_coarse_res_with_valid_fine_res", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("aspect_ratio_array_functions.cython_calc_proportion_of_coarse_res_with_valid_fine_res", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = NULL;
   goto __pyx_L2;
   __pyx_L0:;
@@ -5476,7 +5476,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
   return __pyx_r;
 }
 
-/* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":67
+/* "aspect_ratio_array_functions.pyx":67
  *     return coarse_res_proporition_array
  * 
  * @cython.cdivision(True)             # <<<<<<<<<<<<<<
@@ -5485,16 +5485,16 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
  */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_9hazelbean_16calculation_core_28aspect_ratio_array_functions_3naive_downscale(PyObject *__pyx_self, 
+static PyObject *__pyx_pw_28aspect_ratio_array_functions_3naive_downscale(PyObject *__pyx_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
 #else
 PyObject *__pyx_args, PyObject *__pyx_kwds
 #endif
 ); /*proto*/
-PyDoc_STRVAR(__pyx_doc_9hazelbean_16calculation_core_28aspect_ratio_array_functions_2naive_downscale, "naive_downscale(ndarray coarse_res_array, long long downscale_factor)\nReturn an array that makes a n by m array into a n * downscale_factor by m * downscale_factor with the n by m value put into each higher-res cell. ");
-static PyMethodDef __pyx_mdef_9hazelbean_16calculation_core_28aspect_ratio_array_functions_3naive_downscale = {"naive_downscale", (PyCFunction)(void*)(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_9hazelbean_16calculation_core_28aspect_ratio_array_functions_3naive_downscale, __Pyx_METH_FASTCALL|METH_KEYWORDS, __pyx_doc_9hazelbean_16calculation_core_28aspect_ratio_array_functions_2naive_downscale};
-static PyObject *__pyx_pw_9hazelbean_16calculation_core_28aspect_ratio_array_functions_3naive_downscale(PyObject *__pyx_self, 
+PyDoc_STRVAR(__pyx_doc_28aspect_ratio_array_functions_2naive_downscale, "naive_downscale(ndarray coarse_res_array, long long downscale_factor)\nReturn an array that makes a n by m array into a n * downscale_factor by m * downscale_factor with the n by m value put into each higher-res cell. ");
+static PyMethodDef __pyx_mdef_28aspect_ratio_array_functions_3naive_downscale = {"naive_downscale", (PyCFunction)(void*)(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_28aspect_ratio_array_functions_3naive_downscale, __Pyx_METH_FASTCALL|METH_KEYWORDS, __pyx_doc_28aspect_ratio_array_functions_2naive_downscale};
+static PyObject *__pyx_pw_28aspect_ratio_array_functions_3naive_downscale(PyObject *__pyx_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
 #else
@@ -5579,12 +5579,12 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
       __Pyx_Arg_XDECREF_FASTCALL(values[__pyx_temp]);
     }
   }
-  __Pyx_AddTraceback("hazelbean.calculation_core.aspect_ratio_array_functions.naive_downscale", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("aspect_ratio_array_functions.naive_downscale", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
   if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_coarse_res_array), __pyx_ptype_5numpy_ndarray, 1, "coarse_res_array", 0))) __PYX_ERR(0, 71, __pyx_L1_error)
-  __pyx_r = __pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_functions_2naive_downscale(__pyx_self, __pyx_v_coarse_res_array, __pyx_v_downscale_factor);
+  __pyx_r = __pyx_pf_28aspect_ratio_array_functions_2naive_downscale(__pyx_self, __pyx_v_coarse_res_array, __pyx_v_downscale_factor);
 
   /* function exit code */
   goto __pyx_L0;
@@ -5601,7 +5601,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_functions_2naive_downscale(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_coarse_res_array, PY_LONG_LONG __pyx_v_downscale_factor) {
+static PyObject *__pyx_pf_28aspect_ratio_array_functions_2naive_downscale(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_coarse_res_array, PY_LONG_LONG __pyx_v_downscale_factor) {
   PY_LONG_LONG __pyx_v_num_coarse_rows;
   PY_LONG_LONG __pyx_v_num_coarse_cols;
   PY_LONG_LONG __pyx_v_num_fine_rows;
@@ -5648,7 +5648,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
   }
   __pyx_pybuffernd_coarse_res_array.diminfo[0].strides = __pyx_pybuffernd_coarse_res_array.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_coarse_res_array.diminfo[0].shape = __pyx_pybuffernd_coarse_res_array.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_coarse_res_array.diminfo[1].strides = __pyx_pybuffernd_coarse_res_array.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_coarse_res_array.diminfo[1].shape = __pyx_pybuffernd_coarse_res_array.rcbuffer->pybuffer.shape[1];
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":73
+  /* "aspect_ratio_array_functions.pyx":73
  * def naive_downscale(np.ndarray[np.float64_t, ndim=2] coarse_res_array, long long downscale_factor):
  *     """Return an array that makes a n by m array into a n * downscale_factor by m * downscale_factor with the n by m value put into each higher-res cell. """
  *     cdef long long num_coarse_rows = coarse_res_array.shape[0]             # <<<<<<<<<<<<<<
@@ -5657,7 +5657,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
  */
   __pyx_v_num_coarse_rows = (__pyx_f_5numpy_7ndarray_5shape_shape(((PyArrayObject *)__pyx_v_coarse_res_array))[0]);
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":74
+  /* "aspect_ratio_array_functions.pyx":74
  *     """Return an array that makes a n by m array into a n * downscale_factor by m * downscale_factor with the n by m value put into each higher-res cell. """
  *     cdef long long num_coarse_rows = coarse_res_array.shape[0]
  *     cdef long long num_coarse_cols = coarse_res_array.shape[1]             # <<<<<<<<<<<<<<
@@ -5666,7 +5666,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
  */
   __pyx_v_num_coarse_cols = (__pyx_f_5numpy_7ndarray_5shape_shape(((PyArrayObject *)__pyx_v_coarse_res_array))[1]);
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":75
+  /* "aspect_ratio_array_functions.pyx":75
  *     cdef long long num_coarse_rows = coarse_res_array.shape[0]
  *     cdef long long num_coarse_cols = coarse_res_array.shape[1]
  *     cdef long long num_fine_rows = num_coarse_rows * downscale_factor             # <<<<<<<<<<<<<<
@@ -5675,7 +5675,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
  */
   __pyx_v_num_fine_rows = (__pyx_v_num_coarse_rows * __pyx_v_downscale_factor);
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":76
+  /* "aspect_ratio_array_functions.pyx":76
  *     cdef long long num_coarse_cols = coarse_res_array.shape[1]
  *     cdef long long num_fine_rows = num_coarse_rows * downscale_factor
  *     cdef long long num_fine_cols = num_coarse_cols * downscale_factor             # <<<<<<<<<<<<<<
@@ -5684,7 +5684,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
  */
   __pyx_v_num_fine_cols = (__pyx_v_num_coarse_cols * __pyx_v_downscale_factor);
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":79
+  /* "aspect_ratio_array_functions.pyx":79
  *     cdef long long cr, cc
  * 
  *     cdef np.ndarray[np.float64_t, ndim=2] output_array = np.empty([num_fine_rows, num_fine_cols], dtype=np.float64)             # <<<<<<<<<<<<<<
@@ -5741,7 +5741,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
   __pyx_v_output_array = ((PyArrayObject *)__pyx_t_5);
   __pyx_t_5 = 0;
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":81
+  /* "aspect_ratio_array_functions.pyx":81
  *     cdef np.ndarray[np.float64_t, ndim=2] output_array = np.empty([num_fine_rows, num_fine_cols], dtype=np.float64)
  * 
  *     for cr in range(num_coarse_rows):             # <<<<<<<<<<<<<<
@@ -5753,7 +5753,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
   for (__pyx_t_9 = 0; __pyx_t_9 < __pyx_t_8; __pyx_t_9+=1) {
     __pyx_v_cr = __pyx_t_9;
 
-    /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":82
+    /* "aspect_ratio_array_functions.pyx":82
  * 
  *     for cr in range(num_coarse_rows):
  *         for cc in range(num_coarse_cols):             # <<<<<<<<<<<<<<
@@ -5765,7 +5765,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
     for (__pyx_t_12 = 0; __pyx_t_12 < __pyx_t_11; __pyx_t_12+=1) {
       __pyx_v_cc = __pyx_t_12;
 
-      /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":83
+      /* "aspect_ratio_array_functions.pyx":83
  *     for cr in range(num_coarse_rows):
  *         for cc in range(num_coarse_cols):
  *             output_array[cr * downscale_factor: (cr + 1) * downscale_factor, cc * downscale_factor: (cc + 1) * downscale_factor] = coarse_res_array[cr, cc]             # <<<<<<<<<<<<<<
@@ -5817,7 +5817,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
     }
   }
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":85
+  /* "aspect_ratio_array_functions.pyx":85
  *             output_array[cr * downscale_factor: (cr + 1) * downscale_factor, cc * downscale_factor: (cc + 1) * downscale_factor] = coarse_res_array[cr, cc]
  * 
  *     return output_array             # <<<<<<<<<<<<<<
@@ -5829,7 +5829,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
   __pyx_r = ((PyObject *)__pyx_v_output_array);
   goto __pyx_L0;
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":67
+  /* "aspect_ratio_array_functions.pyx":67
  *     return coarse_res_proporition_array
  * 
  * @cython.cdivision(True)             # <<<<<<<<<<<<<<
@@ -5851,7 +5851,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
     __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_coarse_res_array.rcbuffer->pybuffer);
     __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_output_array.rcbuffer->pybuffer);
   __Pyx_ErrRestore(__pyx_type, __pyx_value, __pyx_tb);}
-  __Pyx_AddTraceback("hazelbean.calculation_core.aspect_ratio_array_functions.naive_downscale", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("aspect_ratio_array_functions.naive_downscale", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = NULL;
   goto __pyx_L2;
   __pyx_L0:;
@@ -5864,7 +5864,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
   return __pyx_r;
 }
 
-/* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":87
+/* "aspect_ratio_array_functions.pyx":87
  *     return output_array
  * 
  * @cython.cdivision(True)             # <<<<<<<<<<<<<<
@@ -5873,16 +5873,16 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
  */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_9hazelbean_16calculation_core_28aspect_ratio_array_functions_5naive_downscale_byte(PyObject *__pyx_self, 
+static PyObject *__pyx_pw_28aspect_ratio_array_functions_5naive_downscale_byte(PyObject *__pyx_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
 #else
 PyObject *__pyx_args, PyObject *__pyx_kwds
 #endif
 ); /*proto*/
-PyDoc_STRVAR(__pyx_doc_9hazelbean_16calculation_core_28aspect_ratio_array_functions_4naive_downscale_byte, "naive_downscale_byte(ndarray coarse_res_array, long long downscale_factor)\nReturn an array that makes a n by m array into a n * downscale_factor by m * downscale_factor with the n by m value put into each higher-res cell. ");
-static PyMethodDef __pyx_mdef_9hazelbean_16calculation_core_28aspect_ratio_array_functions_5naive_downscale_byte = {"naive_downscale_byte", (PyCFunction)(void*)(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_9hazelbean_16calculation_core_28aspect_ratio_array_functions_5naive_downscale_byte, __Pyx_METH_FASTCALL|METH_KEYWORDS, __pyx_doc_9hazelbean_16calculation_core_28aspect_ratio_array_functions_4naive_downscale_byte};
-static PyObject *__pyx_pw_9hazelbean_16calculation_core_28aspect_ratio_array_functions_5naive_downscale_byte(PyObject *__pyx_self, 
+PyDoc_STRVAR(__pyx_doc_28aspect_ratio_array_functions_4naive_downscale_byte, "naive_downscale_byte(ndarray coarse_res_array, long long downscale_factor)\nReturn an array that makes a n by m array into a n * downscale_factor by m * downscale_factor with the n by m value put into each higher-res cell. ");
+static PyMethodDef __pyx_mdef_28aspect_ratio_array_functions_5naive_downscale_byte = {"naive_downscale_byte", (PyCFunction)(void*)(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_28aspect_ratio_array_functions_5naive_downscale_byte, __Pyx_METH_FASTCALL|METH_KEYWORDS, __pyx_doc_28aspect_ratio_array_functions_4naive_downscale_byte};
+static PyObject *__pyx_pw_28aspect_ratio_array_functions_5naive_downscale_byte(PyObject *__pyx_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
 #else
@@ -5967,12 +5967,12 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
       __Pyx_Arg_XDECREF_FASTCALL(values[__pyx_temp]);
     }
   }
-  __Pyx_AddTraceback("hazelbean.calculation_core.aspect_ratio_array_functions.naive_downscale_byte", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("aspect_ratio_array_functions.naive_downscale_byte", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
   if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_coarse_res_array), __pyx_ptype_5numpy_ndarray, 1, "coarse_res_array", 0))) __PYX_ERR(0, 91, __pyx_L1_error)
-  __pyx_r = __pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_functions_4naive_downscale_byte(__pyx_self, __pyx_v_coarse_res_array, __pyx_v_downscale_factor);
+  __pyx_r = __pyx_pf_28aspect_ratio_array_functions_4naive_downscale_byte(__pyx_self, __pyx_v_coarse_res_array, __pyx_v_downscale_factor);
 
   /* function exit code */
   goto __pyx_L0;
@@ -5989,7 +5989,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_functions_4naive_downscale_byte(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_coarse_res_array, PY_LONG_LONG __pyx_v_downscale_factor) {
+static PyObject *__pyx_pf_28aspect_ratio_array_functions_4naive_downscale_byte(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_coarse_res_array, PY_LONG_LONG __pyx_v_downscale_factor) {
   PY_LONG_LONG __pyx_v_num_coarse_rows;
   PY_LONG_LONG __pyx_v_num_coarse_cols;
   PY_LONG_LONG __pyx_v_num_fine_rows;
@@ -6036,7 +6036,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
   }
   __pyx_pybuffernd_coarse_res_array.diminfo[0].strides = __pyx_pybuffernd_coarse_res_array.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_coarse_res_array.diminfo[0].shape = __pyx_pybuffernd_coarse_res_array.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_coarse_res_array.diminfo[1].strides = __pyx_pybuffernd_coarse_res_array.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_coarse_res_array.diminfo[1].shape = __pyx_pybuffernd_coarse_res_array.rcbuffer->pybuffer.shape[1];
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":93
+  /* "aspect_ratio_array_functions.pyx":93
  * def naive_downscale_byte(np.ndarray[np.int32_t, ndim=2] coarse_res_array, long long downscale_factor):
  *     """Return an array that makes a n by m array into a n * downscale_factor by m * downscale_factor with the n by m value put into each higher-res cell. """
  *     cdef long long num_coarse_rows = coarse_res_array.shape[0]             # <<<<<<<<<<<<<<
@@ -6045,7 +6045,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
  */
   __pyx_v_num_coarse_rows = (__pyx_f_5numpy_7ndarray_5shape_shape(((PyArrayObject *)__pyx_v_coarse_res_array))[0]);
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":94
+  /* "aspect_ratio_array_functions.pyx":94
  *     """Return an array that makes a n by m array into a n * downscale_factor by m * downscale_factor with the n by m value put into each higher-res cell. """
  *     cdef long long num_coarse_rows = coarse_res_array.shape[0]
  *     cdef long long num_coarse_cols = coarse_res_array.shape[1]             # <<<<<<<<<<<<<<
@@ -6054,7 +6054,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
  */
   __pyx_v_num_coarse_cols = (__pyx_f_5numpy_7ndarray_5shape_shape(((PyArrayObject *)__pyx_v_coarse_res_array))[1]);
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":95
+  /* "aspect_ratio_array_functions.pyx":95
  *     cdef long long num_coarse_rows = coarse_res_array.shape[0]
  *     cdef long long num_coarse_cols = coarse_res_array.shape[1]
  *     cdef long long num_fine_rows = num_coarse_rows * downscale_factor             # <<<<<<<<<<<<<<
@@ -6063,7 +6063,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
  */
   __pyx_v_num_fine_rows = (__pyx_v_num_coarse_rows * __pyx_v_downscale_factor);
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":96
+  /* "aspect_ratio_array_functions.pyx":96
  *     cdef long long num_coarse_cols = coarse_res_array.shape[1]
  *     cdef long long num_fine_rows = num_coarse_rows * downscale_factor
  *     cdef long long num_fine_cols = num_coarse_cols * downscale_factor             # <<<<<<<<<<<<<<
@@ -6072,7 +6072,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
  */
   __pyx_v_num_fine_cols = (__pyx_v_num_coarse_cols * __pyx_v_downscale_factor);
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":99
+  /* "aspect_ratio_array_functions.pyx":99
  *     cdef long long cr, cc
  * 
  *     cdef np.ndarray[np.int32_t, ndim=2] output_array = np.empty([num_fine_rows, num_fine_cols], dtype=np.int32)             # <<<<<<<<<<<<<<
@@ -6129,7 +6129,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
   __pyx_v_output_array = ((PyArrayObject *)__pyx_t_5);
   __pyx_t_5 = 0;
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":101
+  /* "aspect_ratio_array_functions.pyx":101
  *     cdef np.ndarray[np.int32_t, ndim=2] output_array = np.empty([num_fine_rows, num_fine_cols], dtype=np.int32)
  * 
  *     for cr in range(num_coarse_rows):             # <<<<<<<<<<<<<<
@@ -6141,7 +6141,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
   for (__pyx_t_9 = 0; __pyx_t_9 < __pyx_t_8; __pyx_t_9+=1) {
     __pyx_v_cr = __pyx_t_9;
 
-    /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":102
+    /* "aspect_ratio_array_functions.pyx":102
  * 
  *     for cr in range(num_coarse_rows):
  *         for cc in range(num_coarse_cols):             # <<<<<<<<<<<<<<
@@ -6153,7 +6153,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
     for (__pyx_t_12 = 0; __pyx_t_12 < __pyx_t_11; __pyx_t_12+=1) {
       __pyx_v_cc = __pyx_t_12;
 
-      /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":103
+      /* "aspect_ratio_array_functions.pyx":103
  *     for cr in range(num_coarse_rows):
  *         for cc in range(num_coarse_cols):
  *             output_array[cr * downscale_factor: (cr + 1) * downscale_factor, cc * downscale_factor: (cc + 1) * downscale_factor] = coarse_res_array[cr, cc]             # <<<<<<<<<<<<<<
@@ -6205,7 +6205,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
     }
   }
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":105
+  /* "aspect_ratio_array_functions.pyx":105
  *             output_array[cr * downscale_factor: (cr + 1) * downscale_factor, cc * downscale_factor: (cc + 1) * downscale_factor] = coarse_res_array[cr, cc]
  * 
  *     return output_array             # <<<<<<<<<<<<<<
@@ -6217,7 +6217,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
   __pyx_r = ((PyObject *)__pyx_v_output_array);
   goto __pyx_L0;
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":87
+  /* "aspect_ratio_array_functions.pyx":87
  *     return output_array
  * 
  * @cython.cdivision(True)             # <<<<<<<<<<<<<<
@@ -6239,7 +6239,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
     __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_coarse_res_array.rcbuffer->pybuffer);
     __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_output_array.rcbuffer->pybuffer);
   __Pyx_ErrRestore(__pyx_type, __pyx_value, __pyx_tb);}
-  __Pyx_AddTraceback("hazelbean.calculation_core.aspect_ratio_array_functions.naive_downscale_byte", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("aspect_ratio_array_functions.naive_downscale_byte", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = NULL;
   goto __pyx_L2;
   __pyx_L0:;
@@ -6252,7 +6252,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
   return __pyx_r;
 }
 
-/* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":107
+/* "aspect_ratio_array_functions.pyx":107
  *     return output_array
  * 
  * @cython.cdivision(True)             # <<<<<<<<<<<<<<
@@ -6261,16 +6261,16 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
  */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_9hazelbean_16calculation_core_28aspect_ratio_array_functions_7upscale_retaining_sum(PyObject *__pyx_self, 
+static PyObject *__pyx_pw_28aspect_ratio_array_functions_7upscale_retaining_sum(PyObject *__pyx_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
 #else
 PyObject *__pyx_args, PyObject *__pyx_kwds
 #endif
 ); /*proto*/
-PyDoc_STRVAR(__pyx_doc_9hazelbean_16calculation_core_28aspect_ratio_array_functions_6upscale_retaining_sum, "upscale_retaining_sum(ndarray high_res_array, long long upscale_factor)\nReturn an array that makes n by m array into n / input_scalar by m / upscale_factor with the sum of the fine res cells in the coarse res.");
-static PyMethodDef __pyx_mdef_9hazelbean_16calculation_core_28aspect_ratio_array_functions_7upscale_retaining_sum = {"upscale_retaining_sum", (PyCFunction)(void*)(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_9hazelbean_16calculation_core_28aspect_ratio_array_functions_7upscale_retaining_sum, __Pyx_METH_FASTCALL|METH_KEYWORDS, __pyx_doc_9hazelbean_16calculation_core_28aspect_ratio_array_functions_6upscale_retaining_sum};
-static PyObject *__pyx_pw_9hazelbean_16calculation_core_28aspect_ratio_array_functions_7upscale_retaining_sum(PyObject *__pyx_self, 
+PyDoc_STRVAR(__pyx_doc_28aspect_ratio_array_functions_6upscale_retaining_sum, "upscale_retaining_sum(ndarray high_res_array, long long upscale_factor)\nReturn an array that makes n by m array into n / input_scalar by m / upscale_factor with the sum of the fine res cells in the coarse res.");
+static PyMethodDef __pyx_mdef_28aspect_ratio_array_functions_7upscale_retaining_sum = {"upscale_retaining_sum", (PyCFunction)(void*)(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_28aspect_ratio_array_functions_7upscale_retaining_sum, __Pyx_METH_FASTCALL|METH_KEYWORDS, __pyx_doc_28aspect_ratio_array_functions_6upscale_retaining_sum};
+static PyObject *__pyx_pw_28aspect_ratio_array_functions_7upscale_retaining_sum(PyObject *__pyx_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
 #else
@@ -6355,12 +6355,12 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
       __Pyx_Arg_XDECREF_FASTCALL(values[__pyx_temp]);
     }
   }
-  __Pyx_AddTraceback("hazelbean.calculation_core.aspect_ratio_array_functions.upscale_retaining_sum", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("aspect_ratio_array_functions.upscale_retaining_sum", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
   if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_high_res_array), __pyx_ptype_5numpy_ndarray, 1, "high_res_array", 0))) __PYX_ERR(0, 111, __pyx_L1_error)
-  __pyx_r = __pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_functions_6upscale_retaining_sum(__pyx_self, __pyx_v_high_res_array, __pyx_v_upscale_factor);
+  __pyx_r = __pyx_pf_28aspect_ratio_array_functions_6upscale_retaining_sum(__pyx_self, __pyx_v_high_res_array, __pyx_v_upscale_factor);
 
   /* function exit code */
   goto __pyx_L0;
@@ -6377,7 +6377,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_functions_6upscale_retaining_sum(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_high_res_array, PY_LONG_LONG __pyx_v_upscale_factor) {
+static PyObject *__pyx_pf_28aspect_ratio_array_functions_6upscale_retaining_sum(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_high_res_array, PY_LONG_LONG __pyx_v_upscale_factor) {
   CYTHON_UNUSED PY_LONG_LONG __pyx_v_num_fine_rows;
   CYTHON_UNUSED PY_LONG_LONG __pyx_v_num_fine_cols;
   PY_LONG_LONG __pyx_v_num_coarse_rows;
@@ -6431,7 +6431,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
   }
   __pyx_pybuffernd_high_res_array.diminfo[0].strides = __pyx_pybuffernd_high_res_array.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_high_res_array.diminfo[0].shape = __pyx_pybuffernd_high_res_array.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_high_res_array.diminfo[1].strides = __pyx_pybuffernd_high_res_array.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_high_res_array.diminfo[1].shape = __pyx_pybuffernd_high_res_array.rcbuffer->pybuffer.shape[1];
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":114
+  /* "aspect_ratio_array_functions.pyx":114
  *     """Return an array that makes n by m array into n / input_scalar by m / upscale_factor with the sum of the fine res cells in the coarse res."""
  * 
  *     cdef long long num_fine_rows = high_res_array.shape[0]             # <<<<<<<<<<<<<<
@@ -6440,7 +6440,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
  */
   __pyx_v_num_fine_rows = (__pyx_f_5numpy_7ndarray_5shape_shape(((PyArrayObject *)__pyx_v_high_res_array))[0]);
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":115
+  /* "aspect_ratio_array_functions.pyx":115
  * 
  *     cdef long long num_fine_rows = high_res_array.shape[0]
  *     cdef long long num_fine_cols = high_res_array.shape[1]             # <<<<<<<<<<<<<<
@@ -6449,7 +6449,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
  */
   __pyx_v_num_fine_cols = (__pyx_f_5numpy_7ndarray_5shape_shape(((PyArrayObject *)__pyx_v_high_res_array))[1]);
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":117
+  /* "aspect_ratio_array_functions.pyx":117
  *     cdef long long num_fine_cols = high_res_array.shape[1]
  * 
  *     cdef long long num_coarse_rows = <long long>(high_res_array.shape[0] / upscale_factor)             # <<<<<<<<<<<<<<
@@ -6458,7 +6458,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
  */
   __pyx_v_num_coarse_rows = ((PY_LONG_LONG)(((PY_LONG_LONG)(__pyx_f_5numpy_7ndarray_5shape_shape(((PyArrayObject *)__pyx_v_high_res_array))[0])) / __pyx_v_upscale_factor));
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":118
+  /* "aspect_ratio_array_functions.pyx":118
  * 
  *     cdef long long num_coarse_rows = <long long>(high_res_array.shape[0] / upscale_factor)
  *     cdef long long num_coarse_cols = <long long>(high_res_array.shape[1] / upscale_factor)             # <<<<<<<<<<<<<<
@@ -6467,7 +6467,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
  */
   __pyx_v_num_coarse_cols = ((PY_LONG_LONG)(((PY_LONG_LONG)(__pyx_f_5numpy_7ndarray_5shape_shape(((PyArrayObject *)__pyx_v_high_res_array))[1])) / __pyx_v_upscale_factor));
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":123
+  /* "aspect_ratio_array_functions.pyx":123
  *     cdef long long cr, cc, fr_start, fr_end, fc_start, fc_end
  * 
  *     cdef np.ndarray[np.float64_t, ndim=2] output_array = np.empty([num_coarse_rows, num_coarse_cols], dtype=np.float64)             # <<<<<<<<<<<<<<
@@ -6524,7 +6524,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
   __pyx_v_output_array = ((PyArrayObject *)__pyx_t_5);
   __pyx_t_5 = 0;
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":125
+  /* "aspect_ratio_array_functions.pyx":125
  *     cdef np.ndarray[np.float64_t, ndim=2] output_array = np.empty([num_coarse_rows, num_coarse_cols], dtype=np.float64)
  * 
  *     for cr in range(num_coarse_rows):             # <<<<<<<<<<<<<<
@@ -6536,7 +6536,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
   for (__pyx_t_9 = 0; __pyx_t_9 < __pyx_t_8; __pyx_t_9+=1) {
     __pyx_v_cr = __pyx_t_9;
 
-    /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":126
+    /* "aspect_ratio_array_functions.pyx":126
  * 
  *     for cr in range(num_coarse_rows):
  *         fr_start = cr * upscale_factor             # <<<<<<<<<<<<<<
@@ -6545,7 +6545,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
  */
     __pyx_v_fr_start = (__pyx_v_cr * __pyx_v_upscale_factor);
 
-    /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":127
+    /* "aspect_ratio_array_functions.pyx":127
  *     for cr in range(num_coarse_rows):
  *         fr_start = cr * upscale_factor
  *         fr_end = (cr + 1) * upscale_factor             # <<<<<<<<<<<<<<
@@ -6554,7 +6554,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
  */
     __pyx_v_fr_end = ((__pyx_v_cr + 1) * __pyx_v_upscale_factor);
 
-    /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":128
+    /* "aspect_ratio_array_functions.pyx":128
  *         fr_start = cr * upscale_factor
  *         fr_end = (cr + 1) * upscale_factor
  *         for cc in range(num_coarse_cols):             # <<<<<<<<<<<<<<
@@ -6566,7 +6566,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
     for (__pyx_t_12 = 0; __pyx_t_12 < __pyx_t_11; __pyx_t_12+=1) {
       __pyx_v_cc = __pyx_t_12;
 
-      /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":130
+      /* "aspect_ratio_array_functions.pyx":130
  *         for cc in range(num_coarse_cols):
  * 
  *             fc_start = cc * upscale_factor             # <<<<<<<<<<<<<<
@@ -6575,7 +6575,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
  */
       __pyx_v_fc_start = (__pyx_v_cc * __pyx_v_upscale_factor);
 
-      /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":131
+      /* "aspect_ratio_array_functions.pyx":131
  * 
  *             fc_start = cc * upscale_factor
  *             fc_end = (cc + 1) * upscale_factor             # <<<<<<<<<<<<<<
@@ -6584,7 +6584,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
  */
       __pyx_v_fc_end = ((__pyx_v_cc + 1) * __pyx_v_upscale_factor);
 
-      /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":132
+      /* "aspect_ratio_array_functions.pyx":132
  *             fc_start = cc * upscale_factor
  *             fc_end = (cc + 1) * upscale_factor
  *             output_array[cr, cc] = np.sum(high_res_array[fr_start:fr_end, fc_start:fc_end])             # <<<<<<<<<<<<<<
@@ -6665,7 +6665,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
     }
   }
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":134
+  /* "aspect_ratio_array_functions.pyx":134
  *             output_array[cr, cc] = np.sum(high_res_array[fr_start:fr_end, fc_start:fc_end])
  * 
  *     return output_array             # <<<<<<<<<<<<<<
@@ -6677,7 +6677,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
   __pyx_r = ((PyObject *)__pyx_v_output_array);
   goto __pyx_L0;
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":107
+  /* "aspect_ratio_array_functions.pyx":107
  *     return output_array
  * 
  * @cython.cdivision(True)             # <<<<<<<<<<<<<<
@@ -6700,7 +6700,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
     __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_high_res_array.rcbuffer->pybuffer);
     __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_output_array.rcbuffer->pybuffer);
   __Pyx_ErrRestore(__pyx_type, __pyx_value, __pyx_tb);}
-  __Pyx_AddTraceback("hazelbean.calculation_core.aspect_ratio_array_functions.upscale_retaining_sum", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("aspect_ratio_array_functions.upscale_retaining_sum", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = NULL;
   goto __pyx_L2;
   __pyx_L0:;
@@ -6713,7 +6713,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
   return __pyx_r;
 }
 
-/* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":138
+/* "aspect_ratio_array_functions.pyx":138
  * 
  * 
  * @cython.cdivision(True)             # <<<<<<<<<<<<<<
@@ -6722,16 +6722,16 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
  */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_9hazelbean_16calculation_core_28aspect_ratio_array_functions_9upscale_using_mean(PyObject *__pyx_self, 
+static PyObject *__pyx_pw_28aspect_ratio_array_functions_9upscale_using_mean(PyObject *__pyx_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
 #else
 PyObject *__pyx_args, PyObject *__pyx_kwds
 #endif
 ); /*proto*/
-PyDoc_STRVAR(__pyx_doc_9hazelbean_16calculation_core_28aspect_ratio_array_functions_8upscale_using_mean, "upscale_using_mean(ndarray high_res_array, long long upscale_factor)\nReturn an array that makes n by m array into n / input_scalar by m / upscale_factor with the sum of the fine res cells in the coarse res.");
-static PyMethodDef __pyx_mdef_9hazelbean_16calculation_core_28aspect_ratio_array_functions_9upscale_using_mean = {"upscale_using_mean", (PyCFunction)(void*)(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_9hazelbean_16calculation_core_28aspect_ratio_array_functions_9upscale_using_mean, __Pyx_METH_FASTCALL|METH_KEYWORDS, __pyx_doc_9hazelbean_16calculation_core_28aspect_ratio_array_functions_8upscale_using_mean};
-static PyObject *__pyx_pw_9hazelbean_16calculation_core_28aspect_ratio_array_functions_9upscale_using_mean(PyObject *__pyx_self, 
+PyDoc_STRVAR(__pyx_doc_28aspect_ratio_array_functions_8upscale_using_mean, "upscale_using_mean(ndarray high_res_array, long long upscale_factor)\nReturn an array that makes n by m array into n / input_scalar by m / upscale_factor with the sum of the fine res cells in the coarse res.");
+static PyMethodDef __pyx_mdef_28aspect_ratio_array_functions_9upscale_using_mean = {"upscale_using_mean", (PyCFunction)(void*)(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_28aspect_ratio_array_functions_9upscale_using_mean, __Pyx_METH_FASTCALL|METH_KEYWORDS, __pyx_doc_28aspect_ratio_array_functions_8upscale_using_mean};
+static PyObject *__pyx_pw_28aspect_ratio_array_functions_9upscale_using_mean(PyObject *__pyx_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
 #else
@@ -6816,12 +6816,12 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
       __Pyx_Arg_XDECREF_FASTCALL(values[__pyx_temp]);
     }
   }
-  __Pyx_AddTraceback("hazelbean.calculation_core.aspect_ratio_array_functions.upscale_using_mean", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("aspect_ratio_array_functions.upscale_using_mean", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
   if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_high_res_array), __pyx_ptype_5numpy_ndarray, 1, "high_res_array", 0))) __PYX_ERR(0, 142, __pyx_L1_error)
-  __pyx_r = __pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_functions_8upscale_using_mean(__pyx_self, __pyx_v_high_res_array, __pyx_v_upscale_factor);
+  __pyx_r = __pyx_pf_28aspect_ratio_array_functions_8upscale_using_mean(__pyx_self, __pyx_v_high_res_array, __pyx_v_upscale_factor);
 
   /* function exit code */
   goto __pyx_L0;
@@ -6838,7 +6838,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_functions_8upscale_using_mean(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_high_res_array, PY_LONG_LONG __pyx_v_upscale_factor) {
+static PyObject *__pyx_pf_28aspect_ratio_array_functions_8upscale_using_mean(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_high_res_array, PY_LONG_LONG __pyx_v_upscale_factor) {
   CYTHON_UNUSED PY_LONG_LONG __pyx_v_num_fine_rows;
   CYTHON_UNUSED PY_LONG_LONG __pyx_v_num_fine_cols;
   PY_LONG_LONG __pyx_v_num_coarse_rows;
@@ -6892,7 +6892,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
   }
   __pyx_pybuffernd_high_res_array.diminfo[0].strides = __pyx_pybuffernd_high_res_array.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_high_res_array.diminfo[0].shape = __pyx_pybuffernd_high_res_array.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_high_res_array.diminfo[1].strides = __pyx_pybuffernd_high_res_array.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_high_res_array.diminfo[1].shape = __pyx_pybuffernd_high_res_array.rcbuffer->pybuffer.shape[1];
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":145
+  /* "aspect_ratio_array_functions.pyx":145
  *     """Return an array that makes n by m array into n / input_scalar by m / upscale_factor with the sum of the fine res cells in the coarse res."""
  * 
  *     cdef long long num_fine_rows = high_res_array.shape[0]             # <<<<<<<<<<<<<<
@@ -6901,7 +6901,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
  */
   __pyx_v_num_fine_rows = (__pyx_f_5numpy_7ndarray_5shape_shape(((PyArrayObject *)__pyx_v_high_res_array))[0]);
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":146
+  /* "aspect_ratio_array_functions.pyx":146
  * 
  *     cdef long long num_fine_rows = high_res_array.shape[0]
  *     cdef long long num_fine_cols = high_res_array.shape[1]             # <<<<<<<<<<<<<<
@@ -6910,7 +6910,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
  */
   __pyx_v_num_fine_cols = (__pyx_f_5numpy_7ndarray_5shape_shape(((PyArrayObject *)__pyx_v_high_res_array))[1]);
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":148
+  /* "aspect_ratio_array_functions.pyx":148
  *     cdef long long num_fine_cols = high_res_array.shape[1]
  * 
  *     cdef long long num_coarse_rows = <long long>(high_res_array.shape[0] / upscale_factor)             # <<<<<<<<<<<<<<
@@ -6919,7 +6919,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
  */
   __pyx_v_num_coarse_rows = ((PY_LONG_LONG)(((PY_LONG_LONG)(__pyx_f_5numpy_7ndarray_5shape_shape(((PyArrayObject *)__pyx_v_high_res_array))[0])) / __pyx_v_upscale_factor));
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":149
+  /* "aspect_ratio_array_functions.pyx":149
  * 
  *     cdef long long num_coarse_rows = <long long>(high_res_array.shape[0] / upscale_factor)
  *     cdef long long num_coarse_cols = <long long>(high_res_array.shape[1] / upscale_factor)             # <<<<<<<<<<<<<<
@@ -6928,7 +6928,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
  */
   __pyx_v_num_coarse_cols = ((PY_LONG_LONG)(((PY_LONG_LONG)(__pyx_f_5numpy_7ndarray_5shape_shape(((PyArrayObject *)__pyx_v_high_res_array))[1])) / __pyx_v_upscale_factor));
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":154
+  /* "aspect_ratio_array_functions.pyx":154
  *     cdef long long cr, cc, fr_start, fr_end, fc_start, fc_end
  * 
  *     cdef np.ndarray[np.float64_t, ndim=2] output_array = np.empty([num_coarse_rows, num_coarse_cols], dtype=np.float64)             # <<<<<<<<<<<<<<
@@ -6985,7 +6985,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
   __pyx_v_output_array = ((PyArrayObject *)__pyx_t_5);
   __pyx_t_5 = 0;
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":156
+  /* "aspect_ratio_array_functions.pyx":156
  *     cdef np.ndarray[np.float64_t, ndim=2] output_array = np.empty([num_coarse_rows, num_coarse_cols], dtype=np.float64)
  * 
  *     for cr in range(num_coarse_rows):             # <<<<<<<<<<<<<<
@@ -6997,7 +6997,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
   for (__pyx_t_9 = 0; __pyx_t_9 < __pyx_t_8; __pyx_t_9+=1) {
     __pyx_v_cr = __pyx_t_9;
 
-    /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":157
+    /* "aspect_ratio_array_functions.pyx":157
  * 
  *     for cr in range(num_coarse_rows):
  *         fr_start = cr * upscale_factor             # <<<<<<<<<<<<<<
@@ -7006,7 +7006,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
  */
     __pyx_v_fr_start = (__pyx_v_cr * __pyx_v_upscale_factor);
 
-    /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":158
+    /* "aspect_ratio_array_functions.pyx":158
  *     for cr in range(num_coarse_rows):
  *         fr_start = cr * upscale_factor
  *         fr_end = (cr + 1) * upscale_factor             # <<<<<<<<<<<<<<
@@ -7015,7 +7015,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
  */
     __pyx_v_fr_end = ((__pyx_v_cr + 1) * __pyx_v_upscale_factor);
 
-    /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":159
+    /* "aspect_ratio_array_functions.pyx":159
  *         fr_start = cr * upscale_factor
  *         fr_end = (cr + 1) * upscale_factor
  *         for cc in range(num_coarse_cols):             # <<<<<<<<<<<<<<
@@ -7027,7 +7027,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
     for (__pyx_t_12 = 0; __pyx_t_12 < __pyx_t_11; __pyx_t_12+=1) {
       __pyx_v_cc = __pyx_t_12;
 
-      /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":161
+      /* "aspect_ratio_array_functions.pyx":161
  *         for cc in range(num_coarse_cols):
  * 
  *             fc_start = cc * upscale_factor             # <<<<<<<<<<<<<<
@@ -7036,7 +7036,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
  */
       __pyx_v_fc_start = (__pyx_v_cc * __pyx_v_upscale_factor);
 
-      /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":162
+      /* "aspect_ratio_array_functions.pyx":162
  * 
  *             fc_start = cc * upscale_factor
  *             fc_end = (cc + 1) * upscale_factor             # <<<<<<<<<<<<<<
@@ -7045,7 +7045,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
  */
       __pyx_v_fc_end = ((__pyx_v_cc + 1) * __pyx_v_upscale_factor);
 
-      /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":163
+      /* "aspect_ratio_array_functions.pyx":163
  *             fc_start = cc * upscale_factor
  *             fc_end = (cc + 1) * upscale_factor
  *             output_array[cr, cc] = np.mean(high_res_array[fr_start:fr_end, fc_start:fc_end])             # <<<<<<<<<<<<<<
@@ -7126,7 +7126,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
     }
   }
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":165
+  /* "aspect_ratio_array_functions.pyx":165
  *             output_array[cr, cc] = np.mean(high_res_array[fr_start:fr_end, fc_start:fc_end])
  * 
  *     return output_array             # <<<<<<<<<<<<<<
@@ -7138,7 +7138,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
   __pyx_r = ((PyObject *)__pyx_v_output_array);
   goto __pyx_L0;
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":138
+  /* "aspect_ratio_array_functions.pyx":138
  * 
  * 
  * @cython.cdivision(True)             # <<<<<<<<<<<<<<
@@ -7161,7 +7161,7 @@ static PyObject *__pyx_pf_9hazelbean_16calculation_core_28aspect_ratio_array_fun
     __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_high_res_array.rcbuffer->pybuffer);
     __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_output_array.rcbuffer->pybuffer);
   __Pyx_ErrRestore(__pyx_type, __pyx_value, __pyx_tb);}
-  __Pyx_AddTraceback("hazelbean.calculation_core.aspect_ratio_array_functions.upscale_using_mean", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("aspect_ratio_array_functions.upscale_using_mean", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = NULL;
   goto __pyx_L2;
   __pyx_L0:;
@@ -7200,6 +7200,8 @@ static int __Pyx_CreateStringTabAndInitStrings(void) {
     {&__pyx_n_s__3, __pyx_k__3, sizeof(__pyx_k__3), 0, 0, 1, 1},
     {&__pyx_kp_u__4, __pyx_k__4, sizeof(__pyx_k__4), 0, 1, 0, 0},
     {&__pyx_n_s_aspect_ratio, __pyx_k_aspect_ratio, sizeof(__pyx_k_aspect_ratio), 0, 0, 1, 1},
+    {&__pyx_n_s_aspect_ratio_array_functions, __pyx_k_aspect_ratio_array_functions, sizeof(__pyx_k_aspect_ratio_array_functions), 0, 0, 1, 1},
+    {&__pyx_kp_s_aspect_ratio_array_functions_pyx, __pyx_k_aspect_ratio_array_functions_pyx, sizeof(__pyx_k_aspect_ratio_array_functions_pyx), 0, 0, 1, 0},
     {&__pyx_n_s_asyncio_coroutines, __pyx_k_asyncio_coroutines, sizeof(__pyx_k_asyncio_coroutines), 0, 0, 1, 1},
     {&__pyx_n_s_byte, __pyx_k_byte, sizeof(__pyx_k_byte), 0, 0, 1, 1},
     {&__pyx_n_s_cc, __pyx_k_cc, sizeof(__pyx_k_cc), 0, 0, 1, 1},
@@ -7224,8 +7226,6 @@ static int __Pyx_CreateStringTabAndInitStrings(void) {
     {&__pyx_n_s_fr, __pyx_k_fr, sizeof(__pyx_k_fr), 0, 0, 1, 1},
     {&__pyx_n_s_fr_end, __pyx_k_fr_end, sizeof(__pyx_k_fr_end), 0, 0, 1, 1},
     {&__pyx_n_s_fr_start, __pyx_k_fr_start, sizeof(__pyx_k_fr_start), 0, 0, 1, 1},
-    {&__pyx_kp_s_hazelbean_calculation_core_aspec, __pyx_k_hazelbean_calculation_core_aspec, sizeof(__pyx_k_hazelbean_calculation_core_aspec), 0, 0, 1, 0},
-    {&__pyx_n_s_hazelbean_calculation_core_aspec_2, __pyx_k_hazelbean_calculation_core_aspec_2, sizeof(__pyx_k_hazelbean_calculation_core_aspec_2), 0, 0, 1, 1},
     {&__pyx_n_s_high_res_array, __pyx_k_high_res_array, sizeof(__pyx_k_high_res_array), 0, 0, 1, 1},
     {&__pyx_n_s_import, __pyx_k_import, sizeof(__pyx_k_import), 0, 0, 1, 1},
     {&__pyx_n_s_initializing, __pyx_k_initializing, sizeof(__pyx_k_initializing), 0, 0, 1, 1},
@@ -7273,7 +7273,7 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("__Pyx_InitCachedConstants", 0);
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1043
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1043
  *         __pyx_import_array()
  *     except Exception:
  *         raise ImportError("numpy._core.multiarray failed to import")             # <<<<<<<<<<<<<<
@@ -7284,7 +7284,7 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
   __Pyx_GOTREF(__pyx_tuple_);
   __Pyx_GIVEREF(__pyx_tuple_);
 
-  /* "../../../AppData/Local/Temp/pip-build-env-0v_tyqx6/overlay/Lib/site-packages/numpy/__init__.cython-30.pxd":1049
+  /* "../../../../../miniforge3/envs/env2025d/Lib/site-packages/numpy/__init__.cython-30.pxd":1049
  *         _import_umath()
  *     except Exception:
  *         raise ImportError("numpy._core.umath failed to import")             # <<<<<<<<<<<<<<
@@ -7295,7 +7295,7 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
   __Pyx_GOTREF(__pyx_tuple__2);
   __Pyx_GIVEREF(__pyx_tuple__2);
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":41
+  /* "aspect_ratio_array_functions.pyx":41
  * ctypedef np.float64_t DTYPEFLOAT64_t
  * 
  * @cython.cdivision(True)             # <<<<<<<<<<<<<<
@@ -7305,9 +7305,9 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
   __pyx_tuple__5 = PyTuple_Pack(14, __pyx_n_s_coarse_res_array, __pyx_n_s_fine_res_array, __pyx_n_s_num_coarse_rows, __pyx_n_s_num_coarse_cols, __pyx_n_s_num_fine_rows, __pyx_n_s_num_fine_cols, __pyx_n_s_fr, __pyx_n_s_fc, __pyx_n_s_cr, __pyx_n_s_cc, __pyx_n_s_aspect_ratio, __pyx_n_s_fine_res_cells_per_coarse_cell, __pyx_n_s_coarse_res_proporition_array, __pyx_n_s_current_proportion); if (unlikely(!__pyx_tuple__5)) __PYX_ERR(0, 41, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__5);
   __Pyx_GIVEREF(__pyx_tuple__5);
-  __pyx_codeobj__6 = (PyObject*)__Pyx_PyCode_New(2, 0, 0, 14, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__5, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_hazelbean_calculation_core_aspec, __pyx_n_s_cython_calc_proportion_of_coarse, 41, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__6)) __PYX_ERR(0, 41, __pyx_L1_error)
+  __pyx_codeobj__6 = (PyObject*)__Pyx_PyCode_New(2, 0, 0, 14, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__5, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_aspect_ratio_array_functions_pyx, __pyx_n_s_cython_calc_proportion_of_coarse, 41, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__6)) __PYX_ERR(0, 41, __pyx_L1_error)
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":67
+  /* "aspect_ratio_array_functions.pyx":67
  *     return coarse_res_proporition_array
  * 
  * @cython.cdivision(True)             # <<<<<<<<<<<<<<
@@ -7317,18 +7317,18 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
   __pyx_tuple__7 = PyTuple_Pack(9, __pyx_n_s_coarse_res_array, __pyx_n_s_downscale_factor, __pyx_n_s_num_coarse_rows, __pyx_n_s_num_coarse_cols, __pyx_n_s_num_fine_rows, __pyx_n_s_num_fine_cols, __pyx_n_s_cr, __pyx_n_s_cc, __pyx_n_s_output_array); if (unlikely(!__pyx_tuple__7)) __PYX_ERR(0, 67, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__7);
   __Pyx_GIVEREF(__pyx_tuple__7);
-  __pyx_codeobj__8 = (PyObject*)__Pyx_PyCode_New(2, 0, 0, 9, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__7, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_hazelbean_calculation_core_aspec, __pyx_n_s_naive_downscale, 67, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__8)) __PYX_ERR(0, 67, __pyx_L1_error)
+  __pyx_codeobj__8 = (PyObject*)__Pyx_PyCode_New(2, 0, 0, 9, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__7, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_aspect_ratio_array_functions_pyx, __pyx_n_s_naive_downscale, 67, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__8)) __PYX_ERR(0, 67, __pyx_L1_error)
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":87
+  /* "aspect_ratio_array_functions.pyx":87
  *     return output_array
  * 
  * @cython.cdivision(True)             # <<<<<<<<<<<<<<
  * @cython.embedsignature(True)
  * @cython.boundscheck(True)
  */
-  __pyx_codeobj__9 = (PyObject*)__Pyx_PyCode_New(2, 0, 0, 9, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__7, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_hazelbean_calculation_core_aspec, __pyx_n_s_naive_downscale_byte, 87, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__9)) __PYX_ERR(0, 87, __pyx_L1_error)
+  __pyx_codeobj__9 = (PyObject*)__Pyx_PyCode_New(2, 0, 0, 9, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__7, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_aspect_ratio_array_functions_pyx, __pyx_n_s_naive_downscale_byte, 87, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__9)) __PYX_ERR(0, 87, __pyx_L1_error)
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":107
+  /* "aspect_ratio_array_functions.pyx":107
  *     return output_array
  * 
  * @cython.cdivision(True)             # <<<<<<<<<<<<<<
@@ -7338,16 +7338,16 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
   __pyx_tuple__10 = PyTuple_Pack(13, __pyx_n_s_high_res_array, __pyx_n_s_upscale_factor, __pyx_n_s_num_fine_rows, __pyx_n_s_num_fine_cols, __pyx_n_s_num_coarse_rows, __pyx_n_s_num_coarse_cols, __pyx_n_s_cr, __pyx_n_s_cc, __pyx_n_s_fr_start, __pyx_n_s_fr_end, __pyx_n_s_fc_start, __pyx_n_s_fc_end, __pyx_n_s_output_array); if (unlikely(!__pyx_tuple__10)) __PYX_ERR(0, 107, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__10);
   __Pyx_GIVEREF(__pyx_tuple__10);
-  __pyx_codeobj__11 = (PyObject*)__Pyx_PyCode_New(2, 0, 0, 13, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__10, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_hazelbean_calculation_core_aspec, __pyx_n_s_upscale_retaining_sum, 107, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__11)) __PYX_ERR(0, 107, __pyx_L1_error)
+  __pyx_codeobj__11 = (PyObject*)__Pyx_PyCode_New(2, 0, 0, 13, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__10, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_aspect_ratio_array_functions_pyx, __pyx_n_s_upscale_retaining_sum, 107, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__11)) __PYX_ERR(0, 107, __pyx_L1_error)
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":138
+  /* "aspect_ratio_array_functions.pyx":138
  * 
  * 
  * @cython.cdivision(True)             # <<<<<<<<<<<<<<
  * @cython.embedsignature(True)
  * @cython.boundscheck(True)
  */
-  __pyx_codeobj__12 = (PyObject*)__Pyx_PyCode_New(2, 0, 0, 13, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__10, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_hazelbean_calculation_core_aspec, __pyx_n_s_upscale_using_mean, 138, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__12)) __PYX_ERR(0, 138, __pyx_L1_error)
+  __pyx_codeobj__12 = (PyObject*)__Pyx_PyCode_New(2, 0, 0, 13, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__10, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_aspect_ratio_array_functions_pyx, __pyx_n_s_upscale_using_mean, 138, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__12)) __PYX_ERR(0, 138, __pyx_L1_error)
   __Pyx_RefNannyFinishContext();
   return 0;
   __pyx_L1_error:;
@@ -7750,14 +7750,14 @@ if (!__Pyx_RefNanny) {
   #if PY_MAJOR_VERSION < 3 && (__PYX_DEFAULT_STRING_ENCODING_IS_ASCII || __PYX_DEFAULT_STRING_ENCODING_IS_DEFAULT)
   if (__Pyx_init_sys_getdefaultencoding_params() < 0) __PYX_ERR(0, 1, __pyx_L1_error)
   #endif
-  if (__pyx_module_is_main_hazelbean__calculation_core__aspect_ratio_array_functions) {
+  if (__pyx_module_is_main_aspect_ratio_array_functions) {
     if (PyObject_SetAttr(__pyx_m, __pyx_n_s_name, __pyx_n_s_main) < 0) __PYX_ERR(0, 1, __pyx_L1_error)
   }
   #if PY_MAJOR_VERSION >= 3
   {
     PyObject *modules = PyImport_GetModuleDict(); if (unlikely(!modules)) __PYX_ERR(0, 1, __pyx_L1_error)
-    if (!PyDict_GetItemString(modules, "hazelbean.calculation_core.aspect_ratio_array_functions")) {
-      if (unlikely((PyDict_SetItemString(modules, "hazelbean.calculation_core.aspect_ratio_array_functions", __pyx_m) < 0))) __PYX_ERR(0, 1, __pyx_L1_error)
+    if (!PyDict_GetItemString(modules, "aspect_ratio_array_functions")) {
+      if (unlikely((PyDict_SetItemString(modules, "aspect_ratio_array_functions", __pyx_m) < 0))) __PYX_ERR(0, 1, __pyx_L1_error)
     }
   }
   #endif
@@ -7778,7 +7778,7 @@ if (!__Pyx_RefNanny) {
   if (__Pyx_patch_abc() < 0) __PYX_ERR(0, 1, __pyx_L1_error)
   #endif
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":5
+  /* "aspect_ratio_array_functions.pyx":5
  * #cython: boundscheck=False, wraparound=False
  * from libc.math cimport log
  * import time             # <<<<<<<<<<<<<<
@@ -7790,7 +7790,7 @@ if (!__Pyx_RefNanny) {
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_time, __pyx_t_2) < 0) __PYX_ERR(0, 5, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":6
+  /* "aspect_ratio_array_functions.pyx":6
  * from libc.math cimport log
  * import time
  * from collections import OrderedDict             # <<<<<<<<<<<<<<
@@ -7811,7 +7811,7 @@ if (!__Pyx_RefNanny) {
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":10
+  /* "aspect_ratio_array_functions.pyx":10
  * cimport cython
  * from cython.parallel cimport prange
  * import numpy as np  # NOTE, both imports are required. cimport adds extra information to the pyd while the import actually defines numppy             # <<<<<<<<<<<<<<
@@ -7823,7 +7823,7 @@ if (!__Pyx_RefNanny) {
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_np, __pyx_t_3) < 0) __PYX_ERR(0, 10, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":14
+  /* "aspect_ratio_array_functions.pyx":14
  * from numpy cimport ndarray
  * 
  * import math, time             # <<<<<<<<<<<<<<
@@ -7839,7 +7839,7 @@ if (!__Pyx_RefNanny) {
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_time, __pyx_t_3) < 0) __PYX_ERR(0, 14, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":29
+  /* "aspect_ratio_array_functions.pyx":29
  * # ctypedef np.float64_t DTYPEFLOAT64_t
  * 
  * DTYPEBYTE = np.byte             # <<<<<<<<<<<<<<
@@ -7854,7 +7854,7 @@ if (!__Pyx_RefNanny) {
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_DTYPEBYTE, __pyx_t_2) < 0) __PYX_ERR(0, 29, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":31
+  /* "aspect_ratio_array_functions.pyx":31
  * DTYPEBYTE = np.byte
  * # DTYPEINT = np.int
  * DTYPEINT64 = np.int64             # <<<<<<<<<<<<<<
@@ -7869,7 +7869,7 @@ if (!__Pyx_RefNanny) {
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_DTYPEINT64, __pyx_t_3) < 0) __PYX_ERR(0, 31, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":32
+  /* "aspect_ratio_array_functions.pyx":32
  * # DTYPEINT = np.int
  * DTYPEINT64 = np.int64
  * DTYPEINT32 = np.int32             # <<<<<<<<<<<<<<
@@ -7884,7 +7884,7 @@ if (!__Pyx_RefNanny) {
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_DTYPEINT32, __pyx_t_2) < 0) __PYX_ERR(0, 32, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":34
+  /* "aspect_ratio_array_functions.pyx":34
  * DTYPEINT32 = np.int32
  * # DTYPELONG = np.long
  * DTYPEFLOAT32 = np.float32             # <<<<<<<<<<<<<<
@@ -7899,67 +7899,67 @@ if (!__Pyx_RefNanny) {
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_DTYPEFLOAT32, __pyx_t_3) < 0) __PYX_ERR(0, 34, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":41
+  /* "aspect_ratio_array_functions.pyx":41
  * ctypedef np.float64_t DTYPEFLOAT64_t
  * 
  * @cython.cdivision(True)             # <<<<<<<<<<<<<<
  * @cython.embedsignature(True)
  * @cython.boundscheck(True)
  */
-  __pyx_t_3 = __Pyx_CyFunction_New(&__pyx_mdef_9hazelbean_16calculation_core_28aspect_ratio_array_functions_1cython_calc_proportion_of_coarse_res_with_valid_fine_res, 0, __pyx_n_s_cython_calc_proportion_of_coarse, NULL, __pyx_n_s_hazelbean_calculation_core_aspec_2, __pyx_d, ((PyObject *)__pyx_codeobj__6)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 41, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_CyFunction_New(&__pyx_mdef_28aspect_ratio_array_functions_1cython_calc_proportion_of_coarse_res_with_valid_fine_res, 0, __pyx_n_s_cython_calc_proportion_of_coarse, NULL, __pyx_n_s_aspect_ratio_array_functions, __pyx_d, ((PyObject *)__pyx_codeobj__6)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 41, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_cython_calc_proportion_of_coarse, __pyx_t_3) < 0) __PYX_ERR(0, 41, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":67
+  /* "aspect_ratio_array_functions.pyx":67
  *     return coarse_res_proporition_array
  * 
  * @cython.cdivision(True)             # <<<<<<<<<<<<<<
  * @cython.embedsignature(True)
  * @cython.boundscheck(True)
  */
-  __pyx_t_3 = __Pyx_CyFunction_New(&__pyx_mdef_9hazelbean_16calculation_core_28aspect_ratio_array_functions_3naive_downscale, 0, __pyx_n_s_naive_downscale, NULL, __pyx_n_s_hazelbean_calculation_core_aspec_2, __pyx_d, ((PyObject *)__pyx_codeobj__8)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 67, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_CyFunction_New(&__pyx_mdef_28aspect_ratio_array_functions_3naive_downscale, 0, __pyx_n_s_naive_downscale, NULL, __pyx_n_s_aspect_ratio_array_functions, __pyx_d, ((PyObject *)__pyx_codeobj__8)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 67, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_naive_downscale, __pyx_t_3) < 0) __PYX_ERR(0, 67, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":87
+  /* "aspect_ratio_array_functions.pyx":87
  *     return output_array
  * 
  * @cython.cdivision(True)             # <<<<<<<<<<<<<<
  * @cython.embedsignature(True)
  * @cython.boundscheck(True)
  */
-  __pyx_t_3 = __Pyx_CyFunction_New(&__pyx_mdef_9hazelbean_16calculation_core_28aspect_ratio_array_functions_5naive_downscale_byte, 0, __pyx_n_s_naive_downscale_byte, NULL, __pyx_n_s_hazelbean_calculation_core_aspec_2, __pyx_d, ((PyObject *)__pyx_codeobj__9)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 87, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_CyFunction_New(&__pyx_mdef_28aspect_ratio_array_functions_5naive_downscale_byte, 0, __pyx_n_s_naive_downscale_byte, NULL, __pyx_n_s_aspect_ratio_array_functions, __pyx_d, ((PyObject *)__pyx_codeobj__9)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 87, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_naive_downscale_byte, __pyx_t_3) < 0) __PYX_ERR(0, 87, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":107
+  /* "aspect_ratio_array_functions.pyx":107
  *     return output_array
  * 
  * @cython.cdivision(True)             # <<<<<<<<<<<<<<
  * @cython.embedsignature(True)
  * @cython.boundscheck(True)
  */
-  __pyx_t_3 = __Pyx_CyFunction_New(&__pyx_mdef_9hazelbean_16calculation_core_28aspect_ratio_array_functions_7upscale_retaining_sum, 0, __pyx_n_s_upscale_retaining_sum, NULL, __pyx_n_s_hazelbean_calculation_core_aspec_2, __pyx_d, ((PyObject *)__pyx_codeobj__11)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 107, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_CyFunction_New(&__pyx_mdef_28aspect_ratio_array_functions_7upscale_retaining_sum, 0, __pyx_n_s_upscale_retaining_sum, NULL, __pyx_n_s_aspect_ratio_array_functions, __pyx_d, ((PyObject *)__pyx_codeobj__11)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 107, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_upscale_retaining_sum, __pyx_t_3) < 0) __PYX_ERR(0, 107, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":138
+  /* "aspect_ratio_array_functions.pyx":138
  * 
  * 
  * @cython.cdivision(True)             # <<<<<<<<<<<<<<
  * @cython.embedsignature(True)
  * @cython.boundscheck(True)
  */
-  __pyx_t_3 = __Pyx_CyFunction_New(&__pyx_mdef_9hazelbean_16calculation_core_28aspect_ratio_array_functions_9upscale_using_mean, 0, __pyx_n_s_upscale_using_mean, NULL, __pyx_n_s_hazelbean_calculation_core_aspec_2, __pyx_d, ((PyObject *)__pyx_codeobj__12)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 138, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_CyFunction_New(&__pyx_mdef_28aspect_ratio_array_functions_9upscale_using_mean, 0, __pyx_n_s_upscale_using_mean, NULL, __pyx_n_s_aspect_ratio_array_functions, __pyx_d, ((PyObject *)__pyx_codeobj__12)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 138, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_upscale_using_mean, __pyx_t_3) < 0) __PYX_ERR(0, 138, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-  /* "hazelbean/calculation_core/aspect_ratio_array_functions.pyx":1
+  /* "aspect_ratio_array_functions.pyx":1
  * # cython: cdivision=True             # <<<<<<<<<<<<<<
  * # define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
  * #cython: boundscheck=False, wraparound=False
@@ -7977,7 +7977,7 @@ if (!__Pyx_RefNanny) {
   __Pyx_XDECREF(__pyx_t_3);
   if (__pyx_m) {
     if (__pyx_d && stringtab_initialized) {
-      __Pyx_AddTraceback("init hazelbean.calculation_core.aspect_ratio_array_functions", __pyx_clineno, __pyx_lineno, __pyx_filename);
+      __Pyx_AddTraceback("init aspect_ratio_array_functions", __pyx_clineno, __pyx_lineno, __pyx_filename);
     }
     #if !CYTHON_USE_MODULE_STATE
     Py_CLEAR(__pyx_m);
@@ -7991,7 +7991,7 @@ if (!__Pyx_RefNanny) {
     }
     #endif
   } else if (!PyErr_Occurred()) {
-    PyErr_SetString(PyExc_ImportError, "init hazelbean.calculation_core.aspect_ratio_array_functions");
+    PyErr_SetString(PyExc_ImportError, "init aspect_ratio_array_functions");
   }
   __pyx_L0:;
   __Pyx_RefNannyFinishContext();

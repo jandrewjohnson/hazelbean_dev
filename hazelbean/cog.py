@@ -10,7 +10,9 @@ import hazelbean as hb
 
 def is_path_cog(path, check_tiled=True, full_check=False, raise_exceptions=False, verbose=False):
     """Check if a file is a (Geo)TIFF with cloud optimized compatible structure."""
-    
+    if verbose:
+        hb.log(f"Checking if {path} is a COG at abspath {hb.path_abs(path)}")
+        
     if not hb.path_exists(path):
         if verbose:
             hb.log(f"Path {path} does not exist at abspath {hb.path_abs(path)}")
@@ -45,6 +47,8 @@ def is_path_cog(path, check_tiled=True, full_check=False, raise_exceptions=False
             raise ValueError(f"Path {path} at abspath {hb.path_abs(path)} is not a valid COG. It raised the following errors: \n " + '\n'.join(result))
         return False
 
+    if verbose:
+        hb.log(f"Path {path} at abspath {hb.path_abs(path)} is a valid COG")
     return True
 
 
@@ -72,7 +76,7 @@ def make_path_cog(input_raster_path, output_raster_path=None, output_data_type=N
     input_data_type = hb.get_datatype_from_uri(input_raster_path)
     if output_data_type is not None:
         if output_data_type != input_data_type:
-            gdal.Translate(temp_copy_path, input_raster_path, outputType=hb.gdal_number_to_gdal_type[output_data_type], options=['-co', 'COMPRESS=ZSTD'], callback=hb.make_gdal_callback(f"Translating to expand to global extent on {temp_copy_path}"))
+            gdal.Translate(temp_copy_path, input_raster_path, outputType=hb.gdal_number_to_gdal_type[output_data_type], options=['-co', 'COMPRESS=ZSTD'], callback=hb.make_gdal_callback(f"Translating to change data type on {temp_copy_path}"))
         else:
             hb.path_copy(input_raster_path, temp_copy_path) # Can just copy it direclty without accessing the raster.        
     else:

@@ -1579,28 +1579,6 @@ def get_raster_info_hb(raster_path, verbose=False):
     Returns:
         raster_properties (dictionary): a dictionary with the properties
             stored under relevant keys.
-
-            'pixel_size' (tuple): (pixel x-size, pixel y-size) from
-                geotransform.
-            'mean_pixel_size' (float): the average size of the absolute value
-                of each pixel size element.
-            'raster_size' (tuple):  number of raster pixels in (x, y)
-                direction.
-            'nodata' (list): a list of the nodata values in the bands of the
-                raster in the same order as increasing band index.
-            'n_bands' (int): number of bands in the raster.
-            'geotransform' (tuple): a 6-tuple representing the geotransform of
-                (x orign, x-increase, xy-increase,
-                 y origin, yx-increase, y-increase).
-            'datatype' (int): An instance of an enumerated gdal.GDT_* int
-                that represents the datatype of the raster.
-            'projection' (string): projection of the raster in Well Known
-                Text.
-            'bounding_box' (list): list of floats representing the bounding
-                box in projected coordinates as [minx, miny, maxx, maxy]
-            'block_size' (tuple): underlying x/y raster block size for
-                efficient reading.
-
     """
     if not hb.path_exists(raster_path):
         raise ValueError("Raster path %s does not exist" % raster_path)
@@ -1650,6 +1628,7 @@ def get_raster_info_hb(raster_path, verbose=False):
 
     # datatype is the same for the whole raster, but is associated with band
     raster_properties['datatype'] = raster.GetRasterBand(1).DataType
+    raster_properties['data_type'] = raster.GetRasterBand(1).DataType # preffered key name
     raster = None
 
     # ULX ULY LRX LRY

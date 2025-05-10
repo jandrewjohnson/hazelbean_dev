@@ -887,14 +887,16 @@ def assert_path_global_pyramid(input_path):
 def is_path_global_pyramid(input_path, verbose=False):
     """Fast method for testing if path is pyramidal."""
     to_return = True
-
+    if verbose:
+        L.info('Testing if path is global pyramid: ' + str(input_path))
     res = hb.determine_pyramid_resolution(input_path)
 
     if res is None:
         if verbose:
             hb.log('Not pyramid because no suitable resolution was found: ' + str(input_path))
         return False
-
+    
+    shape = hb.get_shape_from_dataset_path(input_path)
     gt = hb.get_geotransform_path(input_path)
 
     if not pyramid_compatible_geotransforms[pyramid_compatible_resolution_to_arcseconds[res]] == gt:
@@ -915,17 +917,47 @@ def is_path_global_pyramid(input_path, verbose=False):
     data_type = ds.GetRasterBand(1).DataType
     ndv = ds.GetRasterBand(1).GetNoDataValue()
     
-    correct_ndv = hb.get_correct_ndv_from_flex(data_type)
+    correct_ndv = hb.get_correct_ndv_from_dtype_flex(data_type)
     if ndv != correct_ndv:
         if verbose:
             hb.log('Not pyramid because ndv was not correct for datatype: ' + str(input_path))
         to_return = False
 
+    # Check if the overview levels are correct
+    levels = []
+    band = ds.GetRasterBand(1)
+    overview_count = band.GetOverviewCount()
+    for i in range(overview_count):
+        ovr = band.GetOverview(i)
+        if verbose:
+            hb.log(f"Overview {i+1}: {ovr.XSize} x {ovr.YSize}")
+        levels.append(shape[1] / ovr.XSize)
+        
+    correct_levels = hb.pyramid_compatible_overview_levels[pyramid_compatible_resolution_to_arcseconds[res]]
+    if levels != correct_levels:
+        if verbose:
+            hb.log(f'Not pyramid because overview levels were not correct: {levels} {correct_levels }' + str(input_path))
+        to_return = False
 
+
+    metadata = band.GetMetadata()
+    approx = metadata.get('STATISTICS_APPROXIMATE', 'YES')
+    if approx != 'NO':
+        if verbose:
+            hb.log('Not pyramid because statistics were either approximate or not present: ' + str(input_path))
+        to_return = False
+
+        
     if to_return:
+        if verbose:
+            L.info('Path is a global pyramid: ' + str(input_path))
         return True
     else:
+        if verbose:
+            L.info('Path is NOT a global pyramid: ' + str(input_path))
         return False
+    
+
 
 def make_vector_path_global_pyramid(input_path, output_path=None, pyramid_index_columns=None, drop_columns=False,
                                     clean_temporary_files=False, verbose=False):
@@ -1373,7 +1405,7 @@ def make_path_global_pyramid(
     if verbose:
         L.info('input data_type: ' + str(data_type) + ', input ndv: ' + str(ndv))
         
-    correct_ndv = hb.get_correct_ndv_from_flex(data_type, is_id=is_id_raster)
+    correct_ndv = hb.get_correct_ndv_from_dtype_flex(data_type, is_id=is_id_raster)
     if float(ndv) != float(correct_ndv):
         old_ndv = ndv
         ndv = correct_ndv
@@ -1732,11 +1764,14 @@ def make_path_spatially_clean(input_path,
             ds.GetRasterBand(1).ComputeStatistics(False)  # False here means approx NOT okay
             ds.GetRasterBand(1).GetHistogram(approx_ok=0)
 
-
+ 
     ds = None
     return True
 
 def add_statistics_to_raster(input_path, verbose=False):
+    
+    # DEPRECATED in favor of:
+    hb.add_stats_to_geotiff_with_gdal
     try:
         ds = gdal.OpenEx(input_path)
     except Exception as e:
@@ -1812,11 +1847,11 @@ def set_geotransform_to_tuple(input_path, desired_geotransform, output_path=None
         # ds = None
 
 def change_array_datatype_and_ndv(input_path, output_path, data_type, input_ndv=None, output_ndv=None):
-    output_data_type_numpy = hb.default_no_data_values_by_gdal_number_in_numpy_types[data_type]
+    output_data_type_numpy = hb.gdal_number_to_numpy_type[data_type]
     if input_ndv is None:
         input_ndv = hb.get_ndv_from_path(input_path)
     if output_ndv is None:
-        output_ndv = hb.default_no_data_values_by_gdal_number_in_numpy_types[data_type]
+        output_ndv = hb.no_data_values_by_gdal_number[data_type]
     output_ndv = np.float64(output_ndv)
     hb.raster_calculator_flex(input_path, lambda x: np.where(x == input_ndv, output_ndv, x).astype(output_data_type_numpy), output_path, datatype=data_type, ndv=output_ndv)
 
