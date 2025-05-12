@@ -2736,7 +2736,7 @@ class Form(QtWidgets.QWidget):
     @QtCore.Slot()
     def _emit_submitted(self):
         """Emit the submitted signal."""
-        # PyQt4 won't recognize self.submitted.emit as a bound slot, so
+        # PyQt5 won't recognize self.submitted.emit as a bound slot, so
         # creating a bound method of Form to handle this.  Useful for MESH
         # demo.
         self.submitted.emit()

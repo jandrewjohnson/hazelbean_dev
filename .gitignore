@@ -261,3 +261,5 @@ hazelbean/calculation_core/cython_functions.c
 data/mask_20250418_100350_599cvt.tif
 hazelbean/calculation_core/cython_functions.c
 hazelbean/calculation_core/aspect_ratio_array_functions.c
+hazelbean/calculation_core/cython_functions.c
+hazelbean/calculation_core/aspect_ratio_array_functions.c
