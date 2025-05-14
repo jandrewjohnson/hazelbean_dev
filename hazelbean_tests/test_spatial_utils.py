@@ -86,7 +86,7 @@ class DataStructuresTester(TestCase):
         zone_values_path = self.ha_per_cell_900sec_path
 
         run_all = 0
-        remove_temporary_files = 0
+        remove_temporary_files = 1
         output_dir = self.test_data_dir
 
 
@@ -217,7 +217,7 @@ class DataStructuresTester(TestCase):
         # self.output_dir = os.path.join(user_dir, "temp")     
         # rules = {241: 33}   
         rules = {235: 34}   
-        output_path = hb.temp('.tif', 'reclassify', False, self.output_dir)
+        output_path = hb.temp('.tif', 'reclassify', True, self.output_dir)
         # output_path = hb.temp('.tif', 'reclassify', delete_on_finish, self.output_dir)
         hb.reclassify_raster_hb(self.ee_r264_ids_900sec_path, 
                                 rules,
@@ -251,7 +251,7 @@ class DataStructuresTester(TestCase):
         # self.output_dir = os.path.join(user_dir, "temp")     
         # rules = {241: 33}   
         rules = {235: 34}   
-        output_path = hb.temp('.tif', 'reclassify', False, self.output_dir)
+        output_path = hb.temp('.tif', 'reclassify', True, self.output_dir)
         # output_path = hb.temp('.tif', 'reclassify', delete_on_finish, self.output_dir)
         hb.reclassify_raster_arrayframe(self.ee_r264_ids_900sec_path, 
                                 rules,

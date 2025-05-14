@@ -8,7 +8,7 @@ import hazelbean as hb
 import pandas as pd
 import numpy as np
 
-delete_on_finish = False
+delete_on_finish = 1
 
 
 # global_1deg_raster_path = 'data/global_1deg_floats.tif'
