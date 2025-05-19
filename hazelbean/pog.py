@@ -90,7 +90,7 @@ def make_path_pog(input_raster_path, output_raster_path=None, output_data_type=N
     #         output_data_type = 7
     #         output_data_type_object = gdal.GDT_Float64
     
-    if output_data_type is None:
+    if output_data_type is None or output_data_type == 'auto':
         output_data_type = input_data_type 
 
     if output_data_type != input_data_type:
