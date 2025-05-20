@@ -14,8 +14,8 @@ import sys
 import atexit
 import itertools
 
-import sip
-sip.setapi('QString', 2)
+# import sip
+# sip.setapi('QString', 2)
 import qtpy
 from qtpy import QtWidgets
 from qtpy import QtCore
@@ -43,11 +43,11 @@ if QT_APP is None:
     QT_APP = QApplication(sys.argv)  # pragma: no cover
 
 LOGGER = logging.getLogger(__name__)
-ICON_FOLDER = qtawesome.icon('fa.folder-o')
-ICON_FILE = qtawesome.icon('fa.file-o')
-ICON_ENTER = qtawesome.icon('fa.arrow-circle-o-right',
+ICON_FOLDER = qtawesome.icon('fa5s.folder-open')
+ICON_FILE = qtawesome.icon('fa5s.file')
+ICON_ENTER = qtawesome.icon('fa5s.arrow-circle-right',
                             color='green')
-ICON_MINUS = qtawesome.icon('fa.minus')
+ICON_MINUS = qtawesome.icon('fa5s.minus')
 _QLABEL_STYLE_TEMPLATE = ('QLabel {{padding:{padding};'
                           'background-color:{bg_color};'
                           'border:{border};}}')
@@ -579,12 +579,12 @@ class ValidButton(InfoButton):
             ``None``
         """
         if errors:
-            self.setIcon(qtawesome.icon('fa.times',
+            self.setIcon(qtawesome.icon('fa5s.times',
                                         color='red'))
             error_string = '<br/>'.join(errors)
             self.successful = False
         else:
-            self.setIcon(qtawesome.icon('fa.check',
+            self.setIcon(qtawesome.icon('fa5s.check',
                                         color='green'))
             error_string = 'Validation successful'
             self.successful = True
@@ -607,7 +607,7 @@ class HelpButton(InfoButton):
             ``None``
         """
         InfoButton.__init__(self, default_message)
-        self.setIcon(qtawesome.icon('fa.info-circle',
+        self.setIcon(qtawesome.icon('fa5s.info-circle',
                                     color='blue'))
 
 
@@ -1706,7 +1706,7 @@ class _Path(Text):
             """
             menu = self.createStandardContextMenu()
             refresh_action = QtWidgets.QAction('Refresh', menu)
-            refresh_action.setIcon(qtawesome.icon('fa.refresh'))
+            refresh_action.setIcon(qtawesome.icon('fa5s.refresh'))
             refresh_action.triggered.connect(self._emit_textchanged)
             menu.addAction(refresh_action)
 

@@ -5,7 +5,8 @@ from osgeo import gdal, gdalconst
 from collections import OrderedDict
 import functools, collections
 from functools import reduce
-
+import subprocess
+import json
 from osgeo import gdal, osr, ogr
 import numpy as np
 import random
@@ -6274,6 +6275,323 @@ def add_stats_to_geotiff_with_gdal(geotiff_path, approx_ok=False, force=True, ve
         band.FlushCache()
 
     ds = None 
+    
+
+def add_stats_to_geotiff_with_gdalinfo(geotiff_path, approx_ok=False, verbose=True, force_recompute=True):
+    """
+    Uses gdalinfo to compute base stats and histogram, then parses its JSON output
+    to calculate and store STATISTICS_VALID_COUNT using GDAL Python API.
+    This version includes more robust JSON parsing.
+    """
+    if not os.path.exists(geotiff_path):
+        hb.log(f"ERROR: File not found: {geotiff_path}")
+        return False
+
+    # 1. Unset stats (optional, as in previous gdalinfo example)
+    if force_recompute:
+        cmd_unset = ['gdalinfo', '-unsetstats', geotiff_path]
+        if verbose:
+            hb.log(f"Attempting to unset existing stats for {geotiff_path} with: {' '.join(cmd_unset)}")
+        try:
+            # Run quietly unless verbose for unsetting
+            process_unset = subprocess.run(cmd_unset, capture_output=not verbose, text=True, check=False) # Allow non-zero exit code
+            if process_unset.returncode != 0 and verbose:
+                hb.log(f"  Note: 'gdalinfo -unsetstats' may have failed (return code {process_unset.returncode}). This can happen with older GDAL versions or if no stats were present. Stderr: {process_unset.stderr.strip() if process_unset.stderr else 'N/A'}")
+            elif verbose and process_unset.returncode == 0:
+                 hb.log(f"  Successfully ran 'gdalinfo -unsetstats' or no stats were present to unset.")
+        except FileNotFoundError:
+            hb.log(f"ERROR: gdalinfo command not found. Cannot run '{' '.join(cmd_unset)}'. Please ensure GDAL command-line tools are installed and in PATH.")
+            return False
+        except Exception as e:
+            hb.log(f"ERROR during 'gdalinfo -unsetstats' for {geotiff_path}: {e}")
+            # Potentially continue, as the main stats computation might still work/overwrite
+
+    # 2. Compute stats and histogram using gdalinfo (this will write them to the TIFF)
+    cmd_stats_hist = ['gdalinfo', '-hist', geotiff_path]
+    if verbose:
+        hb.log(f"Computing base stats & histogram for {geotiff_path} with: {' '.join(cmd_stats_hist)}")
+    try:
+        process_stats_hist = subprocess.run(cmd_stats_hist, capture_output=True, text=True, check=True)
+        if verbose:
+            # Print a snippet to avoid overwhelming logs if output is huge
+            output_snippet = process_stats_hist.stdout
+            if len(output_snippet) > 1000:
+                output_snippet = output_snippet[:1000] + "\n... (output truncated)"
+            hb.log(f"  'gdalinfo -hist' stdout snippet:\n{output_snippet}")
+        if "STATISTICS_MINIMUM" not in process_stats_hist.stdout: # Basic check
+             hb.log(f"  WARNING: 'STATISTICS_MINIMUM' not found in 'gdalinfo -hist' output for {geotiff_path}. Base stats might not have been written/embedded correctly.")
+             # Depending on strictness, you might `return False` here
+    except FileNotFoundError:
+        hb.log(f"ERROR: gdalinfo command not found. Cannot run '{' '.join(cmd_stats_hist)}'.")
+        return False
+    except subprocess.CalledProcessError as e:
+        hb.log(f"ERROR: 'gdalinfo -hist' failed for {geotiff_path} with exit code {e.returncode}.")
+        hb.log(f"  Stdout: {e.stdout.strip() if e.stdout else 'N/A'}")
+        hb.log(f"  Stderr: {e.stderr.strip() if e.stderr else 'N/A'}")
+        return False
+    except Exception as e:
+        hb.log(f"An unexpected error occurred with 'gdalinfo -hist' for {geotiff_path}: {e}")
+        return False
+
+    # 3. Get stats including STATISTICS_VALID_PERCENT using gdalinfo -json -stats
+    cmd_json_stats = ['gdalinfo', '-json', '-stats', geotiff_path]
+    if verbose:
+        hb.log(f"Fetching JSON stats for {geotiff_path} with: {' '.join(cmd_json_stats)}")
+    gdalinfo_data = None # Initialize
+    try:
+        process_json = subprocess.run(cmd_json_stats, capture_output=True, text=True, check=True)
+        gdalinfo_data = json.loads(process_json.stdout)
+    except FileNotFoundError:
+        hb.log(f"ERROR: gdalinfo command not found. Cannot run '{' '.join(cmd_json_stats)}'.")
+        return False
+    except subprocess.CalledProcessError as e:
+        hb.log(f"ERROR: 'gdalinfo -json -stats' failed for {geotiff_path} with exit code {e.returncode}.")
+        hb.log(f"  Stdout: {e.stdout.strip() if e.stdout else 'N/A'}")
+        hb.log(f"  Stderr: {e.stderr.strip() if e.stderr else 'N/A'}")
+        return False
+    except json.JSONDecodeError as e:
+        hb.log(f"ERROR: Failed to parse JSON output from 'gdalinfo -json -stats' for {geotiff_path}: {e}")
+        hb.log(f"  gdalinfo stdout that caused error: {process_json.stdout[:500] if process_json and process_json.stdout else 'N/A'}...")
+        return False
+    except Exception as e:
+        hb.log(f"An unexpected error occurred with 'gdalinfo -json -stats' for {geotiff_path}: {e}")
+        return False
+
+    if not gdalinfo_data: # Should not happen if try block succeeded, but as a safeguard
+        hb.log(f"ERROR: No data parsed from 'gdalinfo -json -stats' for {geotiff_path}.")
+        return False
+
+    # 4. Open the GeoTIFF with GDAL Python API to write STATISTICS_VALID_COUNT
+    ds = None # Initialize ds to ensure it's defined for finally block if open fails
+    try:
+        # Ensure GDAL Python bindings are using exceptions
+        gdal.UseExceptions()
+        ds = gdal.OpenEx(geotiff_path, gdal.GA_Update, open_options=["IGNORE_COG_LAYOUT_BREAK=YES"])
+        if not ds:
+            hb.log(f"ERROR: GDAL Python could not open {geotiff_path} in update mode.")
+            return False
+
+        if 'bands' in gdalinfo_data:
+            for i, band_info_from_json in enumerate(gdalinfo_data['bands']):
+                band_index_gdal = i + 1 # GDAL bands are 1-indexed
+                
+                band = ds.GetRasterBand(band_index_gdal)
+                if not band:
+                    hb.log(f"  Band {band_index_gdal}: Could not retrieve band object from dataset using GDAL Python. Skipping.")
+                    continue
+
+                if force_recompute:
+                    # Clear any pre-existing STATISTICS_VALID_COUNT from previous runs
+                    band.SetMetadataItem("STATISTICS_VALID_COUNT", None)
+
+                band_metadata_json = band_info_from_json.get('metadata', {}).get('', {})
+
+                if band_metadata_json and 'STATISTICS_VALID_PERCENT' in band_metadata_json:
+                    try:
+                        valid_percent_str = band_metadata_json['STATISTICS_VALID_PERCENT']
+                        valid_percent = float(valid_percent_str)
+                        
+                        current_band_x_size = band.XSize
+                        current_band_y_size = band.YSize
+
+                        if current_band_x_size > 0 and current_band_y_size > 0:
+                            valid_count = round((valid_percent / 100.0) * current_band_x_size * current_band_y_size)
+                            band.SetMetadataItem("STATISTICS_VALID_COUNT", str(int(valid_count)))
+                            mean = band.GetMetadataItem("STATISTICS_MEAN")
+                            band.SetMetadataItem("STATISTICS_SUM", str(float(valid_count)*float(mean)))
+                            band.SetMetadataItem("STATISTICS_APPROXIMATE", "NO")
+                            if verbose:
+                                hb.log(f"  Band {band_index_gdal}: Set STATISTICS_VALID_COUNT = {valid_count} (from {valid_percent:.2f}%)")
+                        else:
+                            if verbose:
+                                hb.log(f"  Band {band_index_gdal}: Skipping valid count, band dimensions ({current_band_x_size}x{current_band_y_size}) are zero or invalid.")
+                    except ValueError:
+                        if verbose:
+                            hb.log(f"  Band {band_index_gdal}: Could not parse STATISTICS_VALID_PERCENT ('{valid_percent_str}') to float.")
+                    except Exception as e_calc:
+                        if verbose:
+                            hb.log(f"  Band {band_index_gdal}: Error during valid count calculation or setting metadata: {e_calc}")
+                elif verbose:
+                    # More detailed logging for why STATISTICS_VALID_PERCENT might be missing
+                    if not band_info_from_json.get('metadata'):
+                        hb.log(f"  Band {band_index_gdal}: 'metadata' key not found in gdalinfo JSON output for this band.")
+                    elif not band_info_from_json.get('metadata', {}).get(''):
+                        hb.log(f"  Band {band_index_gdal}: Default metadata domain ('') not found in gdalinfo JSON output for this band.")
+                    elif 'STATISTICS_VALID_PERCENT' not in band_metadata_json : # Explicitly check this condition
+                        hb.log(f"  Band {band_index_gdal}: STATISTICS_VALID_PERCENT not found in parsed JSON metadata for this band.")
+                    else: # Should not be reached if the above are exhaustive
+                        hb.log(f"  Band {band_index_gdal}: STATISTICS_VALID_PERCENT not available for an unknown reason in parsed JSON.")
+
+                band.FlushCache()
+        
+        ds.FlushCache() # Final flush for the dataset
+        if verbose:
+            hb.log(f"Successfully processed and updated stats for {geotiff_path}")
+        return True
+
+    except Exception as e:
+        hb.log(f"ERROR during GDAL Python update phase for {geotiff_path}: {e}")
+        return False
+    finally:
+        # Ensure dataset is closed
+        if ds is not None:
+            ds = None
+
+    
+def add_stats_to_geotiff_with_gdal_full(geotiff_path,
+                                   approx_ok=False,
+                                   force=True,
+                                   verbose=True,
+                                   histogram_buckets=256,
+                                   compute_valid_pixels_info=True): # Renamed for clarity
+    """
+    
+    STATUS:::: NEVER FINISHED BEACUSE FAILS ON NO OPTIONS
+    
+    
+    Computes raster statistics (min, max, mean, stddev, histogram, valid pixels info)
+    and embeds them into GeoTIFF internal metadata. Aims to do this in a single
+    data pass by ComputeStatistics where possible.
+
+    Parameters:
+        geotiff_path (str): Path to GeoTIFF.
+        approx_ok (bool): Allow approximate stats computation. If False, histogram
+                          computation is more likely to be detailed and valid pixel
+                          percentage more accurate.
+        force (bool): Force recomputation of statistics by clearing existing ones.
+        verbose (bool): Print detailed statistics per band.
+        histogram_buckets (int): Number of buckets for the histogram.
+                                 Only effective if approx_ok is False.
+        compute_valid_pixels_info (bool): Whether to compute and store the percentage
+                                          and count of valid pixels.
+    """
+    
+    import os
+    from osgeo import gdal # Re-import to be absolutely sure
+    print(f"WORKER PROCESS {os.getpid()}: GDAL Version: {gdal.VersionInfo()}")
+    print(f"WORKER PROCESS {os.getpid()}: GDAL Version Num: {gdal.VersionInfo('VERSION_NUM')}")
+    print(f"WORKER PROCESS {os.getpid()}: osgeo path: {os.path.dirname(gdal.__file__)}")
+    # ... rest of your function
+    
+    
+    ds = gdal.Open(geotiff_path, gdal.GA_Update)
+
+    if not ds:
+        raise ValueError(f"Could not open {geotiff_path}")
+
+    if verbose:
+        hb.log(f"Processing {geotiff_path}...")
+
+    total_pixels_raster = ds.RasterXSize * ds.RasterYSize
+
+    for band_index in range(1, ds.RasterCount + 1):
+        band = ds.GetRasterBand(band_index)
+        band_total_pixels = band.XSize * band.YSize # In case of overviews or different band sizes
+
+        if force:
+            if verbose:
+                hb.log(f"  Band {band_index}: Clearing existing statistics (force=True)...")
+            metadata = band.GetMetadata()
+            keys_to_delete = [k for k in metadata.keys() if k.startswith("STATISTICS_")]
+            if keys_to_delete:
+                delete_dict = {key: None for key in keys_to_delete}
+                band.SetMetadata(delete_dict)
+            else: # Fallback for safety, though usually not needed
+                common_stat_keys = [
+                    "STATISTICS_MINIMUM", "STATISTICS_MAXIMUM", "STATISTICS_MEAN",
+                    "STATISTICS_STDDEV", "STATISTICS_APPROXIMATE",
+                    "STATISTICS_HISTONUMBINS", "STATISTICS_HISTOMIN",
+                    "STATISTICS_HISTOMAX", "STATISTICS_HISTOBINVALUES",
+                    "STATISTICS_VALID_PERCENT", "STATISTICS_VALID_COUNT"
+                ]
+                for key in common_stat_keys:
+                    band.SetMetadataItem(key, None)
+
+        # Options for ComputeStatistics
+        cs_options = []
+        if not approx_ok:
+            cs_options.append(f"STATISTICS_HISTONUMBINS={histogram_buckets}")
+        if compute_valid_pixels_info:
+            # This option tells ComputeStatistics to calculate and store STATISTICS_VALID_PERCENT
+            cs_options.append("STATISTICS_VALID_PERCENT=YES")
+
+
+        callback_fn = hb.make_gdal_callback(f'  Band {band_index} Calculating stats:') if verbose else None
+        
+        try:
+            if verbose:
+                log_msg_cs = f"  Band {band_index}: Computing statistics..."
+                if cs_options:
+                    log_msg_cs += f" with options: {cs_options}"
+                hb.log(log_msg_cs)
+
+            # ComputeStatistics will calculate min, max, mean, stddev
+            # And if options are set: histogram and valid_percent
+            # All in one pass over the data.
+            stats_list = band.ComputeStatistics(approx_ok, callback=callback_fn, options=cs_options)
+            # stats_list = [min, max, mean, stddev]
+        except RuntimeError as e:
+            hb.log(f"  Band {band_index}: Error computing statistics: {e}. Skipping stats for this band.")
+            band.FlushCache()
+            continue
+
+        # ComputeStatistics should have set the relevant metadata items internally.
+        # We explicitly set STATISTICS_APPROXIMATE as good practice.
+        band.SetMetadataItem("STATISTICS_APPROXIMATE", "YES" if approx_ok else "NO")
+
+        valid_pixel_count_derived = -1
+        if compute_valid_pixels_info:
+            # Retrieve the valid percent that ComputeStatistics should have stored
+            valid_percent_str = band.GetMetadataItem("STATISTICS_VALID_PERCENT", "STATISTICS")
+            if not valid_percent_str: # Fallback to default domain
+                valid_percent_str = band.GetMetadataItem("STATISTICS_VALID_PERCENT")
+
+            if valid_percent_str is not None:
+                try:
+                    valid_percent = float(valid_percent_str)
+                    # Calculate count from percent and total pixels for the band
+                    valid_pixel_count_derived = round(band_total_pixels * (valid_percent / 100.0))
+                    band.SetMetadataItem("STATISTICS_VALID_COUNT", str(int(valid_pixel_count_derived)))
+                except ValueError:
+                    if verbose:
+                        hb.log(f"  Band {band_index}: Could not parse STATISTICS_VALID_PERCENT ('{valid_percent_str}') to float.")
+            elif verbose:
+                hb.log(f"  Band {band_index}: STATISTICS_VALID_PERCENT not found in metadata after ComputeStatistics.")
+        
+        if verbose:
+            log_message = (
+                f"  Band {band_index} stats (from ComputeStatistics):\n"
+                f"    Min: {stats_list[0]:.4f}, Max: {stats_list[1]:.4f}, "
+                f"Mean: {stats_list[2]:.4f}, StdDev: {stats_list[3]:.4f}"
+            )
+            if compute_valid_pixels_info:
+                vp_str = band.GetMetadataItem("STATISTICS_VALID_PERCENT", "STATISTICS") or band.GetMetadataItem("STATISTICS_VALID_PERCENT")
+                vc_str = band.GetMetadataItem("STATISTICS_VALID_COUNT", "STATISTICS") or band.GetMetadataItem("STATISTICS_VALID_COUNT")
+                log_message += f"\n    Valid Percent: {vp_str if vp_str else 'N/A'}"
+                log_message += f"\n    Valid Count (derived): {vc_str if vc_str else 'N/A'}"
+
+
+            hist_num_bins = band.GetMetadataItem("STATISTICS_HISTONUMBINS", "STATISTICS") or band.GetMetadataItem("STATISTICS_HISTONUMBINS")
+            if hist_num_bins:
+                hist_min = band.GetMetadataItem("STATISTICS_HISTOMIN", "STATISTICS") or band.GetMetadataItem("STATISTICS_HISTOMIN")
+                hist_max = band.GetMetadataItem("STATISTICS_HISTOMAX", "STATISTICS") or band.GetMetadataItem("STATISTICS_HISTOMAX")
+                hist_values_str = band.GetMetadataItem("STATISTICS_HISTOBINVALUES", "STATISTICS") or band.GetMetadataItem("STATISTICS_HISTOBINVALUES")
+                log_message += (
+                    f"\n    Histogram (from GDAL ComputeStatistics):\n"
+                    f"      Bins: {hist_num_bins}, Min: {hist_min}, Max: {hist_max}"
+                )
+                if hist_values_str:
+                    hist_values_snippet = hist_values_str[:60] + ('...' if len(hist_values_str) > 60 else '')
+                    log_message += f"\n      Bin Values (snippet): {hist_values_snippet}"
+            elif not approx_ok:
+                 log_message += "\n    Histogram: Not computed or not found in metadata."
+            hb.log(log_message)
+
+        band.FlushCache()
+
+    if verbose:
+        hb.log(f"Finished processing {geotiff_path}. All changes should be flushed.")
+    ds = None
     
 def get_stats_from_geotiff(geotiff_path):
     """

@@ -9,7 +9,7 @@ import pprint
 import collections
 import json
 import textwrap
-import cgi
+import html
 import tarfile
 import contextlib
 import functools
@@ -36,9 +36,9 @@ QT_APP = inputs.QT_APP
 
 # How long satus bar messages should be visible, in milliseconds.
 STATUSBAR_MSG_DURATION = 10000
-ICON_BACK = qtawesome.icon('fa.arrow-circle-o-left',
+ICON_BACK = qtawesome.icon('fa5s.arrow-circle-left',
                            color='grey')
-ICON_ALERT = qtawesome.icon('fa.exclamation-triangle',
+ICON_ALERT = qtawesome.icon('fa5s.exclamation-triangle',
                             color='orange')
 _ONLINE_DOCS_LINK = (
     'http://data.naturalcapitalproject.org/nightly-build/'
@@ -160,7 +160,7 @@ class OptionsDialog(QtWidgets.QDialog):
         self.ok_button.setIcon(inputs.ICON_ENTER)
         self.ok_button.clicked.connect(self.accept)
         self.cancel_button = QtWidgets.QPushButton(self._reject_text)
-        self.cancel_button.setIcon(qtawesome.icon('fa.times',
+        self.cancel_button.setIcon(qtawesome.icon('fa5s.times',
                                                   color='grey'))
         self.cancel_button.clicked.connect(self.reject)
 
@@ -1027,7 +1027,6 @@ class WholeModelValidationErrorDialog(QtWidgets.QDialog):
         self.warnings = validation_warnings
 
         if validation_warnings:
-            # cgi.escape handles escaping of characters <, >, &, " for HTML.
             self.title_label.setText(
                 '<h2>Validation warnings found</h2>'
                 '<h4>To ensure the model works as expected, please fix these '
@@ -1035,7 +1034,7 @@ class WholeModelValidationErrorDialog(QtWidgets.QDialog):
             self.label.setText(
                 '<ul>%s</ul>' % ''.join(
                     ['<li><b>%s</b>: %s</li>' % (
-                        ', '.join(labels), cgi.escape(warning_, quote=True))
+                        ', '.join(labels), html.escape(warning_, quote=True))
                      for labels, warning_ in validation_warnings]))
             self.label.repaint()
             self.label.setVisible(True)
@@ -1202,15 +1201,15 @@ class InVESTModel(QtWidgets.QMainWindow):
         # Menu items.
         self.file_menu = QtWidgets.QMenu('&File', parent=self)
         self.file_menu.addAction(
-            qtawesome.icon('fa.cog'),
+            qtawesome.icon('fa5s.cog'),
             'Settings ...', self.settings_dialog.exec_,
             QtGui.QKeySequence(QtGui.QKeySequence.Preferences))
         self.file_menu.addAction(
-            qtawesome.icon('fa.floppy-o'),
+            qtawesome.icon('fa5s.floppy-o'),
             'Save as ...', self._save_datastack_as,
             QtGui.QKeySequence(QtGui.QKeySequence.SaveAs))
         self.open_menu = QtWidgets.QMenu('Load parameters', parent=self)
-        self.open_menu.setIcon(qtawesome.icon('fa.folder-open-o'))
+        self.open_menu.setIcon(qtawesome.icon('fa5s.folder-open-o'))
         self.build_open_menu()
         self.file_menu.addMenu(self.open_menu)
 
@@ -1221,26 +1220,26 @@ class InVESTModel(QtWidgets.QMainWindow):
 
         self.edit_menu = QtWidgets.QMenu('&Edit', parent=self)
         self.edit_menu.addAction(
-            qtawesome.icon('fa.undo', color='red'),
+            qtawesome.icon('fa5s.undo', color='red'),
             'Clear inputs', self.clear_inputs)
         self.edit_menu.addAction(
-            qtawesome.icon('fa.trash-o'),
+            qtawesome.icon('fa5s.trash-o'),
             'Clear parameter cache for %s' % self.label,
             self.clear_local_settings)
         self.menuBar().addMenu(self.edit_menu)
 
         self.dev_menu = QtWidgets.QMenu('&Development', parent=self)
         self.dev_menu.addAction(
-            qtawesome.icon('fa.file-code-o'),
+            qtawesome.icon('fa5s.file-code-o'),
             'Save to python script ...', self.save_to_python)
         self.menuBar().addMenu(self.dev_menu)
 
         self.help_menu = QtWidgets.QMenu('&Help', parent=self)
         self.help_menu.addAction(
-            qtawesome.icon('fa.info'),
+            qtawesome.icon('fa5s.info'),
             'About InVEST', self.about_dialog.exec_)
         self.help_menu.addAction(
-            qtawesome.icon('fa.external-link'),
+            qtawesome.icon('fa5s.external-link'),
             'View documentation', self._check_local_docs)
         self.menuBar().addMenu(self.help_menu)
 
@@ -1259,7 +1258,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         """
         self.open_menu.clear()
         self.open_file_action = self.open_menu.addAction(
-            qtawesome.icon('fa.arrow-circle-o-up'),
+            qtawesome.icon('fa5s.arrow-circle-up'),
             'L&oad datastack, parameter set or logfile...', self.load_datastack,
             QtGui.QKeySequence(QtGui.QKeySequence.Open))
         self.open_menu.addSeparator()
@@ -1655,7 +1654,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         LOGGER.info('Whole-model validation returned: %s',
                     validation_warnings)
         if validation_warnings:
-            icon = qtawesome.icon('fa.times', color='red')
+            icon = qtawesome.icon('fa5s.times', color='red')
         else:
             icon = inputs.ICON_ENTER
         self.form.run_button.setIcon(icon)
@@ -2126,15 +2125,15 @@ class HazelbeanModel(QtWidgets.QMainWindow):
         # Menu items.
         self.file_menu = QtWidgets.QMenu('&File', parent=self)
         self.file_menu.addAction(
-            qtawesome.icon('fa.cog'),
+            qtawesome.icon('fa5s.cog'),
             'Settings ...', self.settings_dialog.exec_,
             QtGui.QKeySequence(QtGui.QKeySequence.Preferences))
         self.file_menu.addAction(
-            qtawesome.icon('fa.floppy-o'),
+            qtawesome.icon('fa5s.floppy-o'),
             'Save as ...', self._save_datastack_as,
             QtGui.QKeySequence(QtGui.QKeySequence.SaveAs))
         self.open_menu = QtWidgets.QMenu('Load parameters', parent=self)
-        self.open_menu.setIcon(qtawesome.icon('fa.folder-open-o'))
+        self.open_menu.setIcon(qtawesome.icon('fa5s.folder-open-o'))
         self.build_open_menu()
         self.file_menu.addMenu(self.open_menu)
 
@@ -2145,26 +2144,26 @@ class HazelbeanModel(QtWidgets.QMainWindow):
 
         self.edit_menu = QtWidgets.QMenu('&Edit', parent=self)
         self.edit_menu.addAction(
-            qtawesome.icon('fa.undo', color='red'),
+            qtawesome.icon('fa5s.undo', color='red'),
             'Clear inputs', self.clear_inputs)
         self.edit_menu.addAction(
-            qtawesome.icon('fa.trash-o'),
+            qtawesome.icon('fa5s.trash-o'),
             'Clear parameter cache for %s' % self.label,
             self.clear_local_settings)
         self.menuBar().addMenu(self.edit_menu)
 
         self.dev_menu = QtWidgets.QMenu('&Development', parent=self)
         self.dev_menu.addAction(
-            qtawesome.icon('fa.file-code-o'),
+            qtawesome.icon('fa5s.file-code-o'),
             'Save to python script ...', self.save_to_python)
         self.menuBar().addMenu(self.dev_menu)
 
         self.help_menu = QtWidgets.QMenu('&Help', parent=self)
         self.help_menu.addAction(
-            qtawesome.icon('fa.info'),
+            qtawesome.icon('fa5s.info'),
             'About InVEST', self.about_dialog.exec_)
         self.help_menu.addAction(
-            qtawesome.icon('fa.external-link'),
+            qtawesome.icon('fa5s.external-link'),
             'View documentation', self._check_local_docs)
         self.menuBar().addMenu(self.help_menu)
 
@@ -2183,7 +2182,7 @@ class HazelbeanModel(QtWidgets.QMainWindow):
         """
         self.open_menu.clear()
         self.open_file_action = self.open_menu.addAction(
-            qtawesome.icon('fa.arrow-circle-o-up'),
+            qtawesome.icon('fa5s.arrow-circle-up'),
             'L&oad datastack, parameter set or logfile...', self.load_datastack,
             QtGui.QKeySequence(QtGui.QKeySequence.Open))
         self.open_menu.addSeparator()
@@ -2579,7 +2578,7 @@ class HazelbeanModel(QtWidgets.QMainWindow):
         LOGGER.info('Whole-model validation returned: %s',
                     validation_warnings)
         if validation_warnings:
-            icon = qtawesome.icon('fa.times', color='red')
+            icon = qtawesome.icon('fa5s.times', color='red')
         else:
             icon = inputs.ICON_ENTER
         self.form.run_button.setIcon(icon)
