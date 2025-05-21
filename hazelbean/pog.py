@@ -178,7 +178,7 @@ def make_paths_pogs_in_parallel(
 
     if num_processes is None:
         num_processes = os.cpu_count()
-    num_processes = min(num_processes, len(starmap_iterable)) # Don't use more processes than tasks
+    num_processes = min(num_processes, len(starmap_iterable)) - 2 # Don't use more processes than tasks
 
     results = []
     if num_processes <= 0:
