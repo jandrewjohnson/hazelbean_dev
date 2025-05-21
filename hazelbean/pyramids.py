@@ -1291,7 +1291,8 @@ def make_path_global_pyramid(
         is_id_raster=False,
         verbose=False
 ):
-    print('DEPRECATION WARNINGL: make_path_global_pyramid is deprecated. Use make_paths_cog or pog.')
+    ### TODO Make this identical to the relevant part of make_path_pog
+    print('CONSIDER ALSO make_paths_cog or pog.')
     """Throw exception if input_path is not pyramid-ready. This requires that the file be global, geographic projection, and with resolution
     that is a factor/multiple of arcdegrees.
 
@@ -1413,7 +1414,7 @@ def make_path_global_pyramid(
         rewrite_array = True
         new_ndv = True
     else:
-        rewrite_array = False
+        # rewrite_array = False
         new_ndv = False
                 
 
@@ -1429,7 +1430,7 @@ def make_path_global_pyramid(
     if verbose:
         L.info('output data_type: ' + str(data_type) + ', output ndv: ' + str(ndv))
 
-    ds.SetMetadataItem('last_processing_on', str(time.time()))
+    # ds.SetMetadataItem('last_processing_on', str(time.time()))
 
     ds = None
     if verbose:

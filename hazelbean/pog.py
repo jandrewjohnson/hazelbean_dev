@@ -65,7 +65,7 @@ def make_paths_pogs_in_parallel(
     include_extensions='.tif',
     exclude_strings=None,
     exclude_extensions=None,
-    output_raster_path_suffix=None, # Suffix to generate output filenames
+    output_raster_path_suffix=None,
     output_data_type='auto',
     overview_resampling_method=None,
     ndv=None,
@@ -74,8 +74,10 @@ def make_paths_pogs_in_parallel(
     verbose_hb_call=False,
     num_processes=None,
     dont_actually_do_it=False,
-    force_reprocess_pog=False, # Added for consistency with previous discussions
-    verbose_pog_check=0        # Added for consistency
+    force_reprocess_pog=False,
+    seek_recursively=True,
+    verbose=0,
+    verbose_pog_check=0, 
 ):
     """
     Lists raster files, checks POG status, and processes them in parallel
@@ -88,14 +90,25 @@ def make_paths_pogs_in_parallel(
         return []
 
     print(f"Scanning folder: {abs_input_folder}")
-    initial_paths_found = hb.list_filtered_paths_nonrecursively(
-        abs_input_folder,
-        include_strings=include_strings,
-        include_extensions=include_extensions,
-        exclude_strings=exclude_strings,
-        exclude_extensions=exclude_extensions,
-        return_only_filenames=False
-    )
+    if seek_recursively:
+    
+        initial_paths_found = hb.list_filtered_paths_recursively(
+            abs_input_folder,
+            include_strings=include_strings,
+            include_extensions=include_extensions,
+            exclude_strings=exclude_strings,
+            exclude_extensions=exclude_extensions,
+            return_only_filenames=False
+        )
+    else:
+        initial_paths_found = hb.list_filtered_paths_nonrecursively(
+            abs_input_folder,
+            include_strings=include_strings,
+            include_extensions=include_extensions,
+            exclude_strings=exclude_strings,
+            exclude_extensions=exclude_extensions,
+            return_only_filenames=False
+        )
 
     if not initial_paths_found:
         print("No files found matching the initial filter criteria.")
