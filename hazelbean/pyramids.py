@@ -227,13 +227,13 @@ for k, v in pyramid_compatible_geotransforms.copy().items():
 # Main: 1, 3, 10, 300, 900, 1800 arc seconds (soon to add 333msec). All main and secondary must have overviews that represent all of the coarser set of these main levels
 # Secondary: 30, 150. Common as an input, but overviews of OTHER levels aren't generated for these.
 pyramid_compatible_overview_levels = {}
-pyramid_compatible_overview_levels[1.0] = [3, 10, 30, 150, 300, 900, 1800]
-pyramid_compatible_overview_levels[10.0] = [3, 15, 30, 90, 180]
-pyramid_compatible_overview_levels[30.0] = [5, 10, 30, 60] 
-pyramid_compatible_overview_levels[150.0] = [2, 6, 12]
-pyramid_compatible_overview_levels[300.0] = [3, 6]
+pyramid_compatible_overview_levels[1.0] = [3, 10, 30, 150, 300, 900, 1800, 3600]
+pyramid_compatible_overview_levels[10.0] = [3, 15, 30, 90, 180, 360]
+pyramid_compatible_overview_levels[30.0] = [5, 10, 30, 60, 120] 
+pyramid_compatible_overview_levels[150.0] = [2, 6, 12, 24]
+pyramid_compatible_overview_levels[300.0] = [3, 6, 12]
 pyramid_compatible_overview_levels[900.0] = [2, 4]
-pyramid_compatible_overview_levels[1800.0] = [2, 4]
+pyramid_compatible_overview_levels[1800.0] = [2, 4] # Technically to make it to 3600sec (1deg) you would only need 2, however, the cog spec requires higher, so we keep the additional ones even tho they're not necessary for pyramid spec.
 pyramid_compatible_overview_levels[3600.0] = [2, 4]
 pyramid_compatible_overview_levels[7200.0] = [2, 4]
 pyramid_compatible_overview_levels[14400.0] = [2, 4]
@@ -903,15 +903,23 @@ def is_path_global_pyramid(input_path, verbose=False):
         if verbose:
             hb.log('Not pyramid because geotransform was not pyramidal. Found ' + str(gt) + ' which was not equal to ' + str(pyramid_compatible_geotransforms[pyramid_compatible_resolution_to_arcseconds[res]]) + ' for: '  + str(input_path))
         to_return = False
+        
+    # Interesting bug: If statistics are exact and stored internally to the geotiff but there is ALSO an external .aux.xml file with approximate statistics, 
+    # the gdal driver will return approximate statistics. To ensure this doesn't happen, first remove any .aux.xml file that may exist.
+    aux_path = input_path + '.aux.xml'
+    if hb.path_exists(aux_path):
+        if verbose:
+            hb.log('Removing aux file: ' + str(aux_path))
+        hb.remove_path(aux_path)        
 
     ds = gdal.OpenEx(input_path)
     image_structure = ds.GetMetadata('IMAGE_STRUCTURE')
     compression = image_structure.get('COMPRESSION', None)
 
     # Check if compressed (pyramidal file standards require compression)
-    if str(compression).lower() not in ['zstd']:
+    if str(compression).lower() not in ['zstd', 'lzw']:
         if verbose:
-            hb.log('Not a global pyramid because compression was not zstd: ' + str(input_path))
+            hb.log('Not a global pyramid because compression was not zstd/lzw: ' + str(input_path))
         to_return = False
 
     data_type = ds.GetRasterBand(1).DataType
@@ -938,6 +946,7 @@ def is_path_global_pyramid(input_path, verbose=False):
         if verbose:
             hb.log(f'Not pyramid because overview levels were not correct: {levels} {correct_levels }' + str(input_path))
         to_return = False
+
 
 
     metadata = band.GetMetadata()

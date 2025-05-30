@@ -72,10 +72,10 @@ def make_paths_pogs_in_parallel(
     compression="ZSTD",
     blocksize=512,
     verbose_hb_call=False,
-    num_processes=None,
+    max_workers=None,
     dont_actually_do_it=False,
     force_reprocess_pog=False,
-    seek_recursively=True,
+    seek_recursively=True, 
     verbose=0,
     verbose_pog_check=0, 
 ):
@@ -176,17 +176,17 @@ def make_paths_pogs_in_parallel(
         common_pog_options_dict=common_pog_options
     )
 
-    if num_processes is None:
-        num_processes = os.cpu_count()
-    num_processes = min(num_processes, len(starmap_iterable)) - 2 # Don't use more processes than tasks
+    if max_workers is None:
+        max_workers = os.cpu_count() - 2
+    max_workers = min(max_workers, len(starmap_iterable)) # Don't use more processes than tasks
 
     results = []
-    if num_processes <= 0:
-        print("No tasks to process or num_processes is 0 or less. Skipping parallel execution.")
+    if max_workers <= 0:
+        print("No tasks to process or max_workers is 0 or less. Skipping parallel execution.")
     else:
-        print(f"\nStarting parallel processing with {num_processes} worker(s)...")
+        print(f"\nStarting parallel processing with {max_workers} worker(s)...")
         if not dont_actually_do_it:
-            with mp.Pool(processes=num_processes) as pool:
+            with mp.Pool(processes=max_workers) as pool:
                 # pool.starmap expects an iterable of argument tuples.
                 # For each (in_path, out_path) in starmap_iterable, it effectively calls:
                 #   _worker_make_path_pog_starmap(in_path, out_path, common_pog_options_dict=common_pog_options)

@@ -19,6 +19,7 @@ import logging
 from hazelbean import geoprocessing
 from hazelbean import netcdf
 import pygeoprocessing as pgp
+from pathlib import Path
 
 from osgeo import gdal
 # gdal.SetConfigOption("IGNORE_COG_LAYOUT_BREAK", "YES") 
@@ -6276,6 +6277,39 @@ def add_stats_to_geotiff_with_gdal(geotiff_path, approx_ok=False, force=True, ve
 
     ds = None 
     
+def find_gdalinfo():
+    """Find gdalinfo executable across different OS and conda setups"""
+    
+    # First try: use shutil.which (checks PATH)
+    gdalinfo_path = shutil.which('gdalinfo')
+    if gdalinfo_path and os.path.exists(gdalinfo_path):
+        return gdalinfo_path
+    
+    # Second try: construct path based on Python executable location
+    python_exe = Path(sys.executable)
+    conda_env_root = python_exe.parent.parent  # Go up from bin/python to env root
+    
+    # Try different possible locations
+    possible_paths = []
+    
+    if os.name == 'nt':  # Windows
+        possible_paths = [
+            conda_env_root / 'Library' / 'bin' / 'gdalinfo.exe',
+            conda_env_root / 'Scripts' / 'gdalinfo.exe',
+            conda_env_root / 'bin' / 'gdalinfo.exe',
+        ]
+    else:  # Linux/macOS
+        possible_paths = [
+            conda_env_root / 'bin' / 'gdalinfo',
+        ]
+    
+    # Check each possible path
+    for path in possible_paths:
+        if path.exists():
+            return str(path)
+    
+    return None
+
 
 def add_stats_to_geotiff_with_gdalinfo(geotiff_path, approx_ok=False, verbose=True, force_recompute=True):
     """
@@ -6289,77 +6323,82 @@ def add_stats_to_geotiff_with_gdalinfo(geotiff_path, approx_ok=False, verbose=Tr
 
     # 1. Unset stats (optional, as in previous gdalinfo example)
     if force_recompute:
-        cmd_unset = ['gdalinfo', '-unsetstats', geotiff_path]
+        gdalinfo_path = find_gdalinfo()
+        cmd_unset = [gdalinfo_path, '-unsetstats', geotiff_path]
+        # cmd_unset = ["C:/Users/jajohns/miniforge3/envs/env2025k/Library/bin/gdalinfo.exe", '-unsetstats', geotiff_path]
         if verbose:
             hb.log(f"Attempting to unset existing stats for {geotiff_path} with: {' '.join(cmd_unset)}")
         try:
             # Run quietly unless verbose for unsetting
-            process_unset = subprocess.run(cmd_unset, capture_output=not verbose, text=True, check=False) # Allow non-zero exit code
+            process_unset = subprocess.run(cmd_unset, capture_output=not verbose, text=True, check=False, env=os.environ.copy()) # Allow non-zero exit code
             if process_unset.returncode != 0 and verbose:
                 hb.log(f"  Note: 'gdalinfo -unsetstats' may have failed (return code {process_unset.returncode}). This can happen with older GDAL versions or if no stats were present. Stderr: {process_unset.stderr.strip() if process_unset.stderr else 'N/A'}")
             elif verbose and process_unset.returncode == 0:
                  hb.log(f"  Successfully ran 'gdalinfo -unsetstats' or no stats were present to unset.")
         except FileNotFoundError:
             hb.log(f"ERROR: gdalinfo command not found. Cannot run '{' '.join(cmd_unset)}'. Please ensure GDAL command-line tools are installed and in PATH.")
-            return False
+            # return False
         except Exception as e:
             hb.log(f"ERROR during 'gdalinfo -unsetstats' for {geotiff_path}: {e}")
             # Potentially continue, as the main stats computation might still work/overwrite
-
+    # 'Driver: GTiff/GeoTIFF\nFiles: C:/Users/jajohns/Files/seals/projects/luh2_300m_global/intermediate/stitched_lulc_simplified_scenarios\\copy_20250530_142029_721now.tif\nSize is 129600, 64800\nCoordinate System is:\nGEOGCRS["WGS 84",\n    ENSEMBLE["World Geodetic System 1984 ensemble",\n        MEMBER["World Geodetic System 1984 (Transit)"],\n        MEMBER["World Geodetic System 1984 (G730)"],\n        MEMBER["World Geodetic System 1984 (G873)"],\n        MEMBER["World Geodetic System 1984 (G1150)"],\n        MEMBER["World Geodetic System 1984 (G1674)"],\n        MEMBER["World Geodetic System 1984 (G1762)"],\n        MEMBER["World Geodetic System 1984 (G2139)"],\n        MEMBER["World Geodetic System 1984 (G2296)"],\n        ELLIPSOID["WGS 84",6378137,298.257223563,\n            LENGTHUNIT["metre",1]],\n        ENSEMBLEACCURACY[2.0]],\n    PRIMEM["Greenwich",0,\n        ANGLEUNIT["degree",0.0174532925199433]],\n    CS[ellipsoidal,2],\n        AXIS["geodetic latitude (Lat)",north,\n            ORDER[1],\n            ANGLEUNIT["degree",0.0174532925199433]],\n        AXIS["geodetic longitude (Lon)",east,\n            ORDER[2],\n            ANGLEUNIT["degree",0.0174532925199433]],\n    USAGE[\n        SCOPE["Horizontal component of 3D system."],\n        AREA["World."],\n        BBOX[-90,-180,90,180]],\n    ID["EPSG",4326]]\nData axis to CRS axis mapping: 2,1\nOrigin = (-180.000000000000000,90.000000000000000)\nPixel Size = (0.002777777777778,-0.002777777777778)\nMetadata:\n  AREA_OR_POINT=Area\nImage Structure Metadata:\n  LAYOUT=COG\n  COMPRESSION=ZSTD\n  INTERLEAVE=BAND\nCorner Coordinates:\nUpper Left  (-180.0000000,  90.0000000) (180d 0\' 0.00"W, 90d 0\' 0.00"N)\nLower Left  (-180.0000000, -90.0000000) (180d 0\' 0.00"W, 90d 0\' 0.00"S)\nUpper Right ( 180.0000000,  90.0000000) (180d 0\' 0.00"E, 90d 0\' 0.00"N)\nLower Right ( 180.0000000, -90.0000000) (180d 0\' 0.00"E, 90d 0\' 0.00"S)\nCenter      (   0.0000000,   0.0000000) (  0d 0\' 0.01"E,  0d 0\' 0.01"N)\nBand 1 Block=512x512 Type=Byte, ColorInterp=Gray\n0...10...20...30...40...50...60...70...80...90...100 - done.\n  256 buckets from -0.5 to 255.5:\n  0 12479975 327004056 176115841 653118942 431070063 5674971368 1123319755 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 \n  NoData Value=255\n  Overviews: 43200x21600, 8640x4320, 4320x2160, 1440x720, 720x360, 360x180\n'
     # 2. Compute stats and histogram using gdalinfo (this will write them to the TIFF)
-    cmd_stats_hist = ['gdalinfo', '-hist', geotiff_path]
-    if verbose:
-        hb.log(f"Computing base stats & histogram for {geotiff_path} with: {' '.join(cmd_stats_hist)}")
-    try:
-        process_stats_hist = subprocess.run(cmd_stats_hist, capture_output=True, text=True, check=True)
+    # cmd_stats_hist = ['gdalinfo', '-hist', geotiff_path]
+    compute_hist = 0
+    if compute_hist:
+        cmd_stats_hist = [gdalinfo_path, '-hist', geotiff_path]
         if verbose:
-            # Print a snippet to avoid overwhelming logs if output is huge
-            output_snippet = process_stats_hist.stdout
-            if len(output_snippet) > 1000:
-                output_snippet = output_snippet[:1000] + "\n... (output truncated)"
-            hb.log(f"  'gdalinfo -hist' stdout snippet:\n{output_snippet}")
-        if "STATISTICS_MINIMUM" not in process_stats_hist.stdout: # Basic check
-             hb.log(f"  WARNING: 'STATISTICS_MINIMUM' not found in 'gdalinfo -hist' output for {geotiff_path}. Base stats might not have been written/embedded correctly.")
-             # Depending on strictness, you might `return False` here
-    except FileNotFoundError:
-        hb.log(f"ERROR: gdalinfo command not found. Cannot run '{' '.join(cmd_stats_hist)}'.")
-        return False
-    except subprocess.CalledProcessError as e:
-        hb.log(f"ERROR: 'gdalinfo -hist' failed for {geotiff_path} with exit code {e.returncode}.")
-        hb.log(f"  Stdout: {e.stdout.strip() if e.stdout else 'N/A'}")
-        hb.log(f"  Stderr: {e.stderr.strip() if e.stderr else 'N/A'}")
-        return False
-    except Exception as e:
-        hb.log(f"An unexpected error occurred with 'gdalinfo -hist' for {geotiff_path}: {e}")
-        return False
+            hb.log(f"Computing base stats & histogram for {geotiff_path} with: {' '.join(cmd_stats_hist)}")
+        try:
+            process_stats_hist = subprocess.run(cmd_stats_hist, capture_output=True, text=True, check=True, env=os.environ.copy())
+            if verbose:
+                # Print a snippet to avoid overwhelming logs if output is huge
+                output_snippet = process_stats_hist.stdout
+                if len(output_snippet) > 1000:
+                    output_snippet = output_snippet[:1000] + "\n... (output truncated)"
+                hb.log(f"  'gdalinfo -hist' stdout snippet:\n{output_snippet}")
+            if "STATISTICS_MINIMUM" not in process_stats_hist.stdout: # Basic check
+                hb.log(f"  WARNING: 'STATISTICS_MINIMUM' not found in 'gdalinfo -hist' output for {geotiff_path}. Base stats might not have been written/embedded correctly.")
+                # Depending on strictness, you might `return False` here
+        except FileNotFoundError:
+            hb.log(f"ERROR: gdalinfo command not found. Cannot run '{' '.join(cmd_stats_hist)}'.")
+            # return False
+        except subprocess.CalledProcessError as e:
+            hb.log(f"ERROR: 'gdalinfo -hist' failed for {geotiff_path} with exit code {e.returncode}.")
+            hb.log(f"  Stdout: {e.stdout.strip() if e.stdout else 'N/A'}")
+            hb.log(f"  Stderr: {e.stderr.strip() if e.stderr else 'N/A'}")
+            # return False
+        except Exception as e:
+            hb.log(f"An unexpected error occurred with 'gdalinfo -hist' for {geotiff_path}: {e}")
+            # return False
 
     # 3. Get stats including STATISTICS_VALID_PERCENT using gdalinfo -json -stats
-    cmd_json_stats = ['gdalinfo', '-json', '-stats', geotiff_path]
+    cmd_json_stats = [gdalinfo_path, '-json', '-stats', geotiff_path]
     if verbose:
         hb.log(f"Fetching JSON stats for {geotiff_path} with: {' '.join(cmd_json_stats)}")
     gdalinfo_data = None # Initialize
     try:
-        process_json = subprocess.run(cmd_json_stats, capture_output=True, text=True, check=True)
+        process_json = subprocess.run(cmd_json_stats, capture_output=True, text=True, check=True, env=os.environ.copy())
         gdalinfo_data = json.loads(process_json.stdout)
     except FileNotFoundError:
         hb.log(f"ERROR: gdalinfo command not found. Cannot run '{' '.join(cmd_json_stats)}'.")
-        return False
+        # return False
     except subprocess.CalledProcessError as e:
         hb.log(f"ERROR: 'gdalinfo -json -stats' failed for {geotiff_path} with exit code {e.returncode}.")
         hb.log(f"  Stdout: {e.stdout.strip() if e.stdout else 'N/A'}")
         hb.log(f"  Stderr: {e.stderr.strip() if e.stderr else 'N/A'}")
-        return False
+        # return False
     except json.JSONDecodeError as e:
         hb.log(f"ERROR: Failed to parse JSON output from 'gdalinfo -json -stats' for {geotiff_path}: {e}")
         hb.log(f"  gdalinfo stdout that caused error: {process_json.stdout[:500] if process_json and process_json.stdout else 'N/A'}...")
-        return False
+        # return False
     except Exception as e:
         hb.log(f"An unexpected error occurred with 'gdalinfo -json -stats' for {geotiff_path}: {e}")
-        return False
+        # return False
 
     if not gdalinfo_data: # Should not happen if try block succeeded, but as a safeguard
         hb.log(f"ERROR: No data parsed from 'gdalinfo -json -stats' for {geotiff_path}.")
-        return False
+        # return False
 
     # 4. Open the GeoTIFF with GDAL Python API to write STATISTICS_VALID_COUNT
     ds = None # Initialize ds to ensure it's defined for finally block if open fails
