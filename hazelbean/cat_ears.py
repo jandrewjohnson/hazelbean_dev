@@ -6,6 +6,39 @@ from collections import OrderedDict
 import pandas as pd
 import hazelbean as hb
 
+def has_cat_ears(input_string):
+    """
+    Check if the input string contains cat ears, which are defined as '<^', '^>, or the divider <^>'.
+    :param input_string: The string to check for cat ears.
+    :return: True if the string contains cat ears, False otherwise.
+    """
+    if not isinstance(input_string, str):
+        return False
+    return '<^' in input_string or '^>' in input_string
+
+def replace_cat_ears_with_variables(input_string, variables):
+    """
+    Replace cat ears in the input string with the corresponding variables base on the python.__locals__ name of the variable. Accepts either a single variable or a list of variables.
+    This function is useful for dynamically replacing placeholders in strings with actual variable values, especially in templating scenarios.
+    :param input_string: The string containing cat ears to be replaced.
+    :param variables: The variables to replace the cat ears with.
+    :return: The input string with cat ears replaced by variables.
+    """
+    if type(variables) is not list:
+        variables = [variables]       
+    
+    for i in variables:
+        variable_name = get_variable_name(i)
+        input_string = input_string.replace('<^' + variable_name + '^>', str(i))
+
+
+# get the name of the variable itself using python locals
+def get_variable_name(variable):
+    for name, value in locals().items():
+        if value is variable:
+            return name
+    return None
+
 def parse_to_ce_list(input_string):
     """Return a list with cat-eared elements in order. """
     to_return = []

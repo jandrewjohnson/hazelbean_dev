@@ -1683,7 +1683,7 @@ def enumerate_array_as_odict(input_array, max_to_report=None):
     return output
 
 def enumerate_array_as_histogram(input_array):
-
+    L.debug('deprecated for enumerate_raster_path')
     hist = np.histogram(input_array)
 
     to_return = []
