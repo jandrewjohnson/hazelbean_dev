@@ -16,20 +16,25 @@ def has_cat_ears(input_string):
         return False
     return '<^' in input_string or '^>' in input_string
 
-def replace_cat_ears_with_variables(input_string, variables):
-    """
-    Replace cat ears in the input string with the corresponding variables base on the python.__locals__ name of the variable. Accepts either a single variable or a list of variables.
-    This function is useful for dynamically replacing placeholders in strings with actual variable values, especially in templating scenarios.
-    :param input_string: The string containing cat ears to be replaced.
-    :param variables: The variables to replace the cat ears with.
-    :return: The input string with cat ears replaced by variables.
-    """
-    if type(variables) is not list:
-        variables = [variables]       
+def replace_cat_ears_with_dict(input_string, variables_dict):
+    # """
+    # Replace cat ears in the input string with the corresponding variables base on the python.__locals__ name of the variable. Accepts either a single variable or a list of variables.
+    # This function is useful for dynamically replacing placeholders in strings with actual variable values, especially in templating scenarios.
+    # :param input_string: The string containing cat ears to be replaced.
+    # :param variables: The variables to replace the cat ears with.
+    # :return: The input string with cat ears replaced by variables.
+    # """
+    # if type(variables) is not list:
+    #     variables = [variables]       
     
-    for i in variables:
-        variable_name = get_variable_name(i)
-        input_string = input_string.replace('<^' + variable_name + '^>', str(i))
+    # if type(input_string) is not str:
+    #     return(input_string)
+    
+    # for i in variables:
+    #     variable_name = get_variable_name(i)
+    for k, v in variables_dict.items():
+        input_string = input_string.replace('<^' + k + '^>', str(v))
+    return input_string
 
 
 # get the name of the variable itself using python locals

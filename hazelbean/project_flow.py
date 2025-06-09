@@ -14,7 +14,7 @@ import inspect
 import pandas as pd
 
 # try:
-#     import anytree
+#     import anytree    
 # except:
 #     'anytree is probably not needed except for project flow.'
 import anytree
@@ -26,7 +26,7 @@ initial_logging_level = L.getEffectiveLevel()
 
 # module level get_path. Usually you want to use the project_level version
 def get_path(relative_path, *join_path_args, possible_dirs='default', prepend_possible_dirs=None, create_shortcut=False, download_destination_dir=None, strip_relative_paths_for_output=False, leave_ref_path_if_fail=False, verbose=False):
-    
+    # SUPER DANGEROUS TO USE IF YOU ACTUALLY WANT TO USE A PROJECT FLOW OBJECT.
     p = ProjectFlow()
     got_path = p.get_path(relative_path, *join_path_args, possible_dirs=possible_dirs, prepend_possible_dirs=prepend_possible_dirs, create_shortcut=create_shortcut, download_destination_dir=download_destination_dir, strip_relative_paths_for_output=strip_relative_paths_for_output, leave_ref_path_if_fail=leave_ref_path_if_fail, verbose=verbose)
     return got_path 
@@ -551,6 +551,12 @@ class ProjectFlow(object):
                     return relative_path
                 else:
                     raise NameError('The path given to hb.get_path() does not appear to be relative, is not relative to one of the possible dirs, does not exist at the unmodified path, and or is not available for download on your selected cloud bucket): ' + str(relative_path) + ', ' + str(possible_dirs))
+                            
+        if leave_ref_path_if_fail:
+            return path_as_inputted
+                                            
+                            
+                            
                             # If it was neither found nor None, THEN return the path constructed from the first element in possible_dirs
         # Get the first non None element in possible_dirs
         possible_dirs = [i for i in possible_dirs if i is not None]

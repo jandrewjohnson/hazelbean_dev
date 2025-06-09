@@ -2726,7 +2726,13 @@ def cast_to_np64(a):
         else:
             return np.float64(float(a))
 
-def reclassify_raster_hb(input_raster_path, rules, output_raster_path, output_data_type=None, array_threshold=200000, match_path=None, output_ndv=None, invoke_full_callback=False, verbose=False):
+def reclassify_raster_hb(input_raster_path, rules, output_raster_path, output_data_type=None, array_threshold=200000, match_path=None, output_ndv=None, existing_values='keep', invoke_full_callback=False, verbose=False):
+    
+    # ADD NOT IN DICT BEHAVIOR
+    if existing_values not in ['keep', 'zero', 'ndv']:
+        raise ValueError("existing_values must be one of 'keep', 'zero', or 'ndv'.")
+    
+    
     # Replacement for reclassify_raster_arrayframe, once tested and working, consider renaming to not have hb.
     # NOTE: array_threshold value is currently hardcoded in cython to 200000, so do not change.
     """NOTE: The rules dict NEEDS to have the existing values that remain unchanged included, otherwise they get written to zero
@@ -2890,25 +2896,75 @@ def reclassify_raster_hb(input_raster_path, rules, output_raster_path, output_da
         # elif output_data_type == 13:
         #     rules = np.zeros(array_threshold + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
 
+        # Make the rules into an array. Note a clever but confusing optimization here: for outputs that might be negative, we shift the ruels array by the array_threshold/2 and then correct posthoc. This is much faster
+        # because it doesnt have a negativity check in the loop. However, this requires thinking carefully about what value the non-listed rules should be.
         old_rules = rules
         if output_data_type == 1:
             rules = np.arange(255 + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
         elif output_data_type == 2:
             rules = np.arange(65535 + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
         elif output_data_type == 3:
-            rules = np.arange(65535 + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+            if existing_values == 'keep':
+                positive_sequence  = np.arange(array_threshold/2 + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+                negative_sequence  = np.arange(-array_threshold/2, 0, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+            elif existing_values == 'zero':
+                positive_sequence = np.zeros(int(array_threshold/2 + 1), dtype=hb.gdal_number_to_numpy_type[output_data_type])
+                negative_sequence = np.zeros(int(array_threshold/2), dtype=hb.gdal_number_to_numpy_type[output_data_type])
+            elif existing_values == 'ndv':
+                positive_sequence  = np.full(int(array_threshold/2 + 1), output_ndv, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+                negative_sequence  = np.full(int(array_threshold/2), output_ndv, dtype=hb.gdal_number_to_numpy_type[output_data_type])                
+            rules = np.concatenate((positive_sequence, negative_sequence))
         elif output_data_type == 4:
             rules = np.arange(array_threshold + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type]) 
         elif output_data_type == 5:
-            positive_sequence  = np.arange(array_threshold/2 + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
-            negative_sequence  = np.arange(-array_threshold/2, 0, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+            if existing_values == 'keep':
+                positive_sequence  = np.arange(array_threshold/2 + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+                negative_sequence  = np.arange(-array_threshold/2, 0, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+            elif existing_values == 'zero':
+                positive_sequence = np.zeros(int(array_threshold/2 + 1), dtype=hb.gdal_number_to_numpy_type[output_data_type])
+                negative_sequence = np.zeros(int(array_threshold/2), dtype=hb.gdal_number_to_numpy_type[output_data_type])
+            elif existing_values == 'ndv':
+                positive_sequence  = np.full(int(array_threshold/2 + 1), output_ndv, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+                negative_sequence  = np.full(int(array_threshold/2), output_ndv, dtype=hb.gdal_number_to_numpy_type[output_data_type])
             rules = np.concatenate((positive_sequence, negative_sequence))
         elif output_data_type == 6 or output_data_type == 7:
-            rules = np.arange(array_threshold + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+            if existing_values == 'keep':
+                positive_sequence  = np.arange(array_threshold/2 + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+                negative_sequence  = np.arange(-array_threshold/2, 0, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+            elif existing_values == 'zero':
+                positive_sequence = np.zeros(int(array_threshold/2 + 1), dtype=hb.gdal_number_to_numpy_type[output_data_type])
+                negative_sequence = np.zeros(int(array_threshold/2), dtype=hb.gdal_number_to_numpy_type[output_data_type])
+            elif existing_values == 'ndv':
+                positive_sequence  = np.full(int(array_threshold/2 + 1), output_ndv, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+                negative_sequence  = np.full(int(array_threshold/2), output_ndv, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+            rules = np.concatenate((positive_sequence, negative_sequence))            
+            
+            # rules = np.arange(array_threshold + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
         elif output_data_type == 12:
-            rules = np.arange(array_threshold + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type]) 
+            if existing_values == 'keep':
+                positive_sequence  = np.arange(array_threshold/2 + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+                negative_sequence  = np.arange(-array_threshold/2, 0, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+            elif existing_values == 'zero':
+                positive_sequence = np.zeros(int(array_threshold/2 + 1), dtype=hb.gdal_number_to_numpy_type[output_data_type])
+                negative_sequence = np.zeros(int(array_threshold/2), dtype=hb.gdal_number_to_numpy_type[output_data_type])
+            elif existing_values == 'ndv':
+                positive_sequence  = np.full(int(array_threshold/2 + 1), output_ndv, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+                negative_sequence  = np.full(int(array_threshold/2), output_ndv, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+            rules = np.concatenate((positive_sequence, negative_sequence))            
+            
+            # rules = np.arange(array_threshold + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type]) 
         elif output_data_type == 13:
-            rules = np.arange(array_threshold + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+            if existing_values == 'keep':
+                positive_sequence  = np.arange(array_threshold/2 + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+                negative_sequence  = np.arange(-array_threshold/2, 0, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+            elif existing_values == 'zero':
+                positive_sequence = np.zeros(int(array_threshold/2 + 1), dtype=hb.gdal_number_to_numpy_type[output_data_type])
+                negative_sequence = np.zeros(int(array_threshold/2), dtype=hb.gdal_number_to_numpy_type[output_data_type])
+            elif existing_values == 'ndv':
+                positive_sequence  = np.full(int(array_threshold/2 + 1), output_ndv, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+                negative_sequence  = np.full(int(array_threshold/2), output_ndv, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+            rules = np.concatenate((positive_sequence, negative_sequence))            
+            
             
         # old_rules = rules
         # if output_data_type == 1:
@@ -6421,10 +6477,16 @@ def add_stats_to_geotiff_with_gdalinfo(geotiff_path, approx_ok=False, verbose=Tr
 
                 if force_recompute:
                     # Clear any pre-existing STATISTICS_VALID_COUNT from previous runs
-                    band.SetMetadataItem("STATISTICS_VALID_COUNT", None)
+                    # band.SetMetadataItem("STATISTICS_VALID_COUNT", None)
+                    pass # Why did I do this? then it just fails the next check.
 
                 band_metadata_json = band_info_from_json.get('metadata', {}).get('', {})
 
+                if 'STATISTICS_VALID_PERCENT' not in band_metadata_json:
+                    # set to 100 percent
+                    band_metadata_json['STATISTICS_VALID_PERCENT'] = '100'  # Default to 100% if not present
+                    
+                    
                 if band_metadata_json and 'STATISTICS_VALID_PERCENT' in band_metadata_json:
                     try:
                         valid_percent_str = band_metadata_json['STATISTICS_VALID_PERCENT']

@@ -33,7 +33,8 @@ class DataStructuresTester(TestCase):
         pass
 
     def test_get_wkt_from_epsg_code(self):
-        hb.get_wkt_from_epsg_code(hb.common_epsg_codes_by_name['robinson'])
+        hb.get_wkt_from_epsg_code(hb.common_epsg_codes_by_name['wgs84'])
+        # hb.get_wkt_from_epsg_code(hb.common_epsg_codes_by_name['robinson'])
 
 
 
@@ -182,7 +183,7 @@ class DataStructuresTester(TestCase):
                                         output_path, 
                                         self.ee_r264_correspondence_vector_path, 
                                         output_data_type=6, 
-                                        clip_vector_filter='ISO3="RWA"',
+                                        clip_vector_filter='ee_r264_id="120"',
                                         
                                         gtiff_creation_options=hb.DEFAULT_GTIFF_CREATION_OPTIONS)
 
@@ -231,6 +232,49 @@ class DataStructuresTester(TestCase):
                                 )
         
         
+    def test_reclassify_raster_with_negatives_hb(self):
+
+        rules = {235: -555}   
+        output_path = hb.temp('.tif', 'reclassify', False, self.output_dir)
+        # output_path = hb.temp('.tif', 'reclassify', delete_on_finish, self.output_dir)
+        hb.reclassify_raster_hb(self.ee_r264_ids_900sec_path, 
+                                rules,
+                                output_path, 
+                                output_data_type=5, 
+                                # array_threshold=10000, 
+                                # match_path=self.ha_per_cell_900sec_path, 
+                                # output_ndv=-9999, 
+                                # invoke_full_callback=False, 
+                                # verbose=True
+                                )
+        
+        print(hb.enumerate_raster_path(output_path))
+                
+        output_with_neg_path = hb.temp('.tif', 'reclassify_with_neg', False, self.output_dir)
+        # output_path = hb.temp('.tif', 'reclassify', delete_on_finish, self.output_dir)
+        
+        rules = {
+            235: -444,
+            241: -9999,
+            -555: -888,
+            }  # Adding a rule for 241 to be reclassified to -9999
+        
+        
+        hb.reclassify_raster_hb(output_path, 
+                                rules,
+                                output_with_neg_path, 
+                                output_data_type=5, 
+                                # array_threshold=10000, 
+                                # match_path=self.ha_per_cell_900sec_path, 
+                                # output_ndv=-9999, 
+                                # invoke_full_callback=False, 
+                                # verbose=True
+                                )
+        
+        print(hb.enumerate_raster_path(output_with_neg_path))
+        
+        5
+                
 
     def test_reclassify_raster_arrayframe(self):
         # input_flex, rules, output_path, output_data_type=None, array_threshold=10000, match_path=None, output_ndv=None, invoke_full_callback=False, verbose=False):
