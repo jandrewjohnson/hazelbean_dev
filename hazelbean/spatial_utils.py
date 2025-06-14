@@ -6343,13 +6343,15 @@ def find_gdalinfo():
     
     # Second try: construct path based on Python executable location
     python_exe = Path(sys.executable)
-    conda_env_root = python_exe.parent.parent  # Go up from bin/python to env root
+    conda_parent_env_root = python_exe.parent.parent  # Go up from bin/python to env root
+    conda_env_root = python_exe.parent  # Go up from bin/python to env root
     
     # Try different possible locations
     possible_paths = []
     
     if os.name == 'nt':  # Windows
         possible_paths = [
+            conda_parent_env_root / 'Library' / 'bin' / 'gdalinfo.exe',
             conda_env_root / 'Library' / 'bin' / 'gdalinfo.exe',
             conda_env_root / 'Scripts' / 'gdalinfo.exe',
             conda_env_root / 'bin' / 'gdalinfo.exe',
@@ -6361,8 +6363,10 @@ def find_gdalinfo():
     
     # Check each possible path
     for path in possible_paths:
-        if path.exists():
-            return str(path)
+        str_path = str(path)
+        if hb.path_exists(str(str_path), verbose=1):
+            # if path.exists():
+            return str_path
     
     return None
 
