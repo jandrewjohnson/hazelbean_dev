@@ -354,6 +354,10 @@ class ProjectFlow(object):
         # 2. relative path has directories, join path args is empty
         # 3. relative path has no directories, join path args is not empty
         # 4. relative path has directories, join path args is not empty
+        if hb.has_cat_ears(relative_path):
+            if verbose:
+                hb.log("A refpath with catears was given. You probably want to replace the variables wrapped in catears. Returning the original path intact: " + str(relative_path))
+            return relative_path
         
         if relative_path is None:
             hb.log('WARNING: You gave None to hb.get_path(). This is not recommended but returning None Nonetheless, lol.')
