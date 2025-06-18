@@ -1319,8 +1319,8 @@ def extract_features_in_shapefile_by_attribute(input_path, output_path, column_n
     # hb.log('column_name: ' + str(column_name), level=100)
     # hb.log('column_filter: ' + str(column_filter), level=100)
     
-    gdf_out = gdf.loc[gdf[column_name] == column_filter]
-    
+    gdf_out = gdf.loc[gdf[column_name].astype(str) == str(column_filter)]
+    # 2704
     if len(gdf_out) == 0:
         raise NameError('No features found in ' + str(input_path) + ' with ' + str(column_name) + ' == ' + str(column_filter))
 
