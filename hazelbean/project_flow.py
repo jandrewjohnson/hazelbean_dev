@@ -349,7 +349,7 @@ class  ProjectFlow(object):
     def get_path(self, relative_path, *join_path_args, possible_dirs='default', prepend_possible_dirs=None, create_shortcut=False, download_destination_dir=None, strip_relative_paths_for_output=False, verbose=False):
         ### NOTE: This is a PROJECT METHOD. There is currently no hb level function cause then you'd just have to pass the project.
         
-        # This is tricky cause tehre are four possible cases
+        # This is tricky cause there are four possible cases
         # 1. relative path has no directories, join path args is empty
         # 2. relative path has directories, join path args is empty
         # 3. relative path has no directories, join path args is not empty
