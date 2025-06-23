@@ -16,6 +16,24 @@ def has_cat_ears(input_string):
         return False
     return '<^' in input_string or '^>' in input_string
 
+def replace_cat_ears_with_object_attributes(input_string, object_instance):
+    """
+    Replace cat ears in the input string with the corresponding attributes of the object instance.
+    This function is useful for dynamically replacing placeholders in strings with actual object attribute values, especially in templating scenarios.
+    :param input_string: The string containing cat ears to be replaced.
+    :param object_instance: The object instance whose attributes will replace the cat ears.
+    :return: The input string with cat ears replaced by object attributes.
+    """
+    if not isinstance(input_string, str):
+        return input_string
+    
+    for attr in dir(object_instance):
+        if not attr.startswith('__'):
+            value = getattr(object_instance, attr)
+            input_string = input_string.replace('<^' + attr + '^>', str(value))
+    
+    return input_string
+
 def replace_cat_ears_with_dict(input_string, variables_dict):
     # """
     # Replace cat ears in the input string with the corresponding variables base on the python.__locals__ name of the variable. Accepts either a single variable or a list of variables.
@@ -33,7 +51,8 @@ def replace_cat_ears_with_dict(input_string, variables_dict):
     # for i in variables:
     #     variable_name = get_variable_name(i)
     for k, v in variables_dict.items():
-        input_string = input_string.replace('<^' + k + '^>', str(v))
+        if input_string:
+            input_string = input_string.replace('<^' + k + '^>', str(v))
     return input_string
 
 
