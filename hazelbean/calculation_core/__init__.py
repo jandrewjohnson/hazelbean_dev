@@ -13,7 +13,7 @@ But basically, need to install
 hazelbean_cython_directory = os.path.split(__file__)[0]
 hazelbean_working_directory = os.path.split(hazelbean_cython_directory)[0]
 CYTHON_FILES = ['compile_cython_functions.py']
-recompile_cython = 0
+recompile_cython = True # NEVER PUSH CODE WITH THIS SET TO TRUE!
 
 if recompile_cython == True:
     # if os.path.exists(hazelbean_working_directory):
@@ -36,7 +36,8 @@ if recompile_cython == True:
     else:
         python_executable = sys.executable
         for python_file_uri in CYTHON_FILES:
-            cython_command = python_executable + " " + python_file_uri + " --quiet build_ext -i clean"  #
+            cython_command = python_executable + " " + python_file_uri + " --verbose build_ext -i clean"  #
+            # cython_command = python_executable + " " + python_file_uri + " --quiet build_ext -i clean"  #
             # cython_command = "python " + python_file_uri + " --quiet build_ext -i clean"  #
             # cython_command = "python " + python_file_uri + " --verbose build_ext -i clean"  #
             returned = os.system(cython_command)

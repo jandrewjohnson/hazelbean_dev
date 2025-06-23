@@ -5,7 +5,8 @@ from osgeo import gdal, gdalconst
 from collections import OrderedDict
 import functools, collections
 from functools import reduce
-
+import subprocess
+import json
 from osgeo import gdal, osr, ogr
 import numpy as np
 import random
@@ -18,6 +19,7 @@ import logging
 from hazelbean import geoprocessing
 from hazelbean import netcdf
 import pygeoprocessing as pgp
+from pathlib import Path
 
 from osgeo import gdal
 # gdal.SetConfigOption("IGNORE_COG_LAYOUT_BREAK", "YES") 
@@ -89,20 +91,35 @@ type_string_to_ogr_field_type = {
 }
 
 gdal_number_to_gdal_type = {
-    1: gdalconst.GDT_Byte,
-    2: gdalconst.GDT_UInt16,
-    3: gdalconst.GDT_Int16,
-    4: gdalconst.GDT_UInt32,
-    5: gdalconst.GDT_Int32,
-    6: gdalconst.GDT_Float32,
-    7: gdalconst.GDT_Float64,
-    8: gdalconst.GDT_CInt16,
-    9: gdalconst.GDT_CInt32,
-    10: gdalconst.GDT_CFloat32,
-    11: gdalconst.GDT_CFloat64,
-    12: gdalconst.GDT_UInt64,
-    13: gdalconst.GDT_Int64,
+    1: gdal.GDT_Byte,
+    2: gdal.GDT_UInt16,
+    3: gdal.GDT_Int16,
+    4: gdal.GDT_UInt32,
+    5: gdal.GDT_Int32,
+    6: gdal.GDT_Float32,
+    7: gdal.GDT_Float64,
+    8: gdal.GDT_CInt16,
+    9: gdal.GDT_CInt32,
+    10: gdal.GDT_CFloat32,
+    11: gdal.GDT_CFloat64,
+    12: gdal.GDT_UInt64,
+    13: gdal.GDT_Int64,
 }
+# gdal_number_to_gdal_type = {
+#     1: gdalconst.GDT_Byte,
+#     2: gdalconst.GDT_UInt16,
+#     3: gdalconst.GDT_Int16,
+#     4: gdalconst.GDT_UInt32,
+#     5: gdalconst.GDT_Int32,
+#     6: gdalconst.GDT_Float32,
+#     7: gdalconst.GDT_Float64,
+#     8: gdalconst.GDT_CInt16,
+#     9: gdalconst.GDT_CInt32,
+#     10: gdalconst.GDT_CFloat32,
+#     11: gdalconst.GDT_CFloat64,
+#     12: gdalconst.GDT_UInt64,
+#     13: gdalconst.GDT_Int64,
+# }
 
 gdal_number_to_gdal_name = {
     1: 'Byte',
@@ -154,7 +171,8 @@ gdal_name_to_gdal_number = {
 gdal_number_to_numpy_type = {
     1: np.uint8,
     2: np.uint16,
-    3: np.int16,
+    3: np.int32,
+    # 3: np.int16, # HACK to fix the reclassification bug.
     4: np.uint32,
     5: np.int32,
     6: np.float32,
@@ -251,9 +269,9 @@ except:
     }
 resampling_methods = RESAMPLE_DICT
 
-def get_correct_ndv_from_flex(input_object, is_id=False):
+def get_correct_ndv_from_dtype_flex(input_object, is_id=False):
     # is_id means we will be using the EE devestack approach of having 0 be the ndv for UINT types IF it is an id_layer. This
-    # allows faster lookup.
+    # allows faster lookup. HOWEVER, i'm thinking that instead the standard should just be that id rasters should never have a ndv present.
 
     try:
         int(input_object)
@@ -272,9 +290,15 @@ def get_correct_ndv_from_flex(input_object, is_id=False):
         raise ValueError('Could not find a no data value for ' + str(input_object))
 
     if not is_id:
-        return current[0]
+        if type(current) is list:
+            return current[0]
+        else: 
+            return current
     else:
-        return current[1]
+        if type(current) is list:
+            return current[1]
+        else: 
+            return current
 
 MAX_UINT8 = 255
 MAX_UINT16 = 65535
@@ -283,6 +307,19 @@ MAX_UINT64 = 18446744073709551615
 MAX_INT16 = 32767
 MAX_INT32 = 2147483647
 MAX_INT64 = 9223372036854775807
+
+no_data_values_by_numpy_type_NON_LIST = {
+    np.uint8: MAX_UINT8,
+    np.byte: MAX_UINT8,
+    np.uint16: MAX_UINT16,
+    np.int16: -9999,
+    np.uint32: MAX_UINT32,
+    np.int32: -9999,
+    np.float32: -9999.0,
+    np.float64: -9999.0,
+    np.uint64: MAX_UINT64,
+    np.int64: -9999,
+}
 
 no_data_values_by_numpy_type = {
     np.uint8: [MAX_UINT8, 0],
@@ -1282,8 +1319,8 @@ def extract_features_in_shapefile_by_attribute(input_path, output_path, column_n
     # hb.log('column_name: ' + str(column_name), level=100)
     # hb.log('column_filter: ' + str(column_filter), level=100)
     
-    gdf_out = gdf.loc[gdf[column_name] == column_filter]
-    
+    gdf_out = gdf.loc[gdf[column_name].astype(str) == str(column_filter)]
+    # 2704
     if len(gdf_out) == 0:
         raise NameError('No features found in ' + str(input_path) + ' with ' + str(column_name) + ' == ' + str(column_filter))
 
@@ -1358,6 +1395,7 @@ def get_wkt_from_path(input_path):
 
 
 def get_shape_from_dataset_path(dataset_path):
+    # Row, Column. Y, X.
 
     dataset = gdal.Open(dataset_path)
     if dataset == None:
@@ -1646,7 +1684,7 @@ def enumerate_array_as_odict(input_array, max_to_report=None):
     return output
 
 def enumerate_array_as_histogram(input_array):
-
+    L.debug('deprecated for enumerate_raster_path')
     hist = np.histogram(input_array)
 
     to_return = []
@@ -2688,9 +2726,464 @@ def cast_to_np64(a):
         else:
             return np.float64(float(a))
 
+def reclassify_raster_hb(input_raster_path, rules, output_raster_path, output_data_type=None, array_threshold=200000, match_path=None, output_ndv=None, existing_values='keep', invoke_full_callback=False, verbose=False):
+    
+    # ADD NOT IN DICT BEHAVIOR
+    if existing_values not in ['keep', 'zero', 'ndv']:
+        raise ValueError("existing_values must be one of 'keep', 'zero', or 'ndv'.")
+    
+    
+    # Replacement for reclassify_raster_arrayframe, once tested and working, consider renaming to not have hb.
+    # NOTE: array_threshold value is currently hardcoded in cython to 200000, so do not change.
+    """NOTE: The rules dict NEEDS to have the existing values that remain unchanged included, otherwise they get written to zero
+    match_path required in the event that input_flex is not a path.
+    array_threshold # If the max value in the rules is less than this, it will convert to an array where position indicates rules key. 10x faster at 255 length."""
+    from hazelbean import calculation_core
+    from hazelbean.calculation_core import cython_functions
 
-def reclassify_raster_hb(input_flex, rules, output_path, output_data_type=None, array_threshold=10000, match_path=None, output_ndv=None, invoke_full_callback=False, verbose=False):
-    # BROKEN, fails on Memory View is not Initialized.  Use reclassify_raster instead until fixed
+    from hazelbean.calculation_core.cython_functions import calc_change_matrix_of_two_int_arrays
+    from hazelbean.calculation_core.cython_functions import reclassify_uint8_to_uint8_by_dict
+    from hazelbean.calculation_core.cython_functions import reclassify_uint8_to_int_by_dict
+    from hazelbean.calculation_core.cython_functions import reclassify_uint8_to_float32_by_dict
+    from hazelbean.calculation_core.cython_functions import reclassify_uint8_to_float64_by_dict
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_uint8_by_dict
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_int_by_dict
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_float32_by_dict
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_float32_by_dict
+    from hazelbean.calculation_core.cython_functions import reclassify_uint8_to_uint8_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_uint8_to_int_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_uint8_to_float32_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_uint8_to_float64_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_uint8_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_int_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_float32_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_float64_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_uint8_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_int_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_float32_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_float64_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_uint8_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_int_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_float32_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_float64_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_uint8_to_uint8_by_dict
+    from hazelbean.calculation_core.cython_functions import reclassify_uint8_to_int_by_dict
+    from hazelbean.calculation_core.cython_functions import reclassify_uint8_to_float32_by_dict
+    from hazelbean.calculation_core.cython_functions import reclassify_uint8_to_float64_by_dict
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_uint8_by_dict
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_int_by_dict
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_float32_by_dict
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_float64_by_dict
+    from hazelbean.calculation_core.cython_functions import reclassify_uint8_to_uint8_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_uint8_to_int_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_uint8_to_float32_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_uint8_to_float64_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_uint8_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_int_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_float32_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_float64_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_float64_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_float64_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int_to_float64_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int64_to_float32_by_dict
+    from hazelbean.calculation_core.cython_functions import reclassify_int64_to_float32_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int64_to_float64_by_dict
+    from hazelbean.calculation_core.cython_functions import reclassify_int64_to_float64_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int64_to_uint8_by_dict
+    from hazelbean.calculation_core.cython_functions import reclassify_int64_to_uint8_by_array
+    from hazelbean.calculation_core.cython_functions import reclassify_int64_to_int_by_dict
+    from hazelbean.calculation_core.cython_functions import reclassify_int64_to_int64_by_dict
+
+    # Determine output data type based on type of rules.
+    if output_data_type is None:
+        # TODOO Simplify numpy vs python types across code base.        
+        #  'uint16': 2,
+        # 'int16': 3,
+        # 'uint32': 4,
+        # 'int32': 5,
+        # 'float32': 6,
+        # 'float64': 7,
+        # 'uint64': 12,
+        # 'int64': 13,
+        if type(rules) is np.ndarray:
+            if rules[0].dtype == np.uint8:
+                output_data_type = 1
+            elif rules[0].dtype == np.uint16:
+                output_data_type = 2
+            elif rules[0].dtype == np.int16:
+                output_data_type = 3
+            elif rules[0].dtype == np.uint32:
+                output_data_type = 4
+            elif type(rules[0]) == np.int32:
+                output_data_type = 5
+            elif type(rules[0]) == np.float32:
+                output_data_type = 6
+            elif type(rules[0]) == np.float64:
+                output_data_type = 7
+            elif type(rules[0]) == np.uint64:
+                output_data_type = 12
+            elif type(rules[0]) == np.int64:
+                output_data_type = 13
+        elif type(rules[list(rules)[0]]) is int:
+            output_data_type = 5
+        elif type(rules[list(rules)[0]]) is float:
+            output_data_type = 7
+        elif type(rules[list(rules)[0]]) == np.uint8:
+            output_data_type = 1
+        elif type(rules[list(rules)[0]]) == np.uint16:
+            output_data_type = 2
+        elif type(rules[list(rules)[0]]) == np.int16:
+            output_data_type = 3
+        elif type(rules[list(rules)[0]]) == np.uint32:
+            output_data_type = 4
+        elif type(rules[list(rules)[0]]) == np.int32:
+            output_data_type = 5
+        elif type(rules[list(rules)[0]]) == np.float32:
+            output_data_type = 6
+        elif type(rules[list(rules)[0]]) == np.float64:
+            output_data_type = 7
+        elif type(rules[list(rules)[0]]) == np.uint64:
+            output_data_type = 12
+        elif type(rules[list(rules)[0]]) == np.int64:
+            output_data_type = 13
+            
+
+    # Figure out the correct ndv based on the datatype
+    if output_ndv is None:
+        output_ndv = hb.get_correct_ndv_from_dtype_flex(output_data_type)
+
+    # Add the NDV to the rules
+    rules[output_ndv] = output_ndv
+
+    if isinstance(rules, dict):
+        L.debug('Rules dict is a dict. Testing to see if it can be made into an array for performance.')
+        min_key = int(min(rules.keys()))
+        max_key = int(max(rules.keys()))
+        min_value = min(rules.values())
+        max_value = max(rules.values())
+
+        if min_key < -array_threshold/2:
+            raise NameError('The minimum key in the rules dict is less than the array threshold. This will cause problems. Please fix this.')
+        if max_key > array_threshold/2:
+            raise NameError('The maximum key in the rules dict is greater than the array threshold. This will cause problems. Please fix this.')
+
+        
+        
+        # START HERE: Implement this shift so that negative indices work.
+        # If all the keys are negative (e.g. when you are reclassifying a single negative ndv value), this can get wonky.
+        # Turns out this was because negative indices given to numpy arrays, which fundamentally start at zero, implements reverse indexing
+        # so -9999 would be the 9999th from the end. Need to do a pre calc shift.
+        
+        
+        
+        ### NOTE!!!! There is a nuanced performance trick here: it seems like you would want the rules to be np.zeros, but actually
+        # it should be arange(). Unmodified, the arange says position 6 maps to 6, etc. zeros would say 6 maps to 0.
+        # old_rules = rules
+        # if output_data_type == 1:
+        #     rules = np.zeros(255 + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+        # elif output_data_type == 2:
+        #     rules = np.zeros(65535 + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+        # elif output_data_type == 3:
+        #     rules = np.zeros(np.iinfo(np.int16).min + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+        # elif output_data_type == 4:
+        #     rules = np.zeros(array_threshold + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type]) 
+        # elif output_data_type == 5:
+        #     rules = np.zeros(array_threshold + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+        # elif output_data_type == 6 or output_data_type == 7:
+        #     rules = np.zeros(array_threshold + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+        # elif output_data_type == 12:
+        #     rules = np.zeros(array_threshold + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type]) 
+        # elif output_data_type == 13:
+        #     rules = np.zeros(array_threshold + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+
+        # Make the rules into an array. Note a clever but confusing optimization here: for outputs that might be negative, we shift the ruels array by the array_threshold/2 and then correct posthoc. This is much faster
+        # because it doesnt have a negativity check in the loop. However, this requires thinking carefully about what value the non-listed rules should be.
+        old_rules = rules
+        if output_data_type == 1:
+            rules = np.arange(255 + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+        elif output_data_type == 2:
+            rules = np.arange(65535 + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+        elif output_data_type == 3:
+            if existing_values == 'keep':
+                positive_sequence  = np.arange(array_threshold/2 + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+                negative_sequence  = np.arange(-array_threshold/2, 0, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+            elif existing_values == 'zero':
+                positive_sequence = np.zeros(int(array_threshold/2 + 1), dtype=hb.gdal_number_to_numpy_type[output_data_type])
+                negative_sequence = np.zeros(int(array_threshold/2), dtype=hb.gdal_number_to_numpy_type[output_data_type])
+            elif existing_values == 'ndv':
+                positive_sequence  = np.full(int(array_threshold/2 + 1), output_ndv, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+                negative_sequence  = np.full(int(array_threshold/2), output_ndv, dtype=hb.gdal_number_to_numpy_type[output_data_type])                
+            rules = np.concatenate((positive_sequence, negative_sequence))
+        elif output_data_type == 4:
+            rules = np.arange(array_threshold + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type]) 
+        elif output_data_type == 5:
+            if existing_values == 'keep':
+                positive_sequence  = np.arange(array_threshold/2 + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+                negative_sequence  = np.arange(-array_threshold/2, 0, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+            elif existing_values == 'zero':
+                positive_sequence = np.zeros(int(array_threshold/2 + 1), dtype=hb.gdal_number_to_numpy_type[output_data_type])
+                negative_sequence = np.zeros(int(array_threshold/2), dtype=hb.gdal_number_to_numpy_type[output_data_type])
+            elif existing_values == 'ndv':
+                positive_sequence  = np.full(int(array_threshold/2 + 1), output_ndv, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+                negative_sequence  = np.full(int(array_threshold/2), output_ndv, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+            rules = np.concatenate((positive_sequence, negative_sequence))
+        elif output_data_type == 6 or output_data_type == 7:
+            if existing_values == 'keep':
+                positive_sequence  = np.arange(array_threshold/2 + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+                negative_sequence  = np.arange(-array_threshold/2, 0, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+            elif existing_values == 'zero':
+                positive_sequence = np.zeros(int(array_threshold/2 + 1), dtype=hb.gdal_number_to_numpy_type[output_data_type])
+                negative_sequence = np.zeros(int(array_threshold/2), dtype=hb.gdal_number_to_numpy_type[output_data_type])
+            elif existing_values == 'ndv':
+                positive_sequence  = np.full(int(array_threshold/2 + 1), output_ndv, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+                negative_sequence  = np.full(int(array_threshold/2), output_ndv, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+            rules = np.concatenate((positive_sequence, negative_sequence))            
+            
+            # rules = np.arange(array_threshold + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+        elif output_data_type == 12:
+            if existing_values == 'keep':
+                positive_sequence  = np.arange(array_threshold/2 + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+                negative_sequence  = np.arange(-array_threshold/2, 0, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+            elif existing_values == 'zero':
+                positive_sequence = np.zeros(int(array_threshold/2 + 1), dtype=hb.gdal_number_to_numpy_type[output_data_type])
+                negative_sequence = np.zeros(int(array_threshold/2), dtype=hb.gdal_number_to_numpy_type[output_data_type])
+            elif existing_values == 'ndv':
+                positive_sequence  = np.full(int(array_threshold/2 + 1), output_ndv, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+                negative_sequence  = np.full(int(array_threshold/2), output_ndv, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+            rules = np.concatenate((positive_sequence, negative_sequence))            
+            
+            # rules = np.arange(array_threshold + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type]) 
+        elif output_data_type == 13:
+            if existing_values == 'keep':
+                positive_sequence  = np.arange(array_threshold/2 + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+                negative_sequence  = np.arange(-array_threshold/2, 0, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+            elif existing_values == 'zero':
+                positive_sequence = np.zeros(int(array_threshold/2 + 1), dtype=hb.gdal_number_to_numpy_type[output_data_type])
+                negative_sequence = np.zeros(int(array_threshold/2), dtype=hb.gdal_number_to_numpy_type[output_data_type])
+            elif existing_values == 'ndv':
+                positive_sequence  = np.full(int(array_threshold/2 + 1), output_ndv, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+                negative_sequence  = np.full(int(array_threshold/2), output_ndv, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+            rules = np.concatenate((positive_sequence, negative_sequence))            
+            
+            
+        # old_rules = rules
+        # if output_data_type == 1:
+        #     rules = np.arange(255 + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+        # elif output_data_type == 2:
+        #     rules = np.arange(65535 + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+        # elif output_data_type == 3:
+        #     rules = np.arange(np.iinfo(np.int16).min, np.iinfo(np.int16).max + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+        # elif output_data_type == 4:
+        #     rules = np.arange(-(array_threshold/2), array_threshold/2 + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type]) 
+        # elif output_data_type == 5:
+        #     rules = np.arange(array_threshold + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+        # elif output_data_type == 6 or output_data_type == 7:
+        #     rules = np.arange(array_threshold + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+        # elif output_data_type == 12:
+        #     rules = np.arange(-(array_threshold/2), array_threshold/2 + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type]) 
+        # elif output_data_type == 13:
+        #     rules = np.arange(array_threshold + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+
+        # Populate the array from dict values
+        ### HILARIOUS optimization here. Rather than subtract the keys to go negative, just USE the negative indexing built into numpy
+        # so that -9999 is the 9999th from the end. 
+        for k, v in old_rules.items():
+            if k < array_threshold/2:
+                rules[int(k)] = v       
+            else:
+                rules[array_threshold - int(k)] = v
+                 
+        print(rules[0:10])
+        print(rules[-10:])
+        print(rules[-10001:-9995])
+        print(rules[9995:10001])
+        # print(rules[-])
+        5
+    elif isinstance(rules, np.ndarray):
+        L.debug('Making rules as arrays is about 10x faster. You already did that!')
+    else:
+        raise NameError('Wrong type of rules given. You gave: ' + str(rules))  
+        
+    # Based on the rule-dtype and array dtype, call the correct optimized cython function
+    geotiff_creation_options = hb.DEFAULT_GTIFF_CREATION_OPTIONS    
+    input_ds = gdal.OpenEx(input_raster_path)
+    raster_info = hb.get_raster_info_hb(input_raster_path)
+    data_type = raster_info['data_type']
+
+    L.debug('Calculating reclassification with rules as a dictionary.')
+    # base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.int32), 'raw')]
+    # TODOO, I don't support 16 bit ints, but those are frequently used. Expand this to include support for this.
+    
+    # START HERE: I'm nearly certain this isn't working because the input raster type is 3 but the rules are 5
+    if data_type == 1:
+        if output_data_type == 1:
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.uint8), 'raw')] # Only uint8 allows non int rules ## WTF DID I MEAN HEARE
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_uint8_to_uint8_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=1,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+        if 2 <= output_data_type <= 5:
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.int32), 'raw')]
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_uint8_to_int_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=1,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+        if output_data_type == 6:
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.float32), 'raw')]
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_uint8_to_float32_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=1,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+        if output_data_type == 7:
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.float64), 'raw')]
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_uint8_to_float64_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=1,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+        if 12 <= output_data_type <= 13:
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.int64), 'raw')]
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_uint8_to_int64_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=1,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+    elif 2 <= data_type <= 5:
+        if output_data_type == 1:
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.uint8), 'raw')]
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int_to_uint8_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=5,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+        elif 2 <= output_data_type <= 5:
+            # base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.int8), 'raw')]
+            
+            
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.int32), 'raw')]
+
+
+
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int_to_int_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=5,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+        elif output_data_type == 6:
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.float32), 'raw')]
+            # TODOO TODOOO, fast memory efficient reclassification doen't work because raster_calculator by default casts to the output type so can't pass a different type to cython.
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int_to_float32_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=5,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+        elif output_data_type == 7:
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.float64), 'raw')]
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int_to_float64_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=5,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+        elif 12 <= output_data_type <= 13:
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.float64), 'raw')]
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int_to_int64_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=5,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+    elif data_type == 6:
+        # raise NameError('reclassify unable to handle floats yet. Unimplemented. ALSO NOTE, if you attempt to fix this later, the rules as array method DOES NOT WORK FOR FLOATS BECAUSE OF THE INDICES NEED TO BE FLOATS, so have to use the dict() method.. ' + str(input_flex))
+        if output_data_type == 1:
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.uint8), 'raw')]
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int_to_uint8_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=6,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+        elif 2 <= output_data_type <= 5:
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.int8), 'raw')]
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int_to_int_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=6,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+        elif output_data_type == 6:
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.float32), 'raw')]
+            # TODOO TODOOO, fast memory efficient reclassification doen't work because raster_calculator by default casts to the output type so can't pass a different type to cython.
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int_to_float32_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=6,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+        elif output_data_type == 7:
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.float64), 'raw')]
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int_to_float64_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=6,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+        elif 12 <= output_data_type <= 13:
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.int64), 'raw')]
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int_to_int64_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=6,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+
+    elif data_type == 7:
+        # raise NameError('reclassify unable to handle floats yet. Unimplemented. ALSO NOTE, if you attempt to fix this later, the rules as array method DOES NOT WORK FOR FLOATS BECAUSE OF THE INDICES NEED TO BE FLOATS, so have to use the dict() method.. ' + str(input_flex))
+        # raise NameError('reclassify unable to handle floats yet. Unimplemented. ALSO NOTE, if you attempt to fix this later, the rules as array method DOES NOT WORK FOR FLOATS BECAUSE OF THE INDICES NEED TO BE FLOATS, so have to use the dict() method.. ' + str(input_flex))
+        if output_data_type == 1:
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.uint8), 'raw')]
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int_to_uint8_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=7,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+        elif 2 <= output_data_type <= 5:
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.int8), 'raw')]
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int_to_int_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=7,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+        elif output_data_type == 6:
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.float32), 'raw')]
+            # TODOO TODOOO, fast memory efficient reclassification doen't work because raster_calculator by default casts to the output type so can't pass a different type to cython.
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int_to_float32_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=7,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+        elif output_data_type == 7:
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.float64), 'raw')]
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int_to_float64_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=7,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+    elif 12 <= data_type <= 13:
+        if output_data_type == 1:
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.uint8), 'raw')]
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int64_to_uint8_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=13,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+        elif 2 <= output_data_type <= 5:
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.int8), 'raw')]
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int64_to_int_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=13,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+        elif output_data_type == 6:
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.float32), 'raw')]
+            # TODOO TODOOO, fast memory efficient reclassification doen't work because raster_calculator by default casts to the output type so can't pass a different type to cython.
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int64_to_float32_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=13,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+        elif output_data_type == 7:
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.float64), 'raw')]
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int64_to_float64_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=13,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+        elif 12 <= output_data_type <= 13:
+            base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.int64), 'raw')]
+            hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int64_to_int64_by_array, output_raster_path,
+                                    output_data_type, output_ndv, read_datatype=13,
+                                    gtiff_creation_options=geotiff_creation_options,
+                                    calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
+
+        else:
+            raise NameError('Cannot interpret input_flex')
+
+def reclassify_raster_arrayframe(input_flex, rules, output_path, output_data_type=None, array_threshold=10000, match_path=None, output_ndv=None, invoke_full_callback=False, verbose=False):
+    # LEGACY CODE based on arrayframes, which I am moving away from. They were cool, but caused problems like slow REPR resolvement in debug mode. Maye in a different life.
     """NOTE: The rules dict NEEDS to have the existing values that remain unchanged included, otherwise they get written to zero
     match_path required in the event that input_flex is not a path.
     array_threshold # If the max value in the rules is less than this, it will convert to an array where position indicates rules key. 10x faster at 255 length."""
@@ -2760,6 +3253,15 @@ def reclassify_raster_hb(input_flex, rules, output_path, output_data_type=None, 
         # TODOO Finish this logic
         # output_data_type = 6
         # TODOO Simplify numpy vs python types across code base.
+        
+    #         'uint16': 2,
+    # 'int16': 3,
+    # 'uint32': 4,
+    # 'int32': 5,
+    # 'float32': 6,
+    # 'float64': 7,
+    # 'uint64': 12,
+    # 'int64': 13,
         if type(rules) is np.ndarray:
             if rules[0].dtype == np.uint8:
                 output_data_type = 1
@@ -2775,6 +3277,12 @@ def reclassify_raster_hb(input_flex, rules, output_path, output_data_type=None, 
             output_data_type = 7
         elif type(rules[list(rules)[0]]) == np.uint8:
             output_data_type = 1
+        elif type(rules[list(rules)[0]]) == np.uint16:
+            output_data_type = 2
+        elif type(rules[list(rules)[0]]) == np.int16:
+            output_data_type = 3
+        elif type(rules[list(rules)[0]]) == np.uint32:
+            output_data_type = 4
         elif type(rules[list(rules)[0]]) == np.int32:
             output_data_type = 5
         elif type(rules[list(rules)[0]]) == np.float32:
@@ -2785,11 +3293,12 @@ def reclassify_raster_hb(input_flex, rules, output_path, output_data_type=None, 
     # Figure out the correct ndv based on the datatype
     if output_ndv is None:
 
-        ids_are_all_positive = True
+        ids_are_all_positive = False
         if ids_are_all_positive:
             output_ndv = 0
         else:
-            output_ndv = hb.default_no_data_values_by_gdal_number[output_data_type]
+            output_ndv = hb.get_correct_ndv_from_dtype_flex(output_data_type)
+            # output_ndv = hb.default_no_data_values_by_gdal_number[output_data_type]
 
         # if match_path is not None:
 
@@ -2848,7 +3357,8 @@ def reclassify_raster_hb(input_flex, rules, output_path, output_data_type=None, 
             # but i know this messed something else up so build test suite.
             if max_key <= 255 and max_value <= 255:
                 # NOTE BIG CHANGE and awkward code. it doesn't matter how long it is for the OUTPUT type.
-                rules = np.arange(int(math.ceil(max_key)) + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+                # rules = np.arange(int(math.ceil(max_key)) + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+                rules = np.arange(int(math.ceil(array_threshold)) + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
                 # rules = np.zeros(max_key + 1, dtype=np.uint8)
                 for k, v in old_rules.items():
                     rules[int(k)] = v
@@ -2857,7 +3367,8 @@ def reclassify_raster_hb(input_flex, rules, output_path, output_data_type=None, 
                     # except:
                     #     L.info('failed to put into array for ', k, v, 'which maaaaay be okay but it will default to ndv in the output then. Might be able to fix this by having a default nan value')
             else:
-                rules = np.arange(int(math.ceil(max_key)) + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+                # rules = np.arange(int(math.ceil(max_key)) + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
+                rules = np.arange(int(math.ceil(array_threshold)) + 1, dtype=hb.gdal_number_to_numpy_type[output_data_type])
                 for k, v in old_rules.items():
                     if k != output_ndv:
                         rules[int(k)] = v
@@ -2871,7 +3382,7 @@ def reclassify_raster_hb(input_flex, rules, output_path, output_data_type=None, 
         L.debug('Making rules as arrays is about 10x faster. You already did that!')
     else:
         raise NameError('Wrong type of rules given. You gave: ' + str(rules))
-
+    ### WHY do i do this twice?!?
     if output_data_type is None:
         if isinstance(rules, dict):
             if isinstance(rules[list(rules)[0]], int):
@@ -3076,7 +3587,13 @@ def reclassify_raster_hb(input_flex, rules, output_path, output_data_type=None, 
                                             gtiff_creation_options=geotiff_creation_options,
                                             calc_raster_stats=False, invoke_full_callback=invoke_full_callback)
                 elif 2 <= output_data_type <= 5:
-                    base_raster_path_band = [(input_flex.path, 1), (rules.astype(np.int8), 'raw')]
+                    # base_raster_path_band = [(input_flex.path, 1), (rules.astype(np.int8), 'raw')]
+                    
+                    
+                    base_raster_path_band = [(input_flex.path, 1), (rules, 'raw')]
+
+
+
                     hb.raster_calculator_hb(base_raster_path_band, hb.calculation_core.cython_functions.reclassify_int_to_int_by_array, output_path,
                                             output_data_type, output_ndv, read_datatype=5,
                                             gtiff_creation_options=geotiff_creation_options,
@@ -4818,7 +5335,7 @@ def extract_datasource_table_by_key(datasource_uri, key_field):
 
 
 def get_geotransform_path(input_path):
-
+    # (origin_x, pixel_width, rotation_x, origin_y, rotation_y, pixel_height)
     if os.path.exists(input_path):
         ds = gdal.OpenEx(input_path)
         layer = ds.GetLayer()
@@ -5809,14 +6326,377 @@ def add_stats_to_geotiff_with_gdal(geotiff_path, approx_ok=False, force=True, ve
             band.SetMetadataItem("STATISTICS_APPROXIMATE", "YES")
             
         if verbose:
-            print(
-                f"\nBand {band_index} stats: "
-                f"min={stats[0]:.4f}, max={stats[1]:.4f}, mean={stats[2]:.4f}, stddev={stats[3]:.4f}"
+            hb.log( f"Band {band_index} from path {geotiff_path} has stats: min={stats[0]:.4f}, max={stats[1]:.4f}, mean={stats[2]:.4f}, stddev={stats[3]:.4f}"
             )
 
         band.FlushCache()
 
     ds = None 
+    
+def find_gdalinfo():
+    """Find gdalinfo executable across different OS and conda setups"""
+    
+    # First try: use shutil.which (checks PATH)
+    gdalinfo_path = shutil.which('gdalinfo')
+    if gdalinfo_path and os.path.exists(gdalinfo_path):
+        return gdalinfo_path
+    
+    # Second try: construct path based on Python executable location
+    python_exe = Path(sys.executable)
+    conda_parent_env_root = python_exe.parent.parent  # Go up from bin/python to env root
+    conda_env_root = python_exe.parent  # Go up from bin/python to env root
+    
+    # Try different possible locations
+    possible_paths = []
+    
+    if os.name == 'nt':  # Windows
+        possible_paths = [
+            conda_parent_env_root / 'Library' / 'bin' / 'gdalinfo.exe',
+            conda_env_root / 'Library' / 'bin' / 'gdalinfo.exe',
+            conda_env_root / 'Scripts' / 'gdalinfo.exe',
+            conda_env_root / 'bin' / 'gdalinfo.exe',
+        ]
+    else:  # Linux/macOS
+        possible_paths = [
+            conda_env_root / 'bin' / 'gdalinfo',
+        ]
+    
+    # Check each possible path
+    for path in possible_paths:
+        str_path = str(path)
+        if hb.path_exists(str(str_path), verbose=1):
+            # if path.exists():
+            return str_path
+    
+    return None
+
+
+def add_stats_to_geotiff_with_gdalinfo(geotiff_path, approx_ok=False, verbose=True, force_recompute=True):
+    """
+    Uses gdalinfo to compute base stats and histogram, then parses its JSON output
+    to calculate and store STATISTICS_VALID_COUNT using GDAL Python API.
+    This version includes more robust JSON parsing.
+    """
+    if not os.path.exists(geotiff_path):
+        hb.log(f"ERROR: File not found: {geotiff_path}")
+        return False
+
+    # 1. Unset stats (optional, as in previous gdalinfo example)
+    if force_recompute:
+        gdalinfo_path = find_gdalinfo()
+        cmd_unset = [gdalinfo_path, '-unsetstats', geotiff_path]
+        # cmd_unset = ["C:/Users/jajohns/miniforge3/envs/env2025k/Library/bin/gdalinfo.exe", '-unsetstats', geotiff_path]
+        if verbose:
+            hb.log(f"Attempting to unset existing stats for {geotiff_path} with: {' '.join(cmd_unset)}")
+        try:
+            # Run quietly unless verbose for unsetting
+            process_unset = subprocess.run(cmd_unset, capture_output=not verbose, text=True, check=False, env=os.environ.copy()) # Allow non-zero exit code
+            if process_unset.returncode != 0 and verbose:
+                hb.log(f"  Note: 'gdalinfo -unsetstats' may have failed (return code {process_unset.returncode}). This can happen with older GDAL versions or if no stats were present. Stderr: {process_unset.stderr.strip() if process_unset.stderr else 'N/A'}")
+            elif verbose and process_unset.returncode == 0:
+                 hb.log(f"  Successfully ran 'gdalinfo -unsetstats' or no stats were present to unset.")
+        except FileNotFoundError:
+            hb.log(f"ERROR: gdalinfo command not found. Cannot run '{' '.join(cmd_unset)}'. Please ensure GDAL command-line tools are installed and in PATH.")
+            # return False
+        except Exception as e:
+            hb.log(f"ERROR during 'gdalinfo -unsetstats' for {geotiff_path}: {e}")
+            # Potentially continue, as the main stats computation might still work/overwrite
+    # 'Driver: GTiff/GeoTIFF\nFiles: C:/Users/jajohns/Files/seals/projects/luh2_300m_global/intermediate/stitched_lulc_simplified_scenarios\\copy_20250530_142029_721now.tif\nSize is 129600, 64800\nCoordinate System is:\nGEOGCRS["WGS 84",\n    ENSEMBLE["World Geodetic System 1984 ensemble",\n        MEMBER["World Geodetic System 1984 (Transit)"],\n        MEMBER["World Geodetic System 1984 (G730)"],\n        MEMBER["World Geodetic System 1984 (G873)"],\n        MEMBER["World Geodetic System 1984 (G1150)"],\n        MEMBER["World Geodetic System 1984 (G1674)"],\n        MEMBER["World Geodetic System 1984 (G1762)"],\n        MEMBER["World Geodetic System 1984 (G2139)"],\n        MEMBER["World Geodetic System 1984 (G2296)"],\n        ELLIPSOID["WGS 84",6378137,298.257223563,\n            LENGTHUNIT["metre",1]],\n        ENSEMBLEACCURACY[2.0]],\n    PRIMEM["Greenwich",0,\n        ANGLEUNIT["degree",0.0174532925199433]],\n    CS[ellipsoidal,2],\n        AXIS["geodetic latitude (Lat)",north,\n            ORDER[1],\n            ANGLEUNIT["degree",0.0174532925199433]],\n        AXIS["geodetic longitude (Lon)",east,\n            ORDER[2],\n            ANGLEUNIT["degree",0.0174532925199433]],\n    USAGE[\n        SCOPE["Horizontal component of 3D system."],\n        AREA["World."],\n        BBOX[-90,-180,90,180]],\n    ID["EPSG",4326]]\nData axis to CRS axis mapping: 2,1\nOrigin = (-180.000000000000000,90.000000000000000)\nPixel Size = (0.002777777777778,-0.002777777777778)\nMetadata:\n  AREA_OR_POINT=Area\nImage Structure Metadata:\n  LAYOUT=COG\n  COMPRESSION=ZSTD\n  INTERLEAVE=BAND\nCorner Coordinates:\nUpper Left  (-180.0000000,  90.0000000) (180d 0\' 0.00"W, 90d 0\' 0.00"N)\nLower Left  (-180.0000000, -90.0000000) (180d 0\' 0.00"W, 90d 0\' 0.00"S)\nUpper Right ( 180.0000000,  90.0000000) (180d 0\' 0.00"E, 90d 0\' 0.00"N)\nLower Right ( 180.0000000, -90.0000000) (180d 0\' 0.00"E, 90d 0\' 0.00"S)\nCenter      (   0.0000000,   0.0000000) (  0d 0\' 0.01"E,  0d 0\' 0.01"N)\nBand 1 Block=512x512 Type=Byte, ColorInterp=Gray\n0...10...20...30...40...50...60...70...80...90...100 - done.\n  256 buckets from -0.5 to 255.5:\n  0 12479975 327004056 176115841 653118942 431070063 5674971368 1123319755 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 \n  NoData Value=255\n  Overviews: 43200x21600, 8640x4320, 4320x2160, 1440x720, 720x360, 360x180\n'
+    # 2. Compute stats and histogram using gdalinfo (this will write them to the TIFF)
+    # cmd_stats_hist = ['gdalinfo', '-hist', geotiff_path]
+    compute_hist = 0
+    if compute_hist:
+        cmd_stats_hist = [gdalinfo_path, '-hist', geotiff_path]
+        if verbose:
+            hb.log(f"Computing base stats & histogram for {geotiff_path} with: {' '.join(cmd_stats_hist)}")
+        try:
+            process_stats_hist = subprocess.run(cmd_stats_hist, capture_output=True, text=True, check=True, env=os.environ.copy())
+            if verbose:
+                # Print a snippet to avoid overwhelming logs if output is huge
+                output_snippet = process_stats_hist.stdout
+                if len(output_snippet) > 1000:
+                    output_snippet = output_snippet[:1000] + "\n... (output truncated)"
+                hb.log(f"  'gdalinfo -hist' stdout snippet:\n{output_snippet}")
+            if "STATISTICS_MINIMUM" not in process_stats_hist.stdout: # Basic check
+                hb.log(f"  WARNING: 'STATISTICS_MINIMUM' not found in 'gdalinfo -hist' output for {geotiff_path}. Base stats might not have been written/embedded correctly.")
+                # Depending on strictness, you might `return False` here
+        except FileNotFoundError:
+            hb.log(f"ERROR: gdalinfo command not found. Cannot run '{' '.join(cmd_stats_hist)}'.")
+            # return False
+        except subprocess.CalledProcessError as e:
+            hb.log(f"ERROR: 'gdalinfo -hist' failed for {geotiff_path} with exit code {e.returncode}.")
+            hb.log(f"  Stdout: {e.stdout.strip() if e.stdout else 'N/A'}")
+            hb.log(f"  Stderr: {e.stderr.strip() if e.stderr else 'N/A'}")
+            # return False
+        except Exception as e:
+            hb.log(f"An unexpected error occurred with 'gdalinfo -hist' for {geotiff_path}: {e}")
+            # return False
+
+    # 3. Get stats including STATISTICS_VALID_PERCENT using gdalinfo -json -stats
+    cmd_json_stats = [gdalinfo_path, '-json', '-stats', geotiff_path]
+    if verbose:
+        hb.log(f"Fetching JSON stats for {geotiff_path} with: {' '.join(cmd_json_stats)}")
+    gdalinfo_data = None # Initialize
+    try:
+        process_json = subprocess.run(cmd_json_stats, capture_output=True, text=True, check=True, env=os.environ.copy())
+        gdalinfo_data = json.loads(process_json.stdout)
+    except FileNotFoundError:
+        hb.log(f"ERROR: gdalinfo command not found. Cannot run '{' '.join(cmd_json_stats)}'.")
+        # return False
+    except subprocess.CalledProcessError as e:
+        hb.log(f"ERROR: 'gdalinfo -json -stats' failed for {geotiff_path} with exit code {e.returncode}.")
+        hb.log(f"  Stdout: {e.stdout.strip() if e.stdout else 'N/A'}")
+        hb.log(f"  Stderr: {e.stderr.strip() if e.stderr else 'N/A'}")
+        # return False
+    except json.JSONDecodeError as e:
+        hb.log(f"ERROR: Failed to parse JSON output from 'gdalinfo -json -stats' for {geotiff_path}: {e}")
+        hb.log(f"  gdalinfo stdout that caused error: {process_json.stdout[:500] if process_json and process_json.stdout else 'N/A'}...")
+        # return False
+    except Exception as e:
+        hb.log(f"An unexpected error occurred with 'gdalinfo -json -stats' for {geotiff_path}: {e}")
+        # return False
+
+    if not gdalinfo_data: # Should not happen if try block succeeded, but as a safeguard
+        hb.log(f"ERROR: No data parsed from 'gdalinfo -json -stats' for {geotiff_path}.")
+        # return False
+
+    # 4. Open the GeoTIFF with GDAL Python API to write STATISTICS_VALID_COUNT
+    ds = None # Initialize ds to ensure it's defined for finally block if open fails
+    try:
+        # Ensure GDAL Python bindings are using exceptions
+        gdal.UseExceptions()
+        ds = gdal.OpenEx(geotiff_path, gdal.GA_Update, open_options=["IGNORE_COG_LAYOUT_BREAK=YES"])
+        if not ds:
+            hb.log(f"ERROR: GDAL Python could not open {geotiff_path} in update mode.")
+            return False
+
+        if 'bands' in gdalinfo_data:
+            for i, band_info_from_json in enumerate(gdalinfo_data['bands']):
+                band_index_gdal = i + 1 # GDAL bands are 1-indexed
+                
+                band = ds.GetRasterBand(band_index_gdal)
+                if not band:
+                    hb.log(f"  Band {band_index_gdal}: Could not retrieve band object from dataset using GDAL Python. Skipping.")
+                    continue
+
+                if force_recompute:
+                    # Clear any pre-existing STATISTICS_VALID_COUNT from previous runs
+                    # band.SetMetadataItem("STATISTICS_VALID_COUNT", None)
+                    pass # Why did I do this? then it just fails the next check.
+
+                band_metadata_json = band_info_from_json.get('metadata', {}).get('', {})
+
+                if 'STATISTICS_VALID_PERCENT' not in band_metadata_json:
+                    # set to 100 percent
+                    band_metadata_json['STATISTICS_VALID_PERCENT'] = '100'  # Default to 100% if not present
+                    
+                    
+                if band_metadata_json and 'STATISTICS_VALID_PERCENT' in band_metadata_json:
+                    try:
+                        valid_percent_str = band_metadata_json['STATISTICS_VALID_PERCENT']
+                        valid_percent = float(valid_percent_str)
+                        
+                        current_band_x_size = band.XSize
+                        current_band_y_size = band.YSize
+
+                        if current_band_x_size > 0 and current_band_y_size > 0:
+                            valid_count = round((valid_percent / 100.0) * current_band_x_size * current_band_y_size)
+                            band.SetMetadataItem("STATISTICS_VALID_COUNT", str(int(valid_count)))
+                            mean = band.GetMetadataItem("STATISTICS_MEAN")
+                            band.SetMetadataItem("STATISTICS_SUM", str(float(valid_count)*float(mean)))
+                            band.SetMetadataItem("STATISTICS_APPROXIMATE", "NO")
+                            if verbose:
+                                hb.log(f"  Band {band_index_gdal}: Set STATISTICS_VALID_COUNT = {valid_count} (from {valid_percent:.2f}%)")
+                        else:
+                            if verbose:
+                                hb.log(f"  Band {band_index_gdal}: Skipping valid count, band dimensions ({current_band_x_size}x{current_band_y_size}) are zero or invalid.")
+                    except ValueError:
+                        if verbose:
+                            hb.log(f"  Band {band_index_gdal}: Could not parse STATISTICS_VALID_PERCENT ('{valid_percent_str}') to float.")
+                    except Exception as e_calc:
+                        if verbose:
+                            hb.log(f"  Band {band_index_gdal}: Error during valid count calculation or setting metadata: {e_calc}")
+                elif verbose:
+                    # More detailed logging for why STATISTICS_VALID_PERCENT might be missing
+                    if not band_info_from_json.get('metadata'):
+                        hb.log(f"  Band {band_index_gdal}: 'metadata' key not found in gdalinfo JSON output for this band.")
+                    elif not band_info_from_json.get('metadata', {}).get(''):
+                        hb.log(f"  Band {band_index_gdal}: Default metadata domain ('') not found in gdalinfo JSON output for this band.")
+                    elif 'STATISTICS_VALID_PERCENT' not in band_metadata_json : # Explicitly check this condition
+                        hb.log(f"  Band {band_index_gdal}: STATISTICS_VALID_PERCENT not found in parsed JSON metadata for this band.")
+                    else: # Should not be reached if the above are exhaustive
+                        hb.log(f"  Band {band_index_gdal}: STATISTICS_VALID_PERCENT not available for an unknown reason in parsed JSON.")
+
+                band.FlushCache()
+        
+        ds.FlushCache() # Final flush for the dataset
+        if verbose:
+            hb.log(f"Successfully processed and updated stats for {geotiff_path}")
+        return True
+
+    except Exception as e:
+        hb.log(f"ERROR during GDAL Python update phase for {geotiff_path}: {e}")
+        return False
+    finally:
+        # Ensure dataset is closed
+        if ds is not None:
+            ds = None
+
+    
+def add_stats_to_geotiff_with_gdal_full(geotiff_path,
+                                   approx_ok=False,
+                                   force=True,
+                                   verbose=True,
+                                   histogram_buckets=256,
+                                   compute_valid_pixels_info=True): # Renamed for clarity
+    """
+    
+    STATUS:::: NEVER FINISHED BEACUSE FAILS ON NO OPTIONS
+    
+    
+    Computes raster statistics (min, max, mean, stddev, histogram, valid pixels info)
+    and embeds them into GeoTIFF internal metadata. Aims to do this in a single
+    data pass by ComputeStatistics where possible.
+
+    Parameters:
+        geotiff_path (str): Path to GeoTIFF.
+        approx_ok (bool): Allow approximate stats computation. If False, histogram
+                          computation is more likely to be detailed and valid pixel
+                          percentage more accurate.
+        force (bool): Force recomputation of statistics by clearing existing ones.
+        verbose (bool): Print detailed statistics per band.
+        histogram_buckets (int): Number of buckets for the histogram.
+                                 Only effective if approx_ok is False.
+        compute_valid_pixels_info (bool): Whether to compute and store the percentage
+                                          and count of valid pixels.
+    """
+    
+    import os
+    from osgeo import gdal # Re-import to be absolutely sure
+    print(f"WORKER PROCESS {os.getpid()}: GDAL Version: {gdal.VersionInfo()}")
+    print(f"WORKER PROCESS {os.getpid()}: GDAL Version Num: {gdal.VersionInfo('VERSION_NUM')}")
+    print(f"WORKER PROCESS {os.getpid()}: osgeo path: {os.path.dirname(gdal.__file__)}")
+    # ... rest of your function
+    
+    
+    ds = gdal.Open(geotiff_path, gdal.GA_Update)
+
+    if not ds:
+        raise ValueError(f"Could not open {geotiff_path}")
+
+    if verbose:
+        hb.log(f"Processing {geotiff_path}...")
+
+    total_pixels_raster = ds.RasterXSize * ds.RasterYSize
+
+    for band_index in range(1, ds.RasterCount + 1):
+        band = ds.GetRasterBand(band_index)
+        band_total_pixels = band.XSize * band.YSize # In case of overviews or different band sizes
+
+        if force:
+            if verbose:
+                hb.log(f"  Band {band_index}: Clearing existing statistics (force=True)...")
+            metadata = band.GetMetadata()
+            keys_to_delete = [k for k in metadata.keys() if k.startswith("STATISTICS_")]
+            if keys_to_delete:
+                delete_dict = {key: None for key in keys_to_delete}
+                band.SetMetadata(delete_dict)
+            else: # Fallback for safety, though usually not needed
+                common_stat_keys = [
+                    "STATISTICS_MINIMUM", "STATISTICS_MAXIMUM", "STATISTICS_MEAN",
+                    "STATISTICS_STDDEV", "STATISTICS_APPROXIMATE",
+                    "STATISTICS_HISTONUMBINS", "STATISTICS_HISTOMIN",
+                    "STATISTICS_HISTOMAX", "STATISTICS_HISTOBINVALUES",
+                    "STATISTICS_VALID_PERCENT", "STATISTICS_VALID_COUNT"
+                ]
+                for key in common_stat_keys:
+                    band.SetMetadataItem(key, None)
+
+        # Options for ComputeStatistics
+        cs_options = []
+        if not approx_ok:
+            cs_options.append(f"STATISTICS_HISTONUMBINS={histogram_buckets}")
+        if compute_valid_pixels_info:
+            # This option tells ComputeStatistics to calculate and store STATISTICS_VALID_PERCENT
+            cs_options.append("STATISTICS_VALID_PERCENT=YES")
+
+
+        callback_fn = hb.make_gdal_callback(f'  Band {band_index} Calculating stats:') if verbose else None
+        
+        try:
+            if verbose:
+                log_msg_cs = f"  Band {band_index}: Computing statistics..."
+                if cs_options:
+                    log_msg_cs += f" with options: {cs_options}"
+                hb.log(log_msg_cs)
+
+            # ComputeStatistics will calculate min, max, mean, stddev
+            # And if options are set: histogram and valid_percent
+            # All in one pass over the data.
+            stats_list = band.ComputeStatistics(approx_ok, callback=callback_fn, options=cs_options)
+            # stats_list = [min, max, mean, stddev]
+        except RuntimeError as e:
+            hb.log(f"  Band {band_index}: Error computing statistics: {e}. Skipping stats for this band.")
+            band.FlushCache()
+            continue
+
+        # ComputeStatistics should have set the relevant metadata items internally.
+        # We explicitly set STATISTICS_APPROXIMATE as good practice.
+        band.SetMetadataItem("STATISTICS_APPROXIMATE", "YES" if approx_ok else "NO")
+
+        valid_pixel_count_derived = -1
+        if compute_valid_pixels_info:
+            # Retrieve the valid percent that ComputeStatistics should have stored
+            valid_percent_str = band.GetMetadataItem("STATISTICS_VALID_PERCENT", "STATISTICS")
+            if not valid_percent_str: # Fallback to default domain
+                valid_percent_str = band.GetMetadataItem("STATISTICS_VALID_PERCENT")
+
+            if valid_percent_str is not None:
+                try:
+                    valid_percent = float(valid_percent_str)
+                    # Calculate count from percent and total pixels for the band
+                    valid_pixel_count_derived = round(band_total_pixels * (valid_percent / 100.0))
+                    band.SetMetadataItem("STATISTICS_VALID_COUNT", str(int(valid_pixel_count_derived)))
+                except ValueError:
+                    if verbose:
+                        hb.log(f"  Band {band_index}: Could not parse STATISTICS_VALID_PERCENT ('{valid_percent_str}') to float.")
+            elif verbose:
+                hb.log(f"  Band {band_index}: STATISTICS_VALID_PERCENT not found in metadata after ComputeStatistics.")
+        
+        if verbose:
+            log_message = (
+                f"  Band {band_index} stats (from ComputeStatistics):\n"
+                f"    Min: {stats_list[0]:.4f}, Max: {stats_list[1]:.4f}, "
+                f"Mean: {stats_list[2]:.4f}, StdDev: {stats_list[3]:.4f}"
+            )
+            if compute_valid_pixels_info:
+                vp_str = band.GetMetadataItem("STATISTICS_VALID_PERCENT", "STATISTICS") or band.GetMetadataItem("STATISTICS_VALID_PERCENT")
+                vc_str = band.GetMetadataItem("STATISTICS_VALID_COUNT", "STATISTICS") or band.GetMetadataItem("STATISTICS_VALID_COUNT")
+                log_message += f"\n    Valid Percent: {vp_str if vp_str else 'N/A'}"
+                log_message += f"\n    Valid Count (derived): {vc_str if vc_str else 'N/A'}"
+
+
+            hist_num_bins = band.GetMetadataItem("STATISTICS_HISTONUMBINS", "STATISTICS") or band.GetMetadataItem("STATISTICS_HISTONUMBINS")
+            if hist_num_bins:
+                hist_min = band.GetMetadataItem("STATISTICS_HISTOMIN", "STATISTICS") or band.GetMetadataItem("STATISTICS_HISTOMIN")
+                hist_max = band.GetMetadataItem("STATISTICS_HISTOMAX", "STATISTICS") or band.GetMetadataItem("STATISTICS_HISTOMAX")
+                hist_values_str = band.GetMetadataItem("STATISTICS_HISTOBINVALUES", "STATISTICS") or band.GetMetadataItem("STATISTICS_HISTOBINVALUES")
+                log_message += (
+                    f"\n    Histogram (from GDAL ComputeStatistics):\n"
+                    f"      Bins: {hist_num_bins}, Min: {hist_min}, Max: {hist_max}"
+                )
+                if hist_values_str:
+                    hist_values_snippet = hist_values_str[:60] + ('...' if len(hist_values_str) > 60 else '')
+                    log_message += f"\n      Bin Values (snippet): {hist_values_snippet}"
+            elif not approx_ok:
+                 log_message += "\n    Histogram: Not computed or not found in metadata."
+            hb.log(log_message)
+
+        band.FlushCache()
+
+    if verbose:
+        hb.log(f"Finished processing {geotiff_path}. All changes should be flushed.")
+    ds = None
     
 def get_stats_from_geotiff(geotiff_path):
     """

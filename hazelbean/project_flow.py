@@ -14,7 +14,7 @@ import inspect
 import pandas as pd
 
 # try:
-#     import anytree
+#     import anytree    
 # except:
 #     'anytree is probably not needed except for project flow.'
 import anytree
@@ -25,10 +25,10 @@ L.setLevel(logging.INFO)
 initial_logging_level = L.getEffectiveLevel()
 
 # module level get_path. Usually you want to use the project_level version
-def get_path(relative_path, *join_path_args, possible_dirs='default', prepend_possible_dirs=None, create_shortcut=False, download_destination_dir=None, strip_relative_paths_for_output=False, verbose=False):
-    
+def get_path(relative_path, *join_path_args, possible_dirs='default', prepend_possible_dirs=None, create_shortcut=False, download_destination_dir=None, strip_relative_paths_for_output=False, leave_ref_path_if_fail=False, verbose=False):
+    # SUPER DANGEROUS TO USE IF YOU ACTUALLY WANT TO USE A PROJECT FLOW OBJECT.
     p = ProjectFlow()
-    got_path = p.get_path(relative_path, *join_path_args, possible_dirs=possible_dirs, prepend_possible_dirs=prepend_possible_dirs, create_shortcut=create_shortcut, download_destination_dir=download_destination_dir, strip_relative_paths_for_output=strip_relative_paths_for_output, verbose=verbose)
+    got_path = p.get_path(relative_path, *join_path_args, possible_dirs=possible_dirs, prepend_possible_dirs=prepend_possible_dirs, create_shortcut=create_shortcut, download_destination_dir=download_destination_dir, strip_relative_paths_for_output=strip_relative_paths_for_output, leave_ref_path_if_fail=leave_ref_path_if_fail, verbose=verbose)
     return got_path 
     
 def op():
@@ -232,7 +232,7 @@ class OutputTask(anytree.NodeMixin):
         self.skip_existing = 0  # Will thus overwrite by default.
 
 
-class  ProjectFlow(object):
+class ProjectFlow(object):
     def __init__(self, project_dir=None):
         try:
             self.calling_script = inspect.stack()[1][1]
@@ -328,7 +328,7 @@ class  ProjectFlow(object):
         return 'Hazelbean ProjectFlow object. ' + hb.pp(self.__dict__, return_as_string=True)
 
     def __repr__(self):
-        return 'Hazelbean ProjectFlow object. ' + hb.pp(self.__dict__, return_as_string=True)
+        return 'Hazelbean ProjectFlow object. ' # +  hb.pp(self.__dict__, return_as_string=True)
 
     def set_project_dir(self, input_dir):
         self.project_dir = input_dir
@@ -346,7 +346,7 @@ class  ProjectFlow(object):
         self.output_dir = os.path.join(self.project_dir, 'outputs')
 
 
-    def get_path(self, relative_path, *join_path_args, possible_dirs='default', prepend_possible_dirs=None, create_shortcut=False, download_destination_dir=None, strip_relative_paths_for_output=False, verbose=False):
+    def get_path(self, relative_path, *join_path_args, possible_dirs='default', prepend_possible_dirs=None, create_shortcut=False, download_destination_dir=None, strip_relative_paths_for_output=False, leave_ref_path_if_fail=False, verbose=False):
         ### NOTE: This is a PROJECT METHOD. There is currently no hb level function cause then you'd just have to pass the project.
         
         # This is tricky cause there are four possible cases
@@ -354,6 +354,10 @@ class  ProjectFlow(object):
         # 2. relative path has directories, join path args is empty
         # 3. relative path has no directories, join path args is not empty
         # 4. relative path has directories, join path args is not empty
+        if hb.has_cat_ears(relative_path):
+            if verbose:
+                hb.log("A refpath with catears was given. You probably want to replace the variables wrapped in catears. Returning the original path intact: " + str(relative_path))
+            return relative_path
         
         if relative_path is None:
             hb.log('WARNING: You gave None to hb.get_path(). This is not recommended but returning None Nonetheless, lol.')
@@ -543,11 +547,20 @@ class  ProjectFlow(object):
                 
             
             if not found_possible_dir_in_input:       
-                if hb.path_exists(relative_path):
+                if leave_ref_path_if_fail:
+                    return path_as_inputted
+                
+                elif hb.path_exists(relative_path):
                     hb.log('WARNING: You gave an absolute path to hb.get_path. It still might work if it found the possible_dirs in the path and removed them, but this is not good practice. Inputted path: ', relative_path, 'Possible dirs: ', possible_dirs, include_script_location=True)
                     return relative_path
                 else:
                     raise NameError('The path given to hb.get_path() does not appear to be relative, is not relative to one of the possible dirs, does not exist at the unmodified path, and or is not available for download on your selected cloud bucket): ' + str(relative_path) + ', ' + str(possible_dirs))
+                            
+        if leave_ref_path_if_fail:
+            return path_as_inputted
+                                            
+                            
+                            
                             # If it was neither found nor None, THEN return the path constructed from the first element in possible_dirs
         # Get the first non None element in possible_dirs
         possible_dirs = [i for i in possible_dirs if i is not None]

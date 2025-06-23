@@ -153,7 +153,7 @@ def path_exists(path, minimum_size_check=0, dir_must_have_content=False, verbose
             
     if path is None:
         if verbose:
-            L.critical('Path given to hazelbean.path_exists() was None.')
+            hb.log('Path given to hazelbean.path_exists() was None.')
         if assert_true:
             raise AssertionError('Path given to hazelbean.path_exists() was None.')
         return False
@@ -161,24 +161,24 @@ def path_exists(path, minimum_size_check=0, dir_must_have_content=False, verbose
         if dir_must_have_content:
             if len(os.listdir(path)) == 0:
                 if verbose:
-                    L.info('Path exists: ' + str(path) + ' exists but it is a directory with no content.')
+                    hb.log('Path exists: ' + str(path) + ' exists but it is a directory with no content. Absolute path is: ' + str(os.path.abspath(path)) + ', Normalized path is: ' + str(os.path.normpath(path)))
                 return False
             else:
                 if verbose:
-                    L.info('Path exists: ' + str(path) + ' exists and it is a directory with content.')
+                    hb.log('Path exists: ' + str(path) + ' exists and it is a directory with content. Absolute path is: ' + str(os.path.abspath(path)) + ', Normalized path is: ' + str(os.path.normpath(path)))
                 return True
         else:
             if verbose:
-                L.info('Path exists: ' + str(path) + ' exists but it is a directory.')
+                hb.log('Path exists: ' + str(path) + ' exists but it is a directory. Absolute path is: ' + str(os.path.abspath(path)) + ', Normalized path is: ' + str(os.path.normpath(path)))
             return True
 
     # if isinstance(path, hb.InputPath):
     #     path = path.get_path(hb.path_filename(path))
     if not path:
         if verbose:
-            L.info('Path DOES NOT exist: ' + str(path) +  ' and abs path is: ' + str(os.path.abspath(path)))
+            hb.log('Path DOES NOT exist: ' + str(path) +  ', Absolute path is: ' + str(os.path.abspath(path)) + ', Normalized path is: ' + str(os.path.normpath(path)))
         if assert_true:
-            raise NameError('Path is not true:' + str(path))
+            raise NameError('Path is not true:' + str(path)  + ', Absolute path is: ' + str(os.path.abspath(path)) + ', Normalized path is: ' + str(os.path.normpath(path)))
         return False
     else:
         if minimum_size_check is not None:
@@ -188,22 +188,25 @@ def path_exists(path, minimum_size_check=0, dir_must_have_content=False, verbose
                         abs_path = os.path.abspath(path)
                         if verbose:
                             
-                            L.info('Path exists: ' + str(path))
+                            hb.log('Path exists: ' + str(path) + ', Absolute path is: ' + str(os.path.abspath(path)) + ', Normalized path is: ' + str(os.path.normpath(path)))
                         return True
                     else:
                         if verbose:
-                            L.info('Path DOES NOT exist: ' + str(path) + ' and abs path is: ' + str(os.path.abspath(path)))
+                            hb.log('Path DOES NOT exist: ' + str(path) + ', Absolute path is: ' + str(os.path.abspath(path)) + ', Normalized path is: ' + str(os.path.normpath(path)))
                         if assert_true:
-                            raise NameError('Path does not exist: ' + str(path))
+                            raise NameError('Path does not exist: ' + str(path) + ', Absolute path is: ' + str(os.path.abspath(path)) + ', Normalized path is: ' + str(os.path.normpath(path)))
                         return False     
                 else:
+                    if verbose:
+                        hb.log('Path DOES NOT exist: ' + str(path) + ', Absolute path is: ' + str(os.path.abspath(path)) + ', Normalized path is: ' + str(os.path.normpath(path)))
+                    
                     return False                
                 
                 
                 
             except:
                 if verbose:
-                    L.info('Path DOES NOT exist: ' + str(path) + ' and abs path is: ' + str(os.path.abspath(path)))
+                    L.info('Path DOES NOT exist: ' + str(path) + ', Absolute path is: ' + str(os.path.abspath(path)) + ', Normalized path is: ' + str(os.path.normpath(path)))
                 if assert_true:
                     raise NameError('Path does not exist: ' + str(path))
                 return False
@@ -215,15 +218,15 @@ def path_exists(path, minimum_size_check=0, dir_must_have_content=False, verbose
                     return True
                 else:
                     if verbose:
-                        L.info('Path DOES NOT exist: ' + str(path) +  ' and abs path is: ' + str(os.path.abspath(path)))
+                        L.info('Path DOES NOT exist: ' + str(path) +  ', Absolute path is: ' + str(os.path.abspath(path)) + ', Normalized path is: ' + str(os.path.normpath(path)))
                     if assert_true:
                         raise NameError('Path does not exist: ' + str(path))
                     return False
             except:
                 if verbose:
-                    L.info('Path DOES NOT exist: ' + str(path) +  ' and abs path is: ' + str(os.path.abspath(path)))
+                    L.info('Path DOES NOT exist: ' + str(path) +  ', Absolute path is: ' + str(os.path.abspath(path)) + ', Normalized path is: ' + str(os.path.normpath(path)))
                 if assert_true:
-                    raise NameError('Path does not exist: ' + str(path))
+                    raise NameError('Path does not exist: ' + str(path) + ', Absolute path is: ' + str(os.path.abspath(path)) + ', Normalized path is: ' + str(os.path.normpath(path)))
                 return False
 
 def path_has_content(path):

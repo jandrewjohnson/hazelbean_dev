@@ -6,6 +6,63 @@ from collections import OrderedDict
 import pandas as pd
 import hazelbean as hb
 
+def has_cat_ears(input_string):
+    """
+    Check if the input string contains cat ears, which are defined as '<^', '^>, or the divider <^>'.
+    :param input_string: The string to check for cat ears.
+    :return: True if the string contains cat ears, False otherwise.
+    """
+    if not isinstance(input_string, str):
+        return False
+    return '<^' in input_string or '^>' in input_string
+
+def replace_cat_ears_with_object_attributes(input_string, object_instance):
+    """
+    Replace cat ears in the input string with the corresponding attributes of the object instance.
+    This function is useful for dynamically replacing placeholders in strings with actual object attribute values, especially in templating scenarios.
+    :param input_string: The string containing cat ears to be replaced.
+    :param object_instance: The object instance whose attributes will replace the cat ears.
+    :return: The input string with cat ears replaced by object attributes.
+    """
+    if not isinstance(input_string, str):
+        return input_string
+    
+    for attr in dir(object_instance):
+        if not attr.startswith('__'):
+            value = getattr(object_instance, attr)
+            input_string = input_string.replace('<^' + attr + '^>', str(value))
+    
+    return input_string
+
+def replace_cat_ears_with_dict(input_string, variables_dict):
+    # """
+    # Replace cat ears in the input string with the corresponding variables base on the python.__locals__ name of the variable. Accepts either a single variable or a list of variables.
+    # This function is useful for dynamically replacing placeholders in strings with actual variable values, especially in templating scenarios.
+    # :param input_string: The string containing cat ears to be replaced.
+    # :param variables: The variables to replace the cat ears with.
+    # :return: The input string with cat ears replaced by variables.
+    # """
+    # if type(variables) is not list:
+    #     variables = [variables]       
+    
+    # if type(input_string) is not str:
+    #     return(input_string)
+    
+    # for i in variables:
+    #     variable_name = get_variable_name(i)
+    for k, v in variables_dict.items():
+        if input_string:
+            input_string = input_string.replace('<^' + k + '^>', str(v))
+    return input_string
+
+
+# get the name of the variable itself using python locals
+def get_variable_name(variable):
+    for name, value in locals().items():
+        if value is variable:
+            return name
+    return None
+
 def parse_to_ce_list(input_string):
     """Return a list with cat-eared elements in order. """
     to_return = []

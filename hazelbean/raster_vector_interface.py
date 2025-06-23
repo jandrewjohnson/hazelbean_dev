@@ -16,6 +16,7 @@ import logging
 import pandas as pd
 import pygeoprocessing.geoprocessing as pgp
 from pygeoprocessing.geoprocessing import *
+from hazelbean import calculation_core
 from hazelbean.calculation_core import cython_functions
 from osgeo import gdal, ogr, osr
 from hazelbean import cloud_utils

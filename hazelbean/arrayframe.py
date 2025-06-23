@@ -207,7 +207,7 @@ class ArrayFrame(object):
         self.gdal_data_number = hb.numpy_type_to_gdal_number[self.numpy_data_type]
         self.gdal_data_type = hb.gdal_number_to_gdal_type[self.gdal_data_number]
         self.data_type = self.gdal_data_number
-        self.ndv = hb.get_correct_ndv_from_flex[str(self.numpy_data_type)]
+        self.ndv = hb.get_correct_ndv_from_dtype_flex[str(self.numpy_data_type)]
 
     @property
     def valid_mask(self):

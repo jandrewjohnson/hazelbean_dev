@@ -227,13 +227,13 @@ for k, v in pyramid_compatible_geotransforms.copy().items():
 # Main: 1, 3, 10, 300, 900, 1800 arc seconds (soon to add 333msec). All main and secondary must have overviews that represent all of the coarser set of these main levels
 # Secondary: 30, 150. Common as an input, but overviews of OTHER levels aren't generated for these.
 pyramid_compatible_overview_levels = {}
-pyramid_compatible_overview_levels[1.0] = [3, 10, 30, 150, 300, 900, 1800]
-pyramid_compatible_overview_levels[10.0] = [3, 15, 30, 90, 180]
-pyramid_compatible_overview_levels[30.0] = [5, 10, 30, 60] 
-pyramid_compatible_overview_levels[150.0] = [2, 6, 12]
-pyramid_compatible_overview_levels[300.0] = [3, 6]
+pyramid_compatible_overview_levels[1.0] = [3, 10, 30, 150, 300, 900, 1800, 3600]
+pyramid_compatible_overview_levels[10.0] = [3, 15, 30, 90, 180, 360]
+pyramid_compatible_overview_levels[30.0] = [5, 10, 30, 60, 120] 
+pyramid_compatible_overview_levels[150.0] = [2, 6, 12, 24]
+pyramid_compatible_overview_levels[300.0] = [3, 6, 12]
 pyramid_compatible_overview_levels[900.0] = [2, 4]
-pyramid_compatible_overview_levels[1800.0] = [2, 4]
+pyramid_compatible_overview_levels[1800.0] = [2, 4] # Technically to make it to 3600sec (1deg) you would only need 2, however, the cog spec requires higher, so we keep the additional ones even tho they're not necessary for pyramid spec.
 pyramid_compatible_overview_levels[3600.0] = [2, 4]
 pyramid_compatible_overview_levels[7200.0] = [2, 4]
 pyramid_compatible_overview_levels[14400.0] = [2, 4]
@@ -887,45 +887,86 @@ def assert_path_global_pyramid(input_path):
 def is_path_global_pyramid(input_path, verbose=False):
     """Fast method for testing if path is pyramidal."""
     to_return = True
-
+    if verbose:
+        L.info('Testing if path is global pyramid: ' + str(input_path))
     res = hb.determine_pyramid_resolution(input_path)
 
     if res is None:
         if verbose:
             hb.log('Not pyramid because no suitable resolution was found: ' + str(input_path))
         return False
-
+    
+    shape = hb.get_shape_from_dataset_path(input_path)
     gt = hb.get_geotransform_path(input_path)
 
     if not pyramid_compatible_geotransforms[pyramid_compatible_resolution_to_arcseconds[res]] == gt:
         if verbose:
             hb.log('Not pyramid because geotransform was not pyramidal. Found ' + str(gt) + ' which was not equal to ' + str(pyramid_compatible_geotransforms[pyramid_compatible_resolution_to_arcseconds[res]]) + ' for: '  + str(input_path))
         to_return = False
+        
+    # Interesting bug: If statistics are exact and stored internally to the geotiff but there is ALSO an external .aux.xml file with approximate statistics, 
+    # the gdal driver will return approximate statistics. To ensure this doesn't happen, first remove any .aux.xml file that may exist.
+    aux_path = input_path + '.aux.xml'
+    if hb.path_exists(aux_path):
+        if verbose:
+            hb.log('Removing aux file: ' + str(aux_path))
+        hb.remove_path(aux_path)        
 
     ds = gdal.OpenEx(input_path)
     image_structure = ds.GetMetadata('IMAGE_STRUCTURE')
     compression = image_structure.get('COMPRESSION', None)
 
     # Check if compressed (pyramidal file standards require compression)
-    if str(compression).lower() not in ['zstd']:
+    if str(compression).lower() not in ['zstd', 'lzw']:
         if verbose:
-            hb.log('Not a global pyramid because compression was not zstd: ' + str(input_path))
+            hb.log('Not a global pyramid because compression was not zstd/lzw: ' + str(input_path))
         to_return = False
 
     data_type = ds.GetRasterBand(1).DataType
     ndv = ds.GetRasterBand(1).GetNoDataValue()
     
-    correct_ndv = hb.get_correct_ndv_from_flex(data_type)
+    correct_ndv = hb.get_correct_ndv_from_dtype_flex(data_type)
     if ndv != correct_ndv:
         if verbose:
             hb.log('Not pyramid because ndv was not correct for datatype: ' + str(input_path))
         to_return = False
 
+    # Check if the overview levels are correct
+    levels = []
+    band = ds.GetRasterBand(1)
+    overview_count = band.GetOverviewCount()
+    for i in range(overview_count):
+        ovr = band.GetOverview(i)
+        if verbose:
+            hb.log(f"Overview {i+1}: {ovr.XSize} x {ovr.YSize}")
+        levels.append(shape[1] / ovr.XSize)
+        
+    correct_levels = hb.pyramid_compatible_overview_levels[pyramid_compatible_resolution_to_arcseconds[res]]
+    if levels != correct_levels:
+        if verbose:
+            hb.log(f'Not pyramid because overview levels were not correct: {levels} {correct_levels }' + str(input_path))
+        to_return = False
 
+
+
+    metadata = band.GetMetadata()
+    approx = metadata.get('STATISTICS_APPROXIMATE', 'YES')
+    if approx != 'NO':
+        if verbose:
+            hb.log('Not pyramid because statistics were either approximate or not present: ' + str(input_path))
+        to_return = False
+
+        
     if to_return:
+        if verbose:
+            L.info('Path is a global pyramid: ' + str(input_path))
         return True
     else:
+        if verbose:
+            L.info('Path is NOT a global pyramid: ' + str(input_path))
         return False
+    
+
 
 def make_vector_path_global_pyramid(input_path, output_path=None, pyramid_index_columns=None, drop_columns=False,
                                     clean_temporary_files=False, verbose=False):
@@ -1259,7 +1300,8 @@ def make_path_global_pyramid(
         is_id_raster=False,
         verbose=False
 ):
-    print('DEPRECATION WARNINGL: make_path_global_pyramid is deprecated. Use make_paths_cog or pog.')
+    ### TODO Make this identical to the relevant part of make_path_pog
+    print('CONSIDER ALSO make_paths_cog or pog.')
     """Throw exception if input_path is not pyramid-ready. This requires that the file be global, geographic projection, and with resolution
     that is a factor/multiple of arcdegrees.
 
@@ -1373,7 +1415,7 @@ def make_path_global_pyramid(
     if verbose:
         L.info('input data_type: ' + str(data_type) + ', input ndv: ' + str(ndv))
         
-    correct_ndv = hb.get_correct_ndv_from_flex(data_type, is_id=is_id_raster)
+    correct_ndv = hb.get_correct_ndv_from_dtype_flex(data_type, is_id=is_id_raster)
     if float(ndv) != float(correct_ndv):
         old_ndv = ndv
         ndv = correct_ndv
@@ -1381,7 +1423,7 @@ def make_path_global_pyramid(
         rewrite_array = True
         new_ndv = True
     else:
-        rewrite_array = False
+        # rewrite_array = False
         new_ndv = False
                 
 
@@ -1397,7 +1439,7 @@ def make_path_global_pyramid(
     if verbose:
         L.info('output data_type: ' + str(data_type) + ', output ndv: ' + str(ndv))
 
-    ds.SetMetadataItem('last_processing_on', str(time.time()))
+    # ds.SetMetadataItem('last_processing_on', str(time.time()))
 
     ds = None
     if verbose:
@@ -1732,11 +1774,14 @@ def make_path_spatially_clean(input_path,
             ds.GetRasterBand(1).ComputeStatistics(False)  # False here means approx NOT okay
             ds.GetRasterBand(1).GetHistogram(approx_ok=0)
 
-
+ 
     ds = None
     return True
 
 def add_statistics_to_raster(input_path, verbose=False):
+    
+    # DEPRECATED in favor of:
+    hb.add_stats_to_geotiff_with_gdal
     try:
         ds = gdal.OpenEx(input_path)
     except Exception as e:
@@ -1812,11 +1857,11 @@ def set_geotransform_to_tuple(input_path, desired_geotransform, output_path=None
         # ds = None
 
 def change_array_datatype_and_ndv(input_path, output_path, data_type, input_ndv=None, output_ndv=None):
-    output_data_type_numpy = hb.default_no_data_values_by_gdal_number_in_numpy_types[data_type]
+    output_data_type_numpy = hb.gdal_number_to_numpy_type[data_type]
     if input_ndv is None:
         input_ndv = hb.get_ndv_from_path(input_path)
     if output_ndv is None:
-        output_ndv = hb.default_no_data_values_by_gdal_number_in_numpy_types[data_type]
+        output_ndv = hb.no_data_values_by_gdal_number[data_type]
     output_ndv = np.float64(output_ndv)
     hb.raster_calculator_flex(input_path, lambda x: np.where(x == input_ndv, output_ndv, x).astype(output_data_type_numpy), output_path, datatype=data_type, ndv=output_ndv)
 

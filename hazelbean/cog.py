@@ -10,12 +10,16 @@ import hazelbean as hb
 
 def is_path_cog(path, check_tiled=True, full_check=False, raise_exceptions=False, verbose=False):
     """Check if a file is a (Geo)TIFF with cloud optimized compatible structure."""
+    if verbose:
+        hb.log(f"Checking if {path} is a COG at abspath {hb.path_abs(path)}")
+        
     if not hb.path_exists(path):
         if verbose:
             hb.log(f"Path {path} does not exist at abspath {hb.path_abs(path)}")
         if raise_exceptions:
             raise FileNotFoundError(f"Path {path} does not exist at abspath {hb.path_abs(path)}")
         return False
+    
     if os.path.splitext(path)[1].lower() != ".tif":
         if verbose:
             hb.log(f"Path {path} at abspath {hb.path_abs(path)} is not a GeoTIFF")
@@ -43,6 +47,8 @@ def is_path_cog(path, check_tiled=True, full_check=False, raise_exceptions=False
             raise ValueError(f"Path {path} at abspath {hb.path_abs(path)} is not a valid COG. It raised the following errors: \n " + '\n'.join(result))
         return False
 
+    if verbose:
+        hb.log(f"Path {path} at abspath {hb.path_abs(path)} is a valid COG")
     return True
 
 
@@ -56,39 +62,43 @@ def make_path_cog(input_raster_path, output_raster_path=None, output_data_type=N
     
     if is_path_cog(input_raster_path, verbose) and verbose:
         hb.log(f"Raster is already a COG: {input_raster_path}")
-        
+        return
     # Make a local copy at a temp file to process on to avoid corrupting the original
-    temp_copy_path = hb.temp('.tif', 'copy', True, tag_along_file_extensions=['.aux.xml'])
+    input_dir = os.path.dirname(input_raster_path)
+    temp_copy_path = hb.temp('.tif', 'copy', True, folder=input_dir, tag_along_file_extensions=['.aux.xml'])
     
     # Ensure output directory exists
     os.makedirs(os.path.dirname(temp_copy_path), exist_ok=True)       
     
-    if output_data_type is None:
-        output_data_type = input_data_type 
+    # if output_data_type is None:
+    #     output_data_type = input_data_type 
 
     input_data_type = hb.get_datatype_from_uri(input_raster_path)
     if output_data_type is not None:
         if output_data_type != input_data_type:
-            gdal.Translate(temp_copy_path, input_raster_path, outputType=hb.gdal_number_to_gdal_type[output_data_type])
+            gdal.Translate(temp_copy_path, input_raster_path, outputType=hb.gdal_number_to_gdal_type[output_data_type], options=['-co', 'COMPRESS=ZSTD'], callback=hb.make_gdal_callback(f"Translating to change data type on {temp_copy_path}"))
         else:
             hb.path_copy(input_raster_path, temp_copy_path) # Can just copy it direclty without accessing the raster.        
-    
+    else:
+        hb.path_copy(input_raster_path, temp_copy_path) 
     # Get the resolution from the src_ds
     degrees = hb.get_cell_size_from_path(temp_copy_path)
     arcseconds = hb.get_cell_size_from_path_in_arcseconds(temp_copy_path)
     
     original_output_raster_path = output_raster_path
     if output_raster_path is None:        
-        output_raster_path = hb.temp('.tif', hb.file_root(input_raster_path) + '_displacement_io_by_make_path_cog', remove_at_exit=False, folder=os.path.dirname(input_raster_path), tag_along_file_extensions=['.aux.xml'])
+        output_raster_path = hb.temp('.tif', hb.file_root(input_raster_path) + '_displaced_by_make_path_cog', remove_at_exit=False, folder=os.path.dirname(input_raster_path), tag_along_file_extensions=['.aux.xml'])
     
-    if output_data_type is None:
-        input_data_type = hb.get_datatype_from_uri(temp_copy_path)
-        output_data_type = input_data_type       
+    # if output_data_type is None:
+    #     input_data_type = hb.get_datatype_from_uri(temp_copy_path)
+    #     output_data_type = input_data_type       
         
     ndv = hb.no_data_values_by_gdal_type[output_data_type][0] # NOTE AWKWARD INCLUSINO OF zero as second option to work with faster_zonal_stats
         
-    # Open the source raster in UPDATE MODE so it writes the overviews as internal
-    src_ds = gdal.OpenEx(temp_copy_path, gdal.GA_Update)
+    # Open the source raster in UPDATE MODE so it writes the overviews as internal, which requires surpressing this warning
+ 
+    src_ds = gdal.OpenEx(temp_copy_path, gdal.GA_Update, open_options=["IGNORE_COG_LAYOUT_BREAK=YES"])
+ 
     if not src_ds:
         raise ValueError(f"Unable to open raster: {input_raster_path}")
     

@@ -87,8 +87,9 @@ def raster_calculator_flex(input_, op, output_path, **kwargs): #KWARGS: datatype
     if kwargs.get('add_overviews'):
         hb.add_overviews_to_path(output_path)
 
-    output_af = hb.ArrayFrame(output_path)
-    return output_af
+
+    
+    return 
 
 
 def apply_op(op, output_path):
