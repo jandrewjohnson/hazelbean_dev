@@ -2243,34 +2243,12 @@ def print_md_dict(input_dict, level = 0):
                 print(prepend + str(i))
 
 
-
-
-
-
 def create_shortcut(target_path, shortcut_path, verbose=False):
-    
-    if sys.platform.startswith('linux') or sys.platform == 'darwin':  # Linux or macOS
-        try:
-            os.symlink(target_path, shortcut_path)
-            if verbose:
-                hb.log(f'Shortcut created at {shortcut_path} pointing to {target_path}')
-        except:
-            hb.log('Unable to create symlink')
-    elif sys.platform == 'win32':  # Windows
+    if sys.platform == 'win32':
         shortcut_path += '.lnk'
-            
-        try:
-            import winshell
-            winshell.CreateShortcut(
-                Path=shortcut_path,
-                Target=target_path,
-                Icon=(target_path, 0),
-                Description='Shortcut'
-            )
-            if verbose:
-                hb.log(f'Shortcut created at {shortcut_path} pointing to {target_path}')
-
-        except ImportError:
-            print("winshell module not found. Creating a symbolic link instead.")
-            os.symlink(target_path, shortcut_path)
-            print(f'Symbolic link created at {shortcut_path} pointing to {target_path}')
+    try:
+        os.symlink(target_path, shortcut_path)
+        if verbose:
+            hb.log(f'Shortcut created at {shortcut_path} pointing to {target_path}')
+    except OSError:
+        hb.log('Unable to create symlink')

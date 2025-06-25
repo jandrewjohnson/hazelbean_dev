@@ -46,7 +46,6 @@ setup(
       "statsmodels",
       "taskgraph",
       "tqdm",
-      "winshell; sys_platform=='win32'",
       "xarray",
       "xlrd",
     ],
