@@ -1144,7 +1144,7 @@ def list_dirs_in_dir_recursively(input_folder, filter_strings=None, max_folders_
 
 def assert_file_existence(input_path):
     if not os.path.exists(input_path):
-        raise FileNotFoundError('hb.assert_file_existence could not find ' + str(input_path))
+        raise FileNotFoundError('hb.assert_file_existence could not find\n    ' + str(input_path) + ' with abspath\n    ' + str(os.path.abspath(input_path)) + ' and normpath\n    ' + str(os.path.normpath(input_path)))
 
 
 def swap_filenames(left_uri, right_uri):

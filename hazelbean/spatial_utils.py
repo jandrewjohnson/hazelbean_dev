@@ -272,6 +272,11 @@ resampling_methods = RESAMPLE_DICT
 def get_correct_ndv_from_dtype_flex(input_object, is_id=False):
     # is_id means we will be using the EE devestack approach of having 0 be the ndv for UINT types IF it is an id_layer. This
     # allows faster lookup. HOWEVER, i'm thinking that instead the standard should just be that id rasters should never have a ndv present.
+    # 2025-06-30 revisiting this thought. I fixed the underlying reason that reclassificaiton was slower when there was negative indices.
+    # It had to do with having negative values being used by reference position in the reclassification array. I fixed this with
+    # some funny logic on  making the lookup array twice as long and having the second half be the negative values. 
+    # This works but might break in the future, hence this note. But for now, I'm switching id_rasters of type 4 to type 5 with
+    # ndv -9999.
 
     try:
         int(input_object)

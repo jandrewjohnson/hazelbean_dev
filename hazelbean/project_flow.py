@@ -346,7 +346,7 @@ class ProjectFlow(object):
         self.output_dir = os.path.join(self.project_dir, 'outputs')
 
 
-    def get_path(self, relative_path, *join_path_args, possible_dirs='default', prepend_possible_dirs=None, create_shortcut=False, download_destination_dir=None, strip_relative_paths_for_output=False, leave_ref_path_if_fail=False, verbose=False):
+    def get_path(self, relative_path, *join_path_args, possible_dirs='default', prepend_possible_dirs=None, create_shortcut=False, download_destination_dir=None, strip_relative_paths_for_output=False, leave_ref_path_if_fail=False, raise_error_if_fail=True, verbose=False):
         ### NOTE: This is a PROJECT METHOD. There is currently no hb level function cause then you'd just have to pass the project.
         
         # This is tricky cause there are four possible cases
@@ -559,7 +559,8 @@ class ProjectFlow(object):
         if leave_ref_path_if_fail:
             return path_as_inputted
                                             
-                            
+        if raise_error_if_fail:
+            raise NameError('The path given to hb.get_path() does not exist at the unmodified path, and or is not available for download on your selected cloud bucket): ' + str(relative_path) + ', ' + str(possible_dirs))                    
                             
                             # If it was neither found nor None, THEN return the path constructed from the first element in possible_dirs
         # Get the first non None element in possible_dirs

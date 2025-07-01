@@ -868,6 +868,8 @@ def df_merge(left_input,
              compare_inner_outer=True, 
              full_check_for_identicallity=False,
              cols_to_ignore_for_analysis=['geometry'],
+             check_identicality=True,
+             raise_error_if_not_identical=False,
              verbose=False,
              supress_warnings=False,
              ):
@@ -1020,7 +1022,28 @@ def df_merge(left_input,
         
         # Also print all the columns dtypes
         # hb.log('Left columns: ' + ['    ' + k +': ' + v + '\n' for k, v in zip(str(left_df.columns), str(left_df.dtypes))] + ' Right columns: ' + ['    ' + k +': ' + v + '\n' for k, v in zip(right_df.columns, right_df.dtypes)])
+    
+    comparison = hb.df_compare_column_labels_as_dict(left_df, right_df)
+    right_df = right_df.rename(columns={i: i + '_right' for i in comparison['intersection'] if i != left_on and i != right_on})
 
+
+    # Merge
+    merged_df = pd.merge(left_df, right_df, how=how, left_on=left_on, right_on=right_on)
+
+    if check_identicality:
+        keep_right = []
+        for col in comparison['intersection']:
+            right_col = col + '_right'
+            if col in merged_df.columns and right_col in merged_df.columns:
+                if not hb.arrays_equal_ignoring_order(merged_df[col].values, merged_df[right_col].values): # , ignore_values=[-9999]        
+                    if raise_error_if_not_identical:
+                        raise NameError('Column ' + col + ' is not identical between left and right dataframes. Contents: ' + str(left_df[col].values) + ' ' + str(right_df[col].values))
+                    else:
+                        if verbose:
+                            print('Column ' + col + ' is not identical between left and right dataframes. Contents: ' + str(left_df[col].values) + ' ' + str(right_df[right_col].values))
+            keep_right.append(right_col)
+        merged_df = merged_df[[i for i in merged_df.columns if i[-7:-1] != '_right' or i in keep_right]]
+        
 
     if compare_inner_outer:
         if left_on == 'index' and right_on == 'index':
