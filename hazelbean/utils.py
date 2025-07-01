@@ -869,6 +869,7 @@ def df_merge(left_input,
              full_check_for_identicallity=False,
              cols_to_ignore_for_analysis=['geometry'],
              check_identicality=True,
+             same_name_nonidentical_column_behavior='keep_both', # One of 'keep_both', 'keep_left', 'keep_right', 'raise_error'
              raise_error_if_not_identical=False,
              verbose=False,
              supress_warnings=False,
@@ -1024,10 +1025,10 @@ def df_merge(left_input,
         # hb.log('Left columns: ' + ['    ' + k +': ' + v + '\n' for k, v in zip(str(left_df.columns), str(left_df.dtypes))] + ' Right columns: ' + ['    ' + k +': ' + v + '\n' for k, v in zip(right_df.columns, right_df.dtypes)])
     
     comparison = hb.df_compare_column_labels_as_dict(left_df, right_df)
-    right_df = right_df.rename(columns={i: i + '_right' for i in comparison['intersection'] if i != left_on and i != right_on})
 
 
     # Merge
+    right_df = right_df.rename(columns={i: i + '_right' for i in comparison['intersection'] if i != left_on and i != right_on})
     merged_df = pd.merge(left_df, right_df, how=how, left_on=left_on, right_on=right_on)
 
     if check_identicality:
@@ -1040,9 +1041,29 @@ def df_merge(left_input,
                         raise NameError('Column ' + col + ' is not identical between left and right dataframes. Contents: ' + str(left_df[col].values) + ' ' + str(right_df[col].values))
                     else:
                         if verbose:
-                            print('Column ' + col + ' is not identical between left and right dataframes. Contents: ' + str(left_df[col].values) + ' ' + str(right_df[right_col].values))
-            keep_right.append(right_col)
-        merged_df = merged_df[[i for i in merged_df.columns if i[-7:-1] != '_right' or i in keep_right]]
+                            # caluculate what was in left but not in right
+                            df_left_only = left_df[col][~left_df[col].isin(right_df[right_col])]
+                            df_right_only = right_df[right_col][~right_df[right_col].isin(left_df[col])]
+                            hb.log('Column ' + col + ' is not identical between left and right dataframes. Contents: ' + str(left_df[col].values) + ' ' + str(right_df[right_col].values))
+                            hb.log('Left only values: ' + str(df_left_only.values) + '\nRight only values: ' + str(df_right_only.values))
+                            pass
+                        
+                    if same_name_nonidentical_column_behavior == 'keep_both':
+                        keep_right.append(right_col)
+                    elif same_name_nonidentical_column_behavior == 'keep_left':
+                        hb.log('Keeping left column ' + col + ' and dropping right column ' + right_col)
+                        if right_col in merged_df.columns:
+                            merged_df = merged_df.drop(right_col, axis=1)
+                    elif same_name_nonidentical_column_behavior == 'keep_right':
+                        hb.log('Keeping right column ' + right_col + ' and dropping left column ' + col)
+                        merged_df = merged_df.drop(col, axis=1)
+                        keep_right.append(right_col)
+                    elif same_name_nonidentical_column_behavior == 'raise_error':
+                        raise NameError('Column ' + col + ' is not identical between left and right dataframes. Contents: ' + str(left_df[col].values) + ' ' + str(right_df[right_col].values))
+                        
+                        
+        # for col in merged_df.columns:
+        merged_df = merged_df[[i for i in merged_df.columns if not i.endswith('_right') or i in keep_right]]
         
 
     if compare_inner_outer:
@@ -1062,7 +1083,7 @@ def df_merge(left_input,
                 raise NameError('Right merge column not in right df columns: ' + right_on + ' not in ' + str(right_df.columns))            
             df_inner = pd.merge(left_df, right_df, how='inner', left_on=left_on, right_on=right_on)    
             df_outer = pd.merge(left_df, right_df, how='outer', left_on=left_on, right_on=right_on)    
-            
+         
         if how == 'inner':
             df = df_inner
         elif how == 'outer':
@@ -1076,7 +1097,9 @@ def df_merge(left_input,
                 df = pd.merge(left_df, right_df, how=how, left_on=left_on, right_index=True)          
             else:
                 df = pd.merge(left_df, right_df, how=how, left_on=left_on, right_on=right_on)     
-                
+        
+        # TODOO AWKWARD but i messed up the logic here and have to do this again here. simplify.
+        df = df[[i for i in merged_df.columns if not i.endswith('_right') or i in keep_right]]         
         comparison_dict = hb.df_compare_column_contents_as_dict(df_outer[left_on], df_outer[right_on])
         
         if verbose:
