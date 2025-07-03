@@ -857,7 +857,76 @@ def df_merge_quick(
         merged_df = merged_df[[i for i in merged_df.columns if i[-7:-1] != '_right' or i in keep_right]]
         
     return merged_df
-        
+
+def df_read(input_path, delimiter=','):
+    """Read an input path to a Pandas DataFram
+    
+    Args:
+        input_path (str): Path string to the file. Currently only implements CSV.
+    
+    Returns:
+        The Pandas DataFrame read from the CSV file.
+
+    Raises:
+        NameError: If anything fails.
+    
+    Examples:
+        Basic usage:
+        ```python
+        df = df_read('path/to/your/file.csv')
+        ```
+    """
+    if not type(input_path) is str:
+        raise NameError(f'df_read only accepts a string path. You passed in {str(input_path)} of type {str(type(input_path))} which is not a string.')
+    if not os.path.exists(input_path):
+        raise NameError(f'Path does not exist, so df_read cannot read it\n    Inputted path: {input_path}\n    Abspath: {os.path.abspath(input_path)} \n    Normpath: {os.path.normpath(input_path)}')
+    
+    try:
+        df = pd.read_csv(input_path, delimiter=delimiter)
+    except:
+        encoding = 'utf-8'
+        try:
+            df = pd.read_csv(input_path, delimiter=delimiter, encoding=encoding)
+        except:
+            encoding = 'ISO-8859-1'
+            try:
+                df = pd.read_csv(input_path, delimiter=delimiter, encoding=encoding)
+            except:
+                encoding = 'latin1'
+                try:
+                    df = pd.read_csv(input_path, delimiter=delimiter, encoding=encoding)
+                except:
+                    raise NameError(f'Unable to read {input_path} as a csv. It may not be a csv or it may be malformed.\n    Abspath: {os.path.abspath(input_path)}. \n    Normpath: {os.path.normpath(input_path)}')
+                raise NameError(f'Unable to read {input_path} as a csv. It may not be a csv or it may be malformed. \n     Abspath: {os.path.abspath(input_path)}. \n     Normpath: {os.path.normpath(input_path)}')
+            raise NameError(f'Unable to read {input_path} as a csv. It may not be a csv or it may be malformed.  \n    Abspath: {os.path.abspath(input_path)}. \n     Normpath: {os.path.normpath(input_path)}')
+        raise NameError(f'Unable to read {input_path} as a csv. It may not be a csv or it may be malformed.  \n    Abspath: {os.path.abspath(input_path)}.  \n    Normpath: {os.path.normpath(input_path)}')
+    return df
+
+def df_write(df, output_path, index=False):
+    """Write a Pandas DataFrame to a CSV file.
+    
+    Args:
+        df (pd.DataFrame): The DataFrame to write.
+        output_path (str): The path where the CSV file will be saved.
+        index (bool): Whether to write row indices. Default is False.
+    
+    Raises:
+        NameError: If the output path is not a string or if the DataFrame is empty.
+    
+    Examples:
+        Basic usage:
+        ```python
+        df_write(my_dataframe, 'path/to/output.csv')
+        ```
+    """
+    if not isinstance(output_path, str):
+        raise NameError(f'Output path must be a string. You passed in {output_path} of type {type(output_path)}.')
+    
+    if df.empty:
+        raise NameError('DataFrame is empty. Cannot write an empty DataFrame to a CSV file.')
+    
+    df.to_csv(output_path, index=index)
+ 
 def df_merge(left_input, 
              right_input, 
              how=None, 

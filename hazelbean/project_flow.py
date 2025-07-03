@@ -1133,6 +1133,19 @@ class ProjectFlow(object):
             L.warn(log_input)
         if self.cur_task.logging_level == 'critical':
             L.critical(log_input)
+            
+    def validate_result(self, result):
+        if type(result) is dict:
+            # Identify all keys that suggest a file path
+            for k, v in result.items():
+                if v.endswith('.csv'):
+                    if not hb.path_exists(v):
+                        hb.log(f"Expected file {v} not found, so entering computation. Abspath: {os.path.abspath(v)}, Normpath: {os.path.normpath(v)}")
+                        return False
+                    
+            else:
+                # If no file paths were found, return True
+                return True
 
     def execute(self, args=None):
 
