@@ -926,7 +926,60 @@ def df_write(df, output_path, index=False):
         raise NameError('DataFrame is empty. Cannot write an empty DataFrame to a CSV file.')
     
     df.to_csv(output_path, index=index)
- 
+
+# TODOOO Reorg hazelbean dfs to be in df.py so you would call hb.df.smartcast(df) instead of hb.df_smartcast(df)
+def df_smartcast(df):
+    """
+    Automatically infer and convert DataFrame columns to appropriate types.
+    
+    Args:
+        df: pandas DataFrame
+        
+    Returns:
+        pandas DataFrame with optimized column types
+    """
+    df_copy = df.copy()
+    
+    for col in df_copy.columns:
+        # Skip if already numeric
+        if pd.api.types.is_numeric_dtype(df_copy[col]):
+            continue
+            
+        # Convert to string first to handle mixed types
+        series = df_copy[col].astype(str)
+        
+        # Remove NaN/null representations
+        non_null_series = series[~series.isin(['nan', 'None', 'NaN', '<NA>'])]
+        
+        if len(non_null_series) == 0:
+            continue
+            
+        # Try integer conversion
+        try:
+            # Check if all values can be converted to int
+            converted = pd.to_numeric(non_null_series, errors='coerce')
+            if converted.notna().all():
+                # Check if they're actually integers (no decimal parts)
+                if (converted == converted.astype(int)).all():
+                    df_copy[col] = pd.to_numeric(df_copy[col], errors='coerce').astype('Int64')
+                    continue
+        except:
+            pass
+            
+        # Try float conversion
+        try:
+            converted = pd.to_numeric(non_null_series, errors='coerce')
+            if converted.notna().all():
+                df_copy[col] = pd.to_numeric(df_copy[col], errors='coerce')
+                continue
+        except:
+            pass
+            
+        # Default to string
+        df_copy[col] = df_copy[col].astype(str)
+    
+    return df_copy
+
 def df_merge(left_input, 
              right_input, 
              how=None, 
@@ -934,7 +987,7 @@ def df_merge(left_input,
              left_on=False,
              right_on=False,
              fill_left_col_nan_with_right_value=False,
-             compare_inner_outer=True, 
+             compare_inner_outer=False, 
              full_check_for_identicallity=False,
              cols_to_ignore_for_analysis=['geometry'],
              check_identicality=True,
@@ -1020,7 +1073,7 @@ def df_merge(left_input,
     shared_column_labels = set(left_df.columns).intersection(set(right_df.columns))
     
     # Ignore columns that need ignoring
-    shared_column_labels = [i for i in shared_column_labels if i not in cols_to_ignore_for_analysis]
+    shared_column_labels = [i for i in shared_column_labels if i not in cols_to_ignore_for_analysis and i not in left_on and i != left_on and i not in right_on and i != right_on]
     
     identical_columns = []
     identical_column_labels = []
@@ -1097,7 +1150,12 @@ def df_merge(left_input,
 
 
     # Merge
-    right_df = right_df.rename(columns={i: i + '_right' for i in comparison['intersection'] if i != left_on and i != right_on})
+    right_df = right_df.rename(columns={i: i + '_right' for i in comparison['intersection'] if i != left_on and i != right_on and i not in left_on and i not in right_on})
+    
+    # Make all DF objects have the right types, as implied by analysis of their content.
+    right_df = df_smartcast(right_df)
+    left_df = df_smartcast(left_df)
+    
     merged_df = pd.merge(left_df, right_df, how=how, left_on=left_on, right_on=right_on)
 
     if check_identicality:
@@ -1146,10 +1204,17 @@ def df_merge(left_input,
             df_inner = pd.merge(left_df, right_df, how='inner', left_on=left_on, right_index=True)
             df_outer = pd.merge(left_df, right_df, how='outer', left_on=left_on, right_index=True)
         else:
-            if not left_on in left_df.columns:
-                raise NameError('Left merge column not in left df columns: ' + left_on + ' not in ' + str(left_df.columns))
-            if not left_on in left_df.columns:
-                raise NameError('Right merge column not in right df columns: ' + right_on + ' not in ' + str(right_df.columns))            
+            if type(left_on) is list:
+                # check if list contents are same
+                if set(left_on) & set(left_df.columns) != set(left_on):
+                    raise NameError('Left_on not in left_df columns: ' + str(left_on) + ' not in ' + str(left_df.columns))
+                if set(right_on) & set(right_df.columns) != set(right_on):
+                    raise NameError('Right_on not in right_df columns: ' + str(right_on) + ' not in ' + str(right_df.columns))
+            else:
+                if not left_on in left_df.columns:
+                    raise NameError('Left merge column not in left df columns: ' + left_on + ' not in ' + str(left_df.columns))
+                if not left_on in left_df.columns:
+                    raise NameError('Right merge column not in right df columns: ' + right_on + ' not in ' + str(right_df.columns))            
             df_inner = pd.merge(left_df, right_df, how='inner', left_on=left_on, right_on=right_on)    
             df_outer = pd.merge(left_df, right_df, how='outer', left_on=left_on, right_on=right_on)    
          
