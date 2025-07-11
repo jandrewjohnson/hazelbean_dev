@@ -2732,6 +2732,7 @@ def cast_to_np64(a):
             return np.float64(float(a))
 
 def reclassify_raster_hb(input_raster_path, rules, output_raster_path, output_data_type=None, array_threshold=200000, match_path=None, output_ndv=None, existing_values='keep', invoke_full_callback=False, verbose=False):
+    # START HERE: Make this consistent with hb naming
     
     # ADD NOT IN DICT BEHAVIOR
     if existing_values not in ['keep', 'zero', 'ndv']:
@@ -2871,14 +2872,6 @@ def reclassify_raster_hb(input_raster_path, rules, output_raster_path, output_da
             raise NameError('The minimum key in the rules dict is less than the array threshold. This will cause problems. Please fix this.')
         if max_key > array_threshold/2:
             raise NameError('The maximum key in the rules dict is greater than the array threshold. This will cause problems. Please fix this.')
-
-        
-        
-        # START HERE: Implement this shift so that negative indices work.
-        # If all the keys are negative (e.g. when you are reclassifying a single negative ndv value), this can get wonky.
-        # Turns out this was because negative indices given to numpy arrays, which fundamentally start at zero, implements reverse indexing
-        # so -9999 would be the 9999th from the end. Need to do a pre calc shift.
-        
         
         
         ### NOTE!!!! There is a nuanced performance trick here: it seems like you would want the rules to be np.zeros, but actually
@@ -2998,12 +2991,7 @@ def reclassify_raster_hb(input_raster_path, rules, output_raster_path, output_da
             else:
                 rules[array_threshold - int(k)] = v
                  
-        print(rules[0:10])
-        print(rules[-10:])
-        print(rules[-10001:-9995])
-        print(rules[9995:10001])
-        # print(rules[-])
-        5
+
     elif isinstance(rules, np.ndarray):
         L.debug('Making rules as arrays is about 10x faster. You already did that!')
     else:
@@ -3018,8 +3006,7 @@ def reclassify_raster_hb(input_raster_path, rules, output_raster_path, output_da
     L.debug('Calculating reclassification with rules as a dictionary.')
     # base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.int32), 'raw')]
     # TODOO, I don't support 16 bit ints, but those are frequently used. Expand this to include support for this.
-    
-    # START HERE: I'm nearly certain this isn't working because the input raster type is 3 but the rules are 5
+
     if data_type == 1:
         if output_data_type == 1:
             base_raster_path_band = [(input_raster_path, 1), (rules.astype(np.uint8), 'raw')] # Only uint8 allows non int rules ## WTF DID I MEAN HEARE
