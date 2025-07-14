@@ -344,7 +344,11 @@ class ProjectFlow(object):
         self.inputs_dir = os.path.join(self.project_dir, 'inputs')
         self.intermediate_dir = os.path.join(self.project_dir, 'intermediate')
         self.output_dir = os.path.join(self.project_dir, 'outputs')
-
+        
+        if not getattr(self, 'data_credentials_path', None):
+            self.data_credentials_path = None # If you want to use a different bucket than the default, provide the credentials here. Otherwise uses default public data 'gtap_invest_seals_2023_04_21'.
+        if not getattr(self, 'input_bucket_name', None):
+            self.input_bucket_name = None # If you want to use a different bucket than the default, provide the name here. Otherwise uses default public data 'gtap_invest_seals_2023_04_21'.
 
     def get_path(self, relative_path, *join_path_args, possible_dirs='default', prepend_possible_dirs=None, create_shortcut=False, download_destination_dir=None, strip_relative_paths_for_output=False, leave_ref_path_if_fail=False, raise_error_if_fail=True, verbose=False):
         ### NOTE: This is a PROJECT METHOD. There is currently no hb level function cause then you'd just have to pass the project.

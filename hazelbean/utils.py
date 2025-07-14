@@ -4,10 +4,9 @@ import pprint
 from collections import OrderedDict
 import numpy as np
 import json
+import warnings
 
 import hazelbean as hb
-
-
 
 import math
 from osgeo import gdal
@@ -1241,9 +1240,9 @@ def df_merge(left_input,
         
         if not supress_warnings:
             if len(comparison_dict['left_only']) > 0:
-                hb.log('\nWARNING!\nIn hb.df_merge, left had non-shared values in merge-col: ' + str(comparison_dict['left_only'])[:100] + '...')
+                hb.log(f'\nWARNING!\nIn hb.df_merge, left had non-shared values in merge-col. N=: {str(len(comparison_dict['left_only']))}. First few values:' + str(comparison_dict['left_only'])[:100] + '...')
             if len(comparison_dict['right_only']) > 0:
-                hb.log('\nWARNING!\nIn hb.df_merge, right had non-shared values in merge-col: ' + str(comparison_dict['right_only'])[:100] + '...')
+                hb.log(f'\nWARNING!\nIn hb.df_merge, left had non-shared values in merge-col. N=: {str(len(comparison_dict['right_only']))}. First few values:' + str(comparison_dict['right_only'])[:100] + '...')
             
     else:
         if left_on == 'index' and right_on == 'index':
@@ -1331,6 +1330,167 @@ def df_reorder_columns(input_df, initial_columns=None, prespecified_order=None, 
     final_columns = initial_columns + [i for i in sorted_columns if i not in initial_columns and i not in remove_columns]
 
     return input_df[final_columns]
+
+
+
+def df_groupby(df, by, agg_dict=None, preserve='keep_all', preserve_cols=None, on_conflict='raise'):
+    """
+    Perform groupby aggregation while preserving non-aggregated columns.
+    
+    Parameters:
+    -----------
+    df : pandas.DataFrame
+        The DataFrame to group
+    by : str or list
+        Column(s) to group by
+    agg_dict : dict, optional
+        Dictionary mapping column names to aggregation functions.
+        If None and preserve='keep_all_valid', will only preserve valid columns without aggregating
+    preserve : {'keep_all', 'keep_all_valid', 'specified'}
+        Strategy for preserving columns:
+        - 'keep_all': Keep all non-grouped, non-aggregated columns (may raise errors)
+        - 'keep_all_valid': Keep only columns that have unique values within groups
+        - 'specified': Keep only columns listed in preserve_cols
+    preserve_cols : list, optional
+        Columns to preserve (only used when preserve='specified')
+    on_conflict : {'raise', 'warn', 'first', 'last', 'concat'}
+        What to do when preserved columns have multiple values within a group:
+        - 'raise': Raise an exception
+        - 'warn': Use first value and issue a warning
+        - 'first': Use first value silently
+        - 'last': Use last value silently
+        - 'concat': Concatenate unique values as strings
+    
+    Returns:
+    --------
+    pandas.DataFrame
+        Grouped DataFrame with preserved columns
+    """
+    
+    # Ensure 'by' is a list
+    by_cols = [by] if isinstance(by, str) else list(by)
+    
+    # Handle case where agg_dict is None
+    if agg_dict is None:
+        agg_dict = {}
+    
+    # Determine columns to preserve based on preserve strategy
+    if preserve == 'keep_all':
+        # Keep all columns except groupby and aggregation columns
+        preserve_cols = [col for col in df.columns 
+                        if col not in by_cols and col not in agg_dict]
+    
+    elif preserve == 'keep_all_valid':
+        # Find columns that have unique values within each group
+        grouped = df.groupby(by_cols)
+        valid_cols = []
+        
+        for col in df.columns:
+            if col not in by_cols and col not in agg_dict:
+                # Check if this column has unique values within each group
+                unique_counts = grouped[col].nunique()
+                if (unique_counts == 1).all():
+                    valid_cols.append(col)
+        
+        preserve_cols = valid_cols
+        
+        # Report which columns were excluded
+        excluded_cols = [col for col in df.columns 
+                        if col not in by_cols and col not in agg_dict and col not in valid_cols]
+        
+        if excluded_cols and len(agg_dict) == 0:
+            print(f"Excluded columns with multiple values per group: {excluded_cols}")
+    
+    elif preserve == 'specified':
+        if preserve_cols is None:
+            raise ValueError("preserve_cols must be specified when preserve='specified'")
+        # Filter out groupby and aggregation columns
+        preserve_cols = [col for col in preserve_cols 
+                        if col not in by_cols and col not in agg_dict]
+    
+    else:
+        raise ValueError(f"Invalid preserve value: {preserve}")
+    
+    # If no aggregation and no columns to preserve, just return groupby columns
+    if len(agg_dict) == 0 and len(preserve_cols) == 0:
+        return df[by_cols].drop_duplicates().reset_index(drop=True)
+    
+    # Check for conflicts in preserved columns
+    conflicts = {}
+    grouped = df.groupby(by_cols)
+    
+    for col in preserve_cols:
+        # Check if each group has unique values
+        unique_counts = grouped[col].nunique()
+        conflict_groups = unique_counts[unique_counts > 1]
+        
+        if len(conflict_groups) > 0:
+            conflicts[col] = conflict_groups
+    
+    # Handle conflicts based on on_conflict parameter
+    preserve_agg = {}
+    
+    for col in preserve_cols:
+        if col in conflicts:
+            if on_conflict == 'raise':
+                conflict_info = []
+                for group_key, count in conflicts[col].items():
+                    group_data = grouped.get_group(group_key)[col].unique()
+                    conflict_info.append(f"  Group {group_key}: {count} unique values: {group_data}")
+                
+                raise ValueError(
+                    f"Column '{col}' has multiple values within groups:\n" + 
+                    "\n".join(conflict_info[:5]) +  # Show first 5 conflicts
+                    ("\n  ..." if len(conflict_info) > 5 else "")
+                )
+            
+            elif on_conflict == 'warn':
+                warnings.warn(
+                    f"Column '{col}' has multiple values in {len(conflicts[col])} groups. "
+                    f"Using first value."
+                )
+                preserve_agg[col] = 'first'
+            
+            elif on_conflict == 'first':
+                preserve_agg[col] = 'first'
+            
+            elif on_conflict == 'last':
+                preserve_agg[col] = 'last'
+            
+            elif on_conflict == 'concat':
+                preserve_agg[col] = lambda x: ', '.join(x.astype(str).unique())
+            
+            else:
+                raise ValueError(f"Invalid on_conflict value: {on_conflict}")
+        else:
+            # No conflict, just take the first (only) value
+            preserve_agg[col] = 'first'
+    
+    # Combine aggregation dictionaries
+    full_agg_dict = {**agg_dict, **preserve_agg}
+    
+    # Perform aggregation
+    if full_agg_dict:
+        result = df.groupby(by_cols).agg(full_agg_dict).reset_index()
+    else:
+        # No aggregation needed, just get unique group keys
+        result = df[by_cols].drop_duplicates().reset_index(drop=True)
+    
+    # Reorder columns to match original order where possible
+    original_order = list(df.columns)
+    new_order = []
+    
+    for col in original_order:
+        if col in result.columns:
+            new_order.append(col)
+    
+    # Add any new columns created by aggregation
+    for col in result.columns:
+        if col not in new_order:
+            new_order.append(col)
+    
+    return result[new_order]
+
 
 
 def convert_py_script_to_jupyter(input_path):
