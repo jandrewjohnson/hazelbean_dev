@@ -1333,8 +1333,10 @@ def df_reorder_columns(input_df, initial_columns=None, prespecified_order=None, 
 
 
 
-def df_groupby(df, by, agg_dict=None, preserve='keep_all', preserve_cols=None, on_conflict='raise'):
+def df_groupby(df, by, agg_dict=None, preserve='keep_all', preserve_cols=None, on_conflict='concat_unique', concat_separator='^'):
     """
+    USEFUL BUT NOT TESTED YET. I liked the idea that it deals with concatenting unique, but I I need a good test case for it first.
+    
     Perform groupby aggregation while preserving non-aggregated columns.
     
     Parameters:
@@ -1345,7 +1347,11 @@ def df_groupby(df, by, agg_dict=None, preserve='keep_all', preserve_cols=None, o
         Column(s) to group by
     agg_dict : dict, optional
         Dictionary mapping column names to aggregation functions.
-        If None and preserve='keep_all_valid', will only preserve valid columns without aggregating
+        If None and preserve='keep_all_valid', will only preserve valid columns without aggregating.
+        Special aggregation functions:
+        - 'concat': Concatenate all values as strings
+        - 'concat_unique': Concatenate unique values as strings
+        - Can also use lambda: lambda x: '^'.join(x.unique())
     preserve : {'keep_all', 'keep_all_valid', 'specified'}
         Strategy for preserving columns:
         - 'keep_all': Keep all non-grouped, non-aggregated columns (may raise errors)
@@ -1353,13 +1359,16 @@ def df_groupby(df, by, agg_dict=None, preserve='keep_all', preserve_cols=None, o
         - 'specified': Keep only columns listed in preserve_cols
     preserve_cols : list, optional
         Columns to preserve (only used when preserve='specified')
-    on_conflict : {'raise', 'warn', 'first', 'last', 'concat'}
+    on_conflict : {'raise', 'warn', 'first', 'last', 'concat', 'concat_unique'}
         What to do when preserved columns have multiple values within a group:
         - 'raise': Raise an exception
         - 'warn': Use first value and issue a warning
         - 'first': Use first value silently
         - 'last': Use last value silently
-        - 'concat': Concatenate unique values as strings
+        - 'concat': Concatenate all values as strings
+        - 'concat_unique': Concatenate unique values as strings
+    concat_separator : str, default ', '
+        Separator to use when concatenating strings
     
     Returns:
     --------
@@ -1374,11 +1383,21 @@ def df_groupby(df, by, agg_dict=None, preserve='keep_all', preserve_cols=None, o
     if agg_dict is None:
         agg_dict = {}
     
+    # Process agg_dict to handle special string aggregations
+    processed_agg_dict = {}
+    for col, func in agg_dict.items():
+        if func == 'concat':
+            processed_agg_dict[col] = lambda x, sep=concat_separator: sep.join(x.astype(str))
+        elif func == 'concat_unique':
+            processed_agg_dict[col] = lambda x, sep=concat_separator: sep.join(x.astype(str).unique())
+        else:
+            processed_agg_dict[col] = func
+    
     # Determine columns to preserve based on preserve strategy
     if preserve == 'keep_all':
         # Keep all columns except groupby and aggregation columns
         preserve_cols = [col for col in df.columns 
-                        if col not in by_cols and col not in agg_dict]
+                        if col not in by_cols and col not in processed_agg_dict]
     
     elif preserve == 'keep_all_valid':
         # Find columns that have unique values within each group
@@ -1386,7 +1405,7 @@ def df_groupby(df, by, agg_dict=None, preserve='keep_all', preserve_cols=None, o
         valid_cols = []
         
         for col in df.columns:
-            if col not in by_cols and col not in agg_dict:
+            if col not in by_cols and col not in processed_agg_dict:
                 # Check if this column has unique values within each group
                 unique_counts = grouped[col].nunique()
                 if (unique_counts == 1).all():
@@ -1396,9 +1415,9 @@ def df_groupby(df, by, agg_dict=None, preserve='keep_all', preserve_cols=None, o
         
         # Report which columns were excluded
         excluded_cols = [col for col in df.columns 
-                        if col not in by_cols and col not in agg_dict and col not in valid_cols]
+                        if col not in by_cols and col not in processed_agg_dict and col not in valid_cols]
         
-        if excluded_cols and len(agg_dict) == 0:
+        if excluded_cols and len(processed_agg_dict) == 0:
             print(f"Excluded columns with multiple values per group: {excluded_cols}")
     
     elif preserve == 'specified':
@@ -1406,13 +1425,13 @@ def df_groupby(df, by, agg_dict=None, preserve='keep_all', preserve_cols=None, o
             raise ValueError("preserve_cols must be specified when preserve='specified'")
         # Filter out groupby and aggregation columns
         preserve_cols = [col for col in preserve_cols 
-                        if col not in by_cols and col not in agg_dict]
+                        if col not in by_cols and col not in processed_agg_dict]
     
     else:
         raise ValueError(f"Invalid preserve value: {preserve}")
     
     # If no aggregation and no columns to preserve, just return groupby columns
-    if len(agg_dict) == 0 and len(preserve_cols) == 0:
+    if len(processed_agg_dict) == 0 and len(preserve_cols) == 0:
         return df[by_cols].drop_duplicates().reset_index(drop=True)
     
     # Check for conflicts in preserved columns
@@ -1458,7 +1477,10 @@ def df_groupby(df, by, agg_dict=None, preserve='keep_all', preserve_cols=None, o
                 preserve_agg[col] = 'last'
             
             elif on_conflict == 'concat':
-                preserve_agg[col] = lambda x: ', '.join(x.astype(str).unique())
+                preserve_agg[col] = lambda x, sep=concat_separator: sep.join(x.astype(str))
+            
+            elif on_conflict == 'concat_unique':
+                preserve_agg[col] = lambda x, sep=concat_separator: sep.join(x.astype(str).unique())
             
             else:
                 raise ValueError(f"Invalid on_conflict value: {on_conflict}")
@@ -1467,7 +1489,7 @@ def df_groupby(df, by, agg_dict=None, preserve='keep_all', preserve_cols=None, o
             preserve_agg[col] = 'first'
     
     # Combine aggregation dictionaries
-    full_agg_dict = {**agg_dict, **preserve_agg}
+    full_agg_dict = {**processed_agg_dict, **preserve_agg}
     
     # Perform aggregation
     if full_agg_dict:
@@ -1490,7 +1512,6 @@ def df_groupby(df, by, agg_dict=None, preserve='keep_all', preserve_cols=None, o
             new_order.append(col)
     
     return result[new_order]
-
 
 
 def convert_py_script_to_jupyter(input_path):
