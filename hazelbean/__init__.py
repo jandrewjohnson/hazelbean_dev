@@ -9,9 +9,9 @@ import pandas as pd
 # print('hazealbean __init__.py at ' + str(__file__))
 
 # Set pandas maximum width to be 1000
-pd.set_option('display.max_columns', 1000)
-pd.set_option('display.width', 1000)
-pd.set_option('display.max_rows', 500)
+pd.set_option('display.max_columns', 20)
+pd.set_option('display.width', 200)
+pd.set_option('display.max_rows', 10)
             
 import_medium_level = 1 # If this is not true, will import all of the HB library on first import, which can take up to 7 seconds.
 use_strict_importing = 0 
