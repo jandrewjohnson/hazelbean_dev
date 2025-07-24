@@ -1442,7 +1442,8 @@ def convert_shapefile_to_multiple_shapefiles_by_id(shapefile_path, id_col_name, 
         else:
             hb.extract_features_in_shapefile_by_attribute(shapefile_path, aoi_path, id_col_name, id_value)
 
-def check_list_of_paths_exist(input_list):
+def check_list_of_paths_exist(input_list):    
+    """Consider hb.path_all_exist. This function just reports."""
     for path in input_list:
         if os.path.exists(path):
             print ('EXISTS: ' + path)

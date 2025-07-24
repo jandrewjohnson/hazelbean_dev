@@ -1,5 +1,5 @@
 import os, sys, types, inspect, logging, collections, time, copy
-# import nose
+from pathlib import Path
 from collections import OrderedDict
 
 import hazelbean as hb
@@ -30,6 +30,60 @@ def get_path(relative_path, *join_path_args, possible_dirs='default', prepend_po
     p = ProjectFlow()
     got_path = p.get_path(relative_path, *join_path_args, possible_dirs=possible_dirs, prepend_possible_dirs=prepend_possible_dirs, create_shortcut=create_shortcut, download_destination_dir=download_destination_dir, strip_relative_paths_for_output=strip_relative_paths_for_output, leave_ref_path_if_fail=leave_ref_path_if_fail, verbose=verbose)
     return got_path 
+
+
+def get_projectflow_module_root(start_path=None, marker_files=None, return_as_string=True):
+    """
+    Find the project root by looking for marker files.
+    
+    Args:
+        start_path: Starting directory (default: current file's directory)
+        marker_files: List of files that indicate project root
+                     (default: common project root indicators)
+    
+    Returns:
+        Path object of project root
+    
+    Raises:
+        RuntimeError: If no project root is found
+    """
+    if marker_files is None:
+        marker_files = [
+            'run.py'  # Your main run file
+        ]
+    
+    if start_path is None:
+        # Get the directory of the calling script
+        import inspect
+        frame = inspect.stack()[1]
+        module = inspect.getmodule(frame[0])
+        start_path = Path(module.__file__).resolve().parent
+    else:
+        start_path = Path(start_path).resolve()
+    
+    current = start_path
+    
+    # Walk up the directory tree
+    while True:
+        # Check if any marker files exist in current directory
+        if any((current / marker).exists() for marker in marker_files):
+            if return_as_string:
+                return str(current)
+            else:
+                # Return as Path object
+                return current
+            
+        # Stop if we've reached the root directory
+        parent = current.parent
+        if parent == current:
+            break
+        current = parent
+    
+    raise RuntimeError(
+        f"Could not find project root starting from {start_path}. "
+        f"Looked for markers: {marker_files}"
+    )
+    
     
 def op():
     pass
@@ -42,6 +96,7 @@ def run_iterator(p, task, iteration_counter):
         things_returned.append(r)
 
     return things_returned
+
 def run_iterator_in_parallel(p, task, iteration_counter):
     things_returned = []
     for child in task.children:
@@ -52,7 +107,6 @@ def run_iterator_in_parallel(p, task, iteration_counter):
             things_returned.append(r)
 
     return things_returned
-
 
 class InputPath(object):
     """Defines a path where an object can be calculated, but also alternate file locations that if they exist, mean that the calculation should not be done and the
@@ -183,7 +237,6 @@ class Task(anytree.NodeMixin):
     def __repr__(self):
         return '<ProjectFlow task ' + self.name + '>'
 
-
 class InputTask(anytree.NodeMixin):
     def __init__(self, function, project=None, parent=None, type='input_task', **kwargs):
         """
@@ -230,7 +283,6 @@ class OutputTask(anytree.NodeMixin):
 
         self.run = 1
         self.skip_existing = 0  # Will thus overwrite by default.
-
 
 class ProjectFlow(object):
     def __init__(self, project_dir=None):
@@ -322,7 +374,6 @@ class ProjectFlow(object):
         
         self.L = hb.get_logger('project_flow')
         # self.registered_dirs = ['.', self.input_dir, self.project_base_data_dir, self.model_base_data_dir, self.base_data_dir]
-
 
     def __str__(self):
         return 'Hazelbean ProjectFlow object. ' + hb.pp(self.__dict__, return_as_string=True)
@@ -585,6 +636,15 @@ class ProjectFlow(object):
                 L.info(pre + task.name)
             else:
                 L.info(pre + task.name + ', running: ' + str(task.run) + ', skip if dir exists: ' + str(task.skip_existing))
+
+    def set_all_tasks_to_skip_if_dir_exists(self):
+        """Set all tasks to skip if the task_dir exists. This is useful for debugging and testing."""
+        for pre, fill, task in anytree.RenderTree(self.task_tree):
+            if task.name == 'ProjectFlow':
+                continue
+            else:
+                task.skip_existing = 1
+                L.info('Setting task ' + str(task.name) + ' to skip if dir exists.')
 
     def add_task(self, function, project=None, parent=None, type='task', run=1, skip_existing=0, **kwargs):
         """KWARGS: task_dir sets where this task will have as its cur_dir, overwritting the default logic"""
@@ -1234,7 +1294,6 @@ class ProjectFlow(object):
 
         L.info('Script complete.')
 
-
 class DataRef(str):
     """Number of times I have attempted this and failed: 3. Please increment when reattempted and failed.
     
@@ -1353,14 +1412,10 @@ class DataRef(str):
         for dir in dirs:
             self.registered_dirs.append(dir)
 
-
-
 def get_dummy_scenarios_df():
     # Make a dataframe with a single row and a single column named scenario_type with the value 'baseline'
     df = pd.DataFrame(data={'scenario_type': ['baseline'], 'years': [2015]})
     return df
-
-
 
 if __name__=='__main__':
     print ('cannot run by itself.')

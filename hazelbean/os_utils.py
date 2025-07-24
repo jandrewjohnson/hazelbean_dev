@@ -1470,6 +1470,9 @@ def path_copy(src, dst, copy_tree=True, displace_overwrites=False, overwrite=Tru
 
 def copy_shutil_flex(src, dst, copy_tree=True, displace_overwrites=False, overwrite=True, verbose=False):
     """Helper util that allows copying of files or dirs in same function"""
+    if not hb.path_exists(src, verbose=verbose):
+        raise NameError('Source path does not exist: ' + str(src))
+    
     if os.path.isdir(src):
         if verbose:
             hb.log('Copying directory ' + str(src) + ' to ' + str(dst))
