@@ -5,6 +5,7 @@ from collections import OrderedDict
 import numpy as np
 import json
 import warnings
+import csv
 
 import hazelbean as hb
 
@@ -889,30 +890,58 @@ def df_read(input_path, delimiter=','):
         raise NameError(f'Unable to read {input_path} as a csv. It may not be a csv or it may be malformed.  \n    Abspath: {os.path.abspath(input_path)}.  \n    Normpath: {os.path.normpath(input_path)}')
     return df
 
-def df_write(df, output_path, index=False):
-    """Write a Pandas DataFrame to a CSV file.
+def df_write(df, output_path, index=False, handle_quotes='auto'):
+    """Write a Pandas DataFrame to a CSV or XLSX file.
     
+    The file format is determined by the extension of `output_path`.
+
     Args:
         df (pd.DataFrame): The DataFrame to write.
-        output_path (str): The path where the CSV file will be saved.
+        output_path (str): The path where the file will be saved. Must end in .csv or .xlsx.
         index (bool): Whether to write row indices. Default is False.
+        handle_quotes (str or int): CSV-specific option for quoting.
+            'auto': QUOTE_MINIMAL, 'default': pandas default, 'all': QUOTE_ALL,
+            or a csv.QUOTE_* constant. Ignored for XLSX files.
     
     Raises:
-        NameError: If the output path is not a string or if the DataFrame is empty.
+        NameError: If the output path is not a string, the DataFrame is empty, or the
+                   file extension is unsupported.
     
     Examples:
         Basic usage:
         ```python
         df_write(my_dataframe, 'path/to/output.csv')
+        df_write(my_dataframe, 'path/to/output.xlsx')
         ```
     """
     if not isinstance(output_path, str):
         raise NameError(f'Output path must be a string. You passed in {output_path} of type {type(output_path)}.')
     
     if df.empty:
-        raise NameError('DataFrame is empty. Cannot write an empty DataFrame to a CSV file.')
-    
-    df.to_csv(output_path, index=index)
+        raise NameError('DataFrame is empty. Cannot write an empty DataFrame to a file.')
+
+    # Create parent directories if they don't exist
+    output_dir = os.path.dirname(output_path)
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
+
+    file_ext = os.path.splitext(output_path)[1].lower()
+
+    if file_ext == '.csv':
+        if handle_quotes == 'auto':
+            df.to_csv(output_path, index=index, quoting=csv.QUOTE_MINIMAL)
+        elif handle_quotes == 'default':            
+            df.to_csv(output_path, index=index)
+        elif handle_quotes == 'all':            
+            df.to_csv(output_path, index=index, quoting=csv.QUOTE_ALL)
+        elif isinstance(handle_quotes, int):
+            df.to_csv(output_path, index=index, quoting=handle_quotes)
+        else:
+            raise NameError(f'handle_quotes must be auto, default, all, or a quoting constant from the csv module. You passed in {handle_quotes} of type {type(handle_quotes)}.')
+    elif file_ext == '.xlsx':
+        df.to_excel(output_path, index=index)
+    else:
+        raise NameError(f"Unsupported file extension: '{file_ext}'. Please use '.csv' or '.xlsx'.")
 
 # TODOOO Reorg hazelbean dfs to be in df.py so you would call hb.df.smartcast(df) instead of hb.df_smartcast(df)
 def df_smartcast(df):
@@ -1868,7 +1897,7 @@ def df_groupby_gemini(df, groupby_cols, agg_dict=None, preserve='keep_all', pres
     
     return result[original_order + new_cols]
 
-def df_groupby(df, groupby_cols, agg_dict=None, preserve='keep_all', preserve_cols=None, 
+def df_groupby(df, groupby_cols, agg_cols=None, agg_dict=None, preserve='keep_all', preserve_cols=None, 
                on_conflict='concat_unique', conflict_reporting='warn', concat_separator='^',
                debug=False):
     """
@@ -1885,6 +1914,9 @@ def df_groupby(df, groupby_cols, agg_dict=None, preserve='keep_all', preserve_co
         The DataFrame to group
     groupby_cols : str or list
         Column(s) to group by. Can be one or many columns, but the more you have, the less aggregation happens.
+    agg_cols : str or list, optional
+        A shorthand for specifying columns to be summed. For each column in this list, a 'sum' aggregation is
+        performed. This is overridden by any specific aggregation for the same column in `agg_dict`.
     agg_dict : dict, optional
         Dictionary mapping column names to aggregation functions.
         If None and preserve='keep_all_valid', will only preserve valid (nunique=1) columns without aggregating.
@@ -1937,6 +1969,14 @@ def df_groupby(df, groupby_cols, agg_dict=None, preserve='keep_all', preserve_co
     # Handle case where agg_dict is None
     if agg_dict is None:
         agg_dict = {}
+
+    # Process agg_cols to populate agg_dict with sum, but don't override existing entries
+    if agg_cols:
+        if isinstance(agg_cols, str):
+            agg_cols = [agg_cols]
+        for col in agg_cols:
+            if col not in agg_dict:
+                agg_dict[col] = 'sum'
     
     # Create proper lambda functions that capture the separator
     def make_concat_func(separator):
@@ -2030,7 +2070,7 @@ def df_groupby(df, groupby_cols, agg_dict=None, preserve='keep_all', preserve_co
         
         elif conflict_reporting == 'warn':
             warnings.warn(f"Columns {list(conflicts.keys())} have multiple values in some groups. "
-                         f"Conflict counts: {conflict_summary}. Applying '{on_conflict}' strategy.")
+                         f"Applying '{on_conflict}' strategy.")
     
     # Define aggregation logic for preserved columns
     preserve_agg = {}
@@ -2064,6 +2104,33 @@ def df_groupby(df, groupby_cols, agg_dict=None, preserve='keep_all', preserve_co
     # Perform aggregation
     if full_agg_dict:
         result = df.groupby(groupby_cols).agg(full_agg_dict).reset_index()
+        # Warn and show sample output if using concat or concat_unique
+        if on_conflict in ['concat', 'concat_unique'] and conflicts:
+            sample_outputs = []
+            for col in conflicts:
+            # Try to find a group where the concatenation separator will actually appear (i.e., more than one unique value)
+                found = False
+                for group_key in conflicts[col].index:
+                    group_data = grouped.get_group(group_key)[col]
+                    if on_conflict == 'concat':
+                        sample = concat_separator.join(group_data.astype(str).dropna())
+                    else:
+                        sample = concat_separator.join(group_data.astype(str).dropna().unique())
+                    if concat_separator in sample:
+                        sample_outputs.append(f"Column '{col}', group {group_key}: {sample[:200]}")
+                        found = True
+                        break
+                if not found:
+                    # Fallback: just show the first group
+                    group_key = conflicts[col].index[0]
+                    group_data = grouped.get_group(group_key)[col]
+                    if on_conflict == 'concat':
+                        sample = concat_separator.join(group_data.astype(str).dropna())
+                    else:
+                        sample = concat_separator.join(group_data.astype(str).dropna().unique())
+                        sample_outputs.append(f"Column '{col}', group {group_key}: {sample[:200]}")
+            if sample_outputs:
+                warnings.warn("Sample output of concatenated cells (first 200 chars):\n" + "\n".join(sample_outputs))
     else:
         # No aggregation needed, just get unique group keys
         result = df[groupby_cols].drop_duplicates().reset_index(drop=True)
