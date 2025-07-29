@@ -7,6 +7,7 @@ import os
 import random
 import shutil
 import sys
+from pathlib import Path
 import distutils
 from distutils import dir_util # NEEDED
 import pathlib
@@ -2255,3 +2256,151 @@ def create_shortcut(target_path, shortcut_path, verbose=False):
             hb.log(f'Shortcut created at {shortcut_path} pointing to {target_path}')
     except OSError:
         hb.log('Unable to create symlink')
+
+
+class Path(type(Path())):
+    """
+    Path(path: str) -> Path
+    Path extends the functionality of pathlib.Path, allowing seamless use in string operations and contexts where strings are expected, while retaining all standard Path features. This is useful for scenarios where you want to work with filesystem paths but also need to interact with APIs or code that expect string-like objects.
+    Features:
+    ---------
+    - Inherits all methods and properties from pathlib.Path.
+    - Supports string operations such as concatenation, slicing, formatting, and comparison.
+    - Can be used wherever a string is expected (e.g., formatting, joining, substring checks).
+    - Implements common string methods: startswith, endswith, replace, split, lower, upper, strip, etc.
+    - Supports indexing, slicing, and iteration over characters.
+    - Hashable and comparable to both strings and Path objects.
+    Example Usage:
+    --------------
+
+    A subclass of pathlib.Path that behaves like a string in string contexts.
+    
+    This class inherits all Path functionality while allowing seamless use
+    in string operations and contexts where strings are expected.
+    
+    # Example usage and demonstration
+
+    # Create a Path instance
+    path = Path("/home/user/documents/file.txt")
+    
+    print("=== Path Demonstration ===")
+    print(f"Path: {path}")
+    print(f"Type: {type(path)}")
+    print(f"Is instance of Path: {isinstance(path, Path)}")
+    print()
+    
+    # String-like operations
+    print("=== String-like Operations ===")
+    print(f"Length: {len(path)}")
+    print(f"Starts with '/home': {path.startswith('/home')}")
+    print(f"Ends with '.txt': {path.endswith('.txt')}")
+    print(f"Contains 'documents': {'documents' in path}")
+    print(f"String concatenation: {path + '.backup'}")
+    print(f"Reverse concatenation: {'backup_' + path}")
+    print()
+    
+    # Path operations still work
+    print("=== Path Operations Still Work ===")
+    print(f"Parent: {path.parent}")
+    print(f"Name: {path.name}")
+    print(f"Suffix: {path.suffix}")
+    print(f"Stem: {path.stem}")
+    print(f"Parts: {path.parts}")
+    print()
+    
+    # String comparison
+    print("=== String Comparison ===")
+    same_path_str = "/home/user/documents/file.txt"
+    print(f"Equals string: {path == same_path_str}")
+    print(f"Equals Path: {path == Path(same_path_str)}")
+    print()
+    
+    # Use in string formatting
+    print("=== String Formatting ===")
+    print(f"Formatted: The file is located at '{path}'")
+    print(f"With format spec: {path:>50}")
+    print()
+    
+    # Indexing and slicing
+    print("=== Indexing and Slicing ===")
+    print(f"First character: {path[0]}")
+    print(f"Last 8 characters: {path[-8:]}")
+    print(f"Directory part: {path[:path.rfind('/')]}")
+    """
+    
+    def __str__(self):
+        """Return the string representation of the path."""
+        return str(self.as_posix() if os.name != 'nt' else self.as_posix().replace('/', '\\'))
+    
+    def __repr__(self):
+        """Return a more readable representation."""
+        return f"Path('{str(self)}')"
+    
+    def __add__(self, other):
+        """Allow string concatenation with + operator."""
+        return str(self) + str(other)
+    
+    def __radd__(self, other):
+        """Allow string concatenation when Path is on the right."""
+        return str(other) + str(self)
+    
+    def __eq__(self, other):
+        """Allow comparison with strings and other paths."""
+        if isinstance(other, (str, Path)):
+            return str(self) == str(other)
+        return super().__eq__(other)
+    
+    def __hash__(self):
+        """Make it hashable like a string."""
+        return hash(str(self))
+    
+    def __format__(self, format_spec):
+        """Support string formatting."""
+        return format(str(self), format_spec)
+    
+    def __contains__(self, item):
+        """Support 'in' operator for substring checking."""
+        return str(item) in str(self)
+    
+    def __getitem__(self, key):
+        """Support indexing and slicing like a string."""
+        return str(self)[key]
+    
+    def __len__(self):
+        """Return the length of the path string."""
+        return len(str(self))
+    
+    def __iter__(self):
+        """Allow iteration over characters like a string."""
+        return iter(str(self))
+    
+    # String methods that might be commonly used
+    def startswith(self, prefix):
+        """Check if path string starts with prefix."""
+        return str(self).startswith(prefix)
+    
+    def endswith(self, suffix):
+        """Check if path string ends with suffix."""
+        return str(self).endswith(suffix)
+    
+    def replace(self, old, new, count=-1):
+        """Replace substring in path string."""
+        return str(self).replace(old, new, count)
+    
+    def split(self, sep=None, maxsplit=-1):
+        """Split path string."""
+        return str(self).split(sep, maxsplit)
+    
+    def lower(self):
+        """Return lowercase path string."""
+        return str(self).lower()
+    
+    def upper(self):
+        """Return uppercase path string."""
+        return str(self).upper()
+    
+    def strip(self, chars=None):
+        """Strip characters from path string."""
+        return str(self).strip(chars)
+
+
