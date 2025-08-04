@@ -864,6 +864,12 @@ def df_read(input_path, delimiter=','):
         df = df_read('path/to/your/file.csv')
         ```
     """
+    
+    # If the input is already a df, just return it
+    # Thhis allows optimization by just initializing it as a string and only loading it when needed, and not reloading it subsequent times.
+    if isinstance(input_path, pd.DataFrame):
+        return input_path
+        
     if not type(input_path) is str:
         raise NameError(f'df_read only accepts a string path. You passed in {str(input_path)} of type {str(type(input_path))} which is not a string.')
     if not os.path.exists(input_path):
