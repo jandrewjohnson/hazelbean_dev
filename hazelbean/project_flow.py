@@ -32,7 +32,7 @@ def get_path(relative_path, *join_path_args, possible_dirs='default', prepend_po
     return got_path 
 
 
-def get_projectflow_module_root(start_path=None, marker_files=None, return_as_string=True):
+def get_projectflow_module_root(start_path=None, marker_files=None, return_as_string=False):
     """
     Find the project root by looking for marker files.
     

@@ -1446,7 +1446,7 @@ def copy_file_tree_to_new_root(input_dir, root_dir, **kwargs):
 
     for cur_dir, dirs_in_dir, files_in_dir in os.walk(input_dir):
         extra_dirs = cur_dir.replace(input_dir, '')
-        output_dir = root_dir + extra_dirs
+        output_dir = str(root_dir) + extra_dirs
         for file in files_in_dir:
             target_path = os.path.join(cur_dir, file)
             output_path = os.path.join(output_dir, file)
