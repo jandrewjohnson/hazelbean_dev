@@ -11,6 +11,17 @@ from pathlib import Path
 import distutils
 from distutils import dir_util # NEEDED
 import pathlib
+import re
+
+import os
+import shlex
+import sys
+import time
+import threading
+import subprocess
+from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Callable, Dict, List, Optional, Union
 
 import hazelbean as hb
 import zipfile
@@ -207,7 +218,7 @@ def random_string():
 
 def pretty_time(format=None):
     # Returns a nicely formated string of YEAR-MONTH-DAY_HOURS-MIN-SECONDS based on the the linux timestamp
-    now = str(datetime.datetime.now())
+    now = str(datetime.now())
     day, time = now.split(' ')
     day = day.replace('-', '')
     time = time.replace(':', '')
@@ -1526,7 +1537,51 @@ def replace_in_file_via_dict(input_path, replace_dict, output_path=None):
         filedata = filedata.replace(key, replace_dict[key])
     with open(output_path, 'w') as file:
         file.write(filedata)
+        
+def replace_in_file_between_strings(input_path, replacement_value, delimiter_string=None, start_string=None, end_string=None, output_path=None):
+    """Replace things in file according to replacement_value, which can be a string or a dict. 
+    If deliminter string is provided, both start_string and end_string will be the delimiter_string. If no delimiter_string is provided,
+    then start_string and end_string must be provided. If replacement_value is a string, every replacement will be assigned the same string value.
+    If it's a dict, then the keys will be replaced with their values in the file. If the keys are not found, raise an error.
+    """
+    if delimiter_string:
+        start_string = delimiter_string
+        end_string = delimiter_string
+    if not (start_string and end_string):
+        raise ValueError("Either delimiter_string or both start_string and end_string must be provided.")
 
+    with open(input_path, 'r', encoding="utf8") as file:
+        filedata = file.read()
+
+
+    # Find all matches between start_string and end_string (non-greedy)
+    pattern = re.escape(start_string) + r'(.*?)' + re.escape(end_string)
+    matches = list(re.finditer(pattern, filedata, re.DOTALL))
+
+    if not matches:
+        raise ValueError(f"No matches found between '{start_string}' and '{end_string}' in {input_path}")
+
+    # If replacement_value is a dict, replace each match with corresponding value
+    if isinstance(replacement_value, dict):
+        new_filedata = filedata
+        for match in matches:
+            key = match.group(1)
+            if key not in replacement_value:
+                raise KeyError(f"Key '{key}' not found in replacement_value dict.")
+            replacement = start_string + replacement_value[key] + end_string
+            new_filedata = new_filedata.replace(match.group(0), replacement)
+    else:
+        # Replace all matches with the same replacement_value
+        def repl(_):
+            return replacement_value
+        new_filedata = re.sub(pattern, repl, filedata, flags=re.DOTALL)
+
+    if not output_path:
+        output_path = input_path
+    with open(output_path, 'w', encoding="utf8") as file:
+        file.write(new_filedata)
+    
+    
 
 def replace_in_string_via_dict(input_string, replace_dict):
     for key in replace_dict:
@@ -2256,6 +2311,73 @@ def create_shortcut(target_path, shortcut_path, verbose=False):
             hb.log(f'Shortcut created at {shortcut_path} pointing to {target_path}')
     except OSError:
         hb.log('Unable to create symlink')
+
+
+
+def run_commands(cmd, run_in_parallel=True):
+    
+    if type(cmd) is str:
+        cmd = [cmd]
+        
+    if len(cmd) == 1:
+        cmd = cmd[0]
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,  # Combine stderr into stdout
+            text=True,
+            bufsize=1,  # Line buffering
+            universal_newlines=True
+        )
+
+        # Read line by line as they come
+        while True:
+            line = process.stdout.readline()
+            if not line and process.poll() is not None:
+                break
+            if line:
+                print(line.rstrip())
+                sys.stdout.flush()  # Force immediate display    
+    # else: run in parallel
+    else:
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        import threading
+        from datetime import datetime
+        from typing import List, Dict, Optional
+
+
+        def run_single_command(command: str) -> Dict:
+            start_time = datetime.now()
+            process = subprocess.Popen(
+                command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                bufsize=1,
+                universal_newlines=True
+            )
+            stdout, stderr = process.communicate()
+            end_time = datetime.now()
+            return {
+                "command": command,
+                "returncode": process.returncode,
+                "started": start_time,
+                "ended": end_time,
+                "duration_s": (end_time - start_time).total_seconds(),
+                "stdout": stdout,
+                "stderr": stderr
+            }
+        returns = []
+        with ThreadPoolExecutor() as executor:
+            futures = {executor.submit(run_single_command, c): c for c in cmd}
+            for future in as_completed(futures):
+                result = future.result()
+                print(f"Command: {result['command']}, Return code: {result['returncode']}, Duration: {result['duration_s']}s")
+                returns.append(result)
+            
+
+        return returns  # type: ignore
+
 
 
 class Path(type(Path())):
