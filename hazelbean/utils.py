@@ -1212,7 +1212,7 @@ def df_merge(left_input,
                         
                         
         # for col in merged_df.columns:
-        merged_df = merged_df[[i for i in merged_df.columns if not i.endswith('_right') or i in keep_right]]
+        merged_df = merged_df[[i for i in merged_df.columns if not str(i).endswith('_right') or i in keep_right]]
         
 
     if compare_inner_outer:
@@ -1255,7 +1255,7 @@ def df_merge(left_input,
                 df = pd.merge(left_df, right_df, how=how, left_on=left_on, right_on=right_on)     
         
         # TODOO AWKWARD but i messed up the logic here and have to do this again here. simplify.
-        df = df[[i for i in merged_df.columns if not i.endswith('_right') or i in keep_right]]         
+        df = df[[i for i in merged_df.columns if not str(i).endswith('_right') or i in keep_right]]         
         comparison_dict = hb.df_compare_column_contents_as_dict(df_outer[left_on], df_outer[right_on])
         
         if verbose:
