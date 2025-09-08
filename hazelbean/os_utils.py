@@ -7,9 +7,21 @@ import os
 import random
 import shutil
 import sys
+from pathlib import Path
 import distutils
 from distutils import dir_util # NEEDED
 import pathlib
+import re
+
+import os
+import shlex
+import sys
+import time
+import threading
+import subprocess
+from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Callable, Dict, List, Optional, Union
 
 import hazelbean as hb
 import zipfile
@@ -206,7 +218,7 @@ def random_string():
 
 def pretty_time(format=None):
     # Returns a nicely formated string of YEAR-MONTH-DAY_HOURS-MIN-SECONDS based on the the linux timestamp
-    now = str(datetime.datetime.now())
+    now = str(datetime.now())
     day, time = now.split(' ')
     day = day.replace('-', '')
     time = time.replace(':', '')
@@ -1445,7 +1457,7 @@ def copy_file_tree_to_new_root(input_dir, root_dir, **kwargs):
 
     for cur_dir, dirs_in_dir, files_in_dir in os.walk(input_dir):
         extra_dirs = cur_dir.replace(input_dir, '')
-        output_dir = root_dir + extra_dirs
+        output_dir = str(root_dir) + extra_dirs
         for file in files_in_dir:
             target_path = os.path.join(cur_dir, file)
             output_path = os.path.join(output_dir, file)
@@ -1470,6 +1482,9 @@ def path_copy(src, dst, copy_tree=True, displace_overwrites=False, overwrite=Tru
 
 def copy_shutil_flex(src, dst, copy_tree=True, displace_overwrites=False, overwrite=True, verbose=False):
     """Helper util that allows copying of files or dirs in same function"""
+    if not hb.path_exists(src, verbose=verbose):
+        raise NameError('Source path does not exist: ' + str(src))
+    
     if os.path.isdir(src):
         if verbose:
             hb.log('Copying directory ' + str(src) + ' to ' + str(dst))
@@ -1522,7 +1537,51 @@ def replace_in_file_via_dict(input_path, replace_dict, output_path=None):
         filedata = filedata.replace(key, replace_dict[key])
     with open(output_path, 'w') as file:
         file.write(filedata)
+        
+def replace_in_file_between_strings(input_path, replacement_value, delimiter_string=None, start_string=None, end_string=None, output_path=None):
+    """Replace things in file according to replacement_value, which can be a string or a dict. 
+    If deliminter string is provided, both start_string and end_string will be the delimiter_string. If no delimiter_string is provided,
+    then start_string and end_string must be provided. If replacement_value is a string, every replacement will be assigned the same string value.
+    If it's a dict, then the keys will be replaced with their values in the file. If the keys are not found, raise an error.
+    """
+    if delimiter_string:
+        start_string = delimiter_string
+        end_string = delimiter_string
+    if not (start_string and end_string):
+        raise ValueError("Either delimiter_string or both start_string and end_string must be provided.")
 
+    with open(input_path, 'r', encoding="utf8") as file:
+        filedata = file.read()
+
+
+    # Find all matches between start_string and end_string (non-greedy)
+    pattern = re.escape(start_string) + r'(.*?)' + re.escape(end_string)
+    matches = list(re.finditer(pattern, filedata, re.DOTALL))
+
+    if not matches:
+        raise ValueError(f"No matches found between '{start_string}' and '{end_string}' in {input_path}")
+
+    # If replacement_value is a dict, replace each match with corresponding value
+    if isinstance(replacement_value, dict):
+        new_filedata = filedata
+        for match in matches:
+            key = match.group(1)
+            if key not in replacement_value:
+                raise KeyError(f"Key '{key}' not found in replacement_value dict.")
+            replacement = start_string + replacement_value[key] + end_string
+            new_filedata = new_filedata.replace(match.group(0), replacement)
+    else:
+        # Replace all matches with the same replacement_value
+        def repl(_):
+            return replacement_value
+        new_filedata = re.sub(pattern, repl, filedata, flags=re.DOTALL)
+
+    if not output_path:
+        output_path = input_path
+    with open(output_path, 'w', encoding="utf8") as file:
+        file.write(new_filedata)
+    
+    
 
 def replace_in_string_via_dict(input_string, replace_dict):
     for key in replace_dict:
@@ -2252,3 +2311,218 @@ def create_shortcut(target_path, shortcut_path, verbose=False):
             hb.log(f'Shortcut created at {shortcut_path} pointing to {target_path}')
     except OSError:
         hb.log('Unable to create symlink')
+
+
+
+def run_commands(cmd, run_in_parallel=True):
+    
+    if type(cmd) is str:
+        cmd = [cmd]
+        
+    if len(cmd) == 1:
+        cmd = cmd[0]
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,  # Combine stderr into stdout
+            text=True,
+            bufsize=1,  # Line buffering
+            universal_newlines=True
+        )
+
+        # Read line by line as they come
+        while True:
+            line = process.stdout.readline()
+            if not line and process.poll() is not None:
+                break
+            if line:
+                print(line.rstrip())
+                sys.stdout.flush()  # Force immediate display    
+    # else: run in parallel
+    else:
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        import threading
+        from datetime import datetime
+        from typing import List, Dict, Optional
+
+
+        def run_single_command(command: str) -> Dict:
+            start_time = datetime.now()
+            process = subprocess.Popen(
+                command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                bufsize=1,
+                universal_newlines=True
+            )
+            stdout, stderr = process.communicate()
+            end_time = datetime.now()
+            return {
+                "command": command,
+                "returncode": process.returncode,
+                "started": start_time,
+                "ended": end_time,
+                "duration_s": (end_time - start_time).total_seconds(),
+                "stdout": stdout,
+                "stderr": stderr
+            }
+        returns = []
+        with ThreadPoolExecutor() as executor:
+            futures = {executor.submit(run_single_command, c): c for c in cmd}
+            for future in as_completed(futures):
+                result = future.result()
+                print(f"Command: {result['command']}, Return code: {result['returncode']}, Duration: {result['duration_s']}s")
+                returns.append(result)
+            
+
+        return returns  # type: ignore
+
+
+
+class Path(type(Path())):
+    """
+    Path(path: str) -> Path
+    Path extends the functionality of pathlib.Path, allowing seamless use in string operations and contexts where strings are expected, while retaining all standard Path features. This is useful for scenarios where you want to work with filesystem paths but also need to interact with APIs or code that expect string-like objects.
+    Features:
+    ---------
+    - Inherits all methods and properties from pathlib.Path.
+    - Supports string operations such as concatenation, slicing, formatting, and comparison.
+    - Can be used wherever a string is expected (e.g., formatting, joining, substring checks).
+    - Implements common string methods: startswith, endswith, replace, split, lower, upper, strip, etc.
+    - Supports indexing, slicing, and iteration over characters.
+    - Hashable and comparable to both strings and Path objects.
+    Example Usage:
+    --------------
+
+    A subclass of pathlib.Path that behaves like a string in string contexts.
+    
+    This class inherits all Path functionality while allowing seamless use
+    in string operations and contexts where strings are expected.
+    
+    # Example usage and demonstration
+
+    # Create a Path instance
+    path = Path("/home/user/documents/file.txt")
+    
+    print("=== Path Demonstration ===")
+    print(f"Path: {path}")
+    print(f"Type: {type(path)}")
+    print(f"Is instance of Path: {isinstance(path, Path)}")
+    print()
+    
+    # String-like operations
+    print("=== String-like Operations ===")
+    print(f"Length: {len(path)}")
+    print(f"Starts with '/home': {path.startswith('/home')}")
+    print(f"Ends with '.txt': {path.endswith('.txt')}")
+    print(f"Contains 'documents': {'documents' in path}")
+    print(f"String concatenation: {path + '.backup'}")
+    print(f"Reverse concatenation: {'backup_' + path}")
+    print()
+    
+    # Path operations still work
+    print("=== Path Operations Still Work ===")
+    print(f"Parent: {path.parent}")
+    print(f"Name: {path.name}")
+    print(f"Suffix: {path.suffix}")
+    print(f"Stem: {path.stem}")
+    print(f"Parts: {path.parts}")
+    print()
+    
+    # String comparison
+    print("=== String Comparison ===")
+    same_path_str = "/home/user/documents/file.txt"
+    print(f"Equals string: {path == same_path_str}")
+    print(f"Equals Path: {path == Path(same_path_str)}")
+    print()
+    
+    # Use in string formatting
+    print("=== String Formatting ===")
+    print(f"Formatted: The file is located at '{path}'")
+    print(f"With format spec: {path:>50}")
+    print()
+    
+    # Indexing and slicing
+    print("=== Indexing and Slicing ===")
+    print(f"First character: {path[0]}")
+    print(f"Last 8 characters: {path[-8:]}")
+    print(f"Directory part: {path[:path.rfind('/')]}")
+    """
+    
+    def __str__(self):
+        """Return the string representation of the path."""
+        return str(self.as_posix() if os.name != 'nt' else self.as_posix().replace('/', '\\'))
+    
+    def __repr__(self):
+        """Return a more readable representation."""
+        return f"Path('{str(self)}')"
+    
+    def __add__(self, other):
+        """Allow string concatenation with + operator."""
+        return str(self) + str(other)
+    
+    def __radd__(self, other):
+        """Allow string concatenation when Path is on the right."""
+        return str(other) + str(self)
+    
+    def __eq__(self, other):
+        """Allow comparison with strings and other paths."""
+        if isinstance(other, (str, Path)):
+            return str(self) == str(other)
+        return super().__eq__(other)
+    
+    def __hash__(self):
+        """Make it hashable like a string."""
+        return hash(str(self))
+    
+    def __format__(self, format_spec):
+        """Support string formatting."""
+        return format(str(self), format_spec)
+    
+    def __contains__(self, item):
+        """Support 'in' operator for substring checking."""
+        return str(item) in str(self)
+    
+    def __getitem__(self, key):
+        """Support indexing and slicing like a string."""
+        return str(self)[key]
+    
+    def __len__(self):
+        """Return the length of the path string."""
+        return len(str(self))
+    
+    def __iter__(self):
+        """Allow iteration over characters like a string."""
+        return iter(str(self))
+    
+    # String methods that might be commonly used
+    def startswith(self, prefix):
+        """Check if path string starts with prefix."""
+        return str(self).startswith(prefix)
+    
+    def endswith(self, suffix):
+        """Check if path string ends with suffix."""
+        return str(self).endswith(suffix)
+    
+    def replace(self, old, new, count=-1):
+        """Replace substring in path string."""
+        return str(self).replace(old, new, count)
+    
+    def split(self, sep=None, maxsplit=-1):
+        """Split path string."""
+        return str(self).split(sep, maxsplit)
+    
+    def lower(self):
+        """Return lowercase path string."""
+        return str(self).lower()
+    
+    def upper(self):
+        """Return uppercase path string."""
+        return str(self).upper()
+    
+    def strip(self, chars=None):
+        """Strip characters from path string."""
+        return str(self).strip(chars)
+
+
