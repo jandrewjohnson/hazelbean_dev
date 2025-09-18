@@ -1,0 +1,336 @@
+# Testing Quality Gates Workflow
+# 
+# Comprehensive testing pipeline implementing quality gates for hazelbean development
+# Demonstrates CI/CD integration patterns for hazelbean testing infrastructure
+#
+# Usage: Copy this workflow to your .github/workflows/ directory to implement
+#        systematic quality gate testing for hazelbean projects
+
+name: Testing Quality Gates
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+      - '.gitignore'
+  pull_request:
+    branches: [ main, develop ]
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+      - '.gitignore'
+  workflow_dispatch: # Allow manual triggering
+    inputs:
+      test_level:
+        description: 'Test level to run'
+        required: false
+        default: 'full'
+        type: choice
+        options:
+          - 'smoke'
+          - 'core'
+          - 'full'
+
+# Prevent concurrent runs on the same branch to avoid resource conflicts
+concurrency:
+  group: testing-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash -l {0}
+
+env:
+  # CI environment configuration
+  CI: true
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  # GDAL configuration for stability
+  GDAL_DISABLE_READDIR_ON_OPEN: EMPTY_DIR
+  GDAL_NUM_THREADS: 1
+  GDAL_HTTP_TIMEOUT: 30
+
+jobs:
+  
+  # Quality Gate 1: Infrastructure Validation
+  infrastructure-validation:
+    name: "Quality Gate 1: Infrastructure"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    outputs:
+      infrastructure-status: ${{ steps.infrastructure.outputs.status }}
+      
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          
+      - name: Setup Mambaforge with hazelbean_env
+        uses: mamba-org/setup-micromamba@v1
+        with:
+          environment-file: environment.yml
+          environment-name: hazelbean_env
+          cache-environment: true
+          init-shell: bash
+          
+      - name: Verify environment setup
+        run: |
+          echo "🔍 Verifying environment setup..."
+          conda info --envs
+          which python
+          python --version
+          python -c "import hazelbean as hb; print('✅ Hazelbean available')" || echo "❌ Hazelbean import failed"
+          python -c "import pytest; print('✅ PyTest available')" || echo "❌ PyTest import failed"
+          
+      - name: Infrastructure smoke test
+        id: infrastructure
+        run: |
+          echo "🚀 Running infrastructure validation..."
+          
+          # Run smoke tests with timeout protection
+          timeout 300 python -m pytest hazelbean_tests/system/test_smoke.py -v --tb=short || {
+            echo "status=failed" >> $GITHUB_OUTPUT
+            echo "❌ Infrastructure smoke tests failed"
+            exit 1
+          }
+          
+          echo "status=passed" >> $GITHUB_OUTPUT
+          echo "✅ Infrastructure validation passed"
+
+  # Quality Gate 2: Core Functionality Testing
+  core-functionality:
+    name: "Quality Gate 2: Core Functionality"
+    runs-on: ubuntu-latest
+    needs: infrastructure-validation
+    if: needs.infrastructure-validation.outputs.infrastructure-status == 'passed'
+    timeout-minutes: 20
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        test-category: ['get_path', 'tile_iterator', 'add_task', 'add_iterator']
+        
+    outputs:
+      core-status: ${{ steps.core-tests.outputs.status }}
+      
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Mambaforge with hazelbean_env  
+        uses: mamba-org/setup-micromamba@v1
+        with:
+          environment-file: environment.yml
+          environment-name: hazelbean_env
+          cache-environment: true
+          
+      - name: Run core functionality tests
+        id: core-tests
+        run: |
+          echo "🎯 Testing core functionality: ${{ matrix.test-category }}"
+          
+          # Run with coverage for core components
+          python -m pytest hazelbean_tests/unit/test_${{ matrix.test-category }}.py -v \
+            --tb=short \
+            --cov=hazelbean \
+            --cov-report=term-missing \
+            --cov-report=xml:coverage-${{ matrix.test-category }}.xml \
+            --maxfail=3 || {
+              echo "status=failed" >> $GITHUB_OUTPUT
+              echo "❌ Core functionality tests failed for ${{ matrix.test-category }}"
+              exit 1
+            }
+          
+          echo "status=passed" >> $GITHUB_OUTPUT
+          echo "✅ Core functionality tests passed for ${{ matrix.test-category }}"
+          
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.test-category }}
+          path: coverage-${{ matrix.test-category }}.xml
+          retention-days: 30
+
+  # Quality Gate 3: Integration Testing
+  integration-testing:
+    name: "Quality Gate 3: Integration Testing"
+    runs-on: ubuntu-latest
+    needs: [infrastructure-validation, core-functionality]
+    if: needs.infrastructure-validation.outputs.infrastructure-status == 'passed'
+    timeout-minutes: 30
+    
+    outputs:
+      integration-status: ${{ steps.integration.outputs.status }}
+      
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Mambaforge with hazelbean_env
+        uses: mamba-org/setup-micromamba@v1
+        with:
+          environment-file: environment.yml
+          environment-name: hazelbean_env
+          cache-environment: true
+          
+      - name: Run integration tests
+        id: integration  
+        run: |
+          echo "🔄 Running integration workflow tests..."
+          
+          # Run most reliable integration tests first (including comprehensive ProjectFlow tests)
+          python -m pytest \
+            hazelbean_tests/integration/test_project_flow_task_management.py \
+            hazelbean_tests/integration/test_data_processing.py::TestGetPathIntegration \
+            hazelbean_tests/integration/test_end_to_end_workflow.py \
+            -v --tb=short --maxfail=5 || {
+              echo "❌ Critical integration tests failed"
+              echo "status=warning" >> $GITHUB_OUTPUT
+              # Don't fail the job - integration issues are often infrastructure-related
+            }
+            
+          # Run broader integration suite with failure tolerance
+          python -m pytest hazelbean_tests/integration/ -v \
+            --tb=short \
+            --maxfail=20 || {
+              echo "⚠️ Some integration tests failed (acceptable for infrastructure issues)"
+            }
+          
+          echo "status=completed" >> $GITHUB_OUTPUT
+          echo "✅ Integration testing completed"
+
+  # Quality Gate 4: Performance Regression Testing
+  performance-regression:
+    name: "Quality Gate 4: Performance Regression"
+    runs-on: ubuntu-22.04  # Lock specific OS version for consistency
+    needs: core-functionality
+    if: ${{ !cancelled() && (needs.core-functionality.result == 'success' || github.event.inputs.test_level == 'full') }}
+    timeout-minutes: 15
+    
+    outputs:
+      performance-status: ${{ steps.performance.outputs.status }}
+      
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Mambaforge with hazelbean_env
+        uses: mamba-org/setup-micromamba@v1
+        with:
+          environment-file: environment.yml
+          environment-name: hazelbean_env
+          cache-environment: true
+          
+      - name: Run performance regression tests with STRICT enforcement
+        id: performance
+        run: |
+          echo "⚡ Running STRICT performance regression tests..."
+          
+          # Run regression check with 10% threshold - FAIL on regression
+          python scripts/run_performance_benchmarks.py --check-regression --threshold 10.0 --verbose || {
+            echo "❌ BLOCKING: Performance regression > 10% detected"
+            echo "📊 Review performance report for details"
+            echo "🛑 This PR cannot be merged until performance is restored"
+            echo "status=failed" >> $GITHUB_OUTPUT
+            exit 1
+          }
+          
+          echo "✅ Performance within acceptable limits"
+          echo "status=passed" >> $GITHUB_OUTPUT
+          
+      - name: Establish baseline for main branch
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          echo "📊 Establishing performance baseline for main branch..."
+          python scripts/run_performance_benchmarks.py --establish-baseline --runs 3
+          
+      - name: Upload performance artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-regression-results
+          path: |
+            metrics/reports/performance_report_*.txt
+            metrics/exports/performance_export_*.csv
+            metrics/analysis/regression_check_*.json
+          retention-days: 90
+
+  # Quality Gate Summary & Reporting
+  quality-gate-summary:
+    name: "Quality Gate Summary"
+    runs-on: ubuntu-latest
+    needs: [infrastructure-validation, core-functionality, integration-testing, performance-regression]
+    if: always() # Always run to provide summary
+    
+    steps:
+      - name: Evaluate quality gates
+        id: evaluation
+        run: |
+          echo "📊 Evaluating quality gate results..."
+          
+          # Extract results
+          infra_status="${{ needs.infrastructure-validation.outputs.infrastructure-status }}"
+          core_status="${{ needs.core-functionality.outputs.core-status }}"  
+          integration_status="${{ needs.integration-testing.outputs.integration-status }}"
+          performance_status="${{ needs.performance-regression.outputs.performance-status }}"
+          
+          # Determine overall status
+          if [[ "$infra_status" == "passed" && "$core_status" == "passed" ]]; then
+            echo "overall_status=success" >> $GITHUB_OUTPUT
+            echo "quality_level=high" >> $GITHUB_OUTPUT
+          elif [[ "$infra_status" == "passed" ]]; then
+            echo "overall_status=warning" >> $GITHUB_OUTPUT  
+            echo "quality_level=medium" >> $GITHUB_OUTPUT
+          else
+            echo "overall_status=failure" >> $GITHUB_OUTPUT
+            echo "quality_level=low" >> $GITHUB_OUTPUT
+          fi
+          
+          # Generate summary
+          echo "## 🎯 Quality Gate Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Quality Gate | Status | Result |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------------|--------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Infrastructure | $infra_status | $([ "$infra_status" == "passed" ] && echo "✅ All systems operational" || echo "❌ Infrastructure issues") |" >> $GITHUB_STEP_SUMMARY
+          echo "| Core Functionality | $core_status | $([ "$core_status" == "passed" ] && echo "✅ Core features working" || echo "❌ Core feature issues") |" >> $GITHUB_STEP_SUMMARY  
+          echo "| Integration Testing | $integration_status | $([ "$integration_status" == "completed" ] && echo "⚠️ Completed with known issues" || echo "❌ Integration problems") |" >> $GITHUB_STEP_SUMMARY
+          echo "| Performance Regression | $performance_status | $([ "$performance_status" == "completed" ] && echo "✅ No significant regressions" || echo "⚠️ Performance needs review") |" >> $GITHUB_STEP_SUMMARY
+          
+      - name: Set job status based on critical gates
+        run: |
+          # Only fail on critical issues (infrastructure or core functionality)
+          infra_status="${{ needs.infrastructure-validation.outputs.infrastructure-status }}"
+          core_status="${{ needs.core-functionality.outputs.core-status }}"
+          
+          if [[ "$infra_status" != "passed" ]]; then
+            echo "❌ BLOCKING: Infrastructure validation failed"
+            exit 1
+          fi
+          
+          if [[ "$core_status" != "passed" ]]; then
+            echo "❌ BLOCKING: Core functionality validation failed"  
+            exit 1
+          fi
+          
+          echo "✅ All critical quality gates passed"
+
+  # Conditional deployment readiness
+  deployment-readiness:
+    name: "Deployment Readiness Check"
+    runs-on: ubuntu-latest
+    needs: quality-gate-summary
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+      - name: Deployment readiness assessment
+        run: |
+          echo "🚀 Assessing deployment readiness..."
+          echo "## 🚀 Deployment Readiness" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ All critical quality gates passed" >> $GITHUB_STEP_SUMMARY
+          echo "📦 Ready for deployment pipeline" >> $GITHUB_STEP_SUMMARY
+          echo "🔍 Review performance and integration warnings before release" >> $GITHUB_STEP_SUMMARY

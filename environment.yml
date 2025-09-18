@@ -1,0 +1,44 @@
+name: hazelbean_env
+channels:
+  - conda-forge
+dependencies:
+  - natcap.invest
+  - geopandas
+  - rasterstats
+  - netcdf4
+  - cartopy
+  - xlrd
+  - markdown
+  - qtpy
+  - qtawesome
+  - plotly
+  - descartes
+  - pygeoprocessing
+  - taskgraph
+  - cython
+  - rioxarray
+  - dask
+  - google-cloud-datastore
+  - google-cloud-storage
+  - aenum
+  - anytree
+  - statsmodels
+  - openpyxl
+  - seaborn
+  - twine
+  - pyqt
+  - ipykernel
+  - imageio
+  - pandoc
+  - conda
+  - google-api-python-client
+  - ca-certificates
+  - certifi
+  - openssl
+  - google-auth-oauthlib
+  - python-pptx
+  - pytest
+  - quarto
+  - jupyter
+  - nbformat
+prefix: /opt/homebrew/Caskroom/mambaforge/base/envs/hazelbean_env

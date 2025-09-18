@@ -1,0 +1,153 @@
+---
+title: "{{ step.title }} - Hazelbean Tutorial"
+format: 
+  html:
+    toc: true
+    toc-depth: 2
+    code-fold: false
+    code-tools: true
+execute:
+  eval: false
+  echo: true
+  freeze: auto
+  error: true
+---
+
+<!-- Navigation breadcrumbs -->
+<div class="navigation-breadcrumbs">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="../index.html">Hazelbean Documentation</a></li>
+      <li class="breadcrumb-item"><a href="index.html">Educational Tutorials</a></li>
+      <li class="breadcrumb-item active" aria-current="page">{{ step.title }}</li>
+    </ol>
+  </nav>
+</div>
+
+# {{ step.title }}
+
+<div class="tutorial-metadata">
+  **Learning Time:** {{ step.learning_time }}  
+  **Prerequisites:** {% if step.previous_step and step.previous_step in steps %}[{{ steps[step.previous_step].title }}]({{ step.previous_step }}.html){% else %}Basic Python knowledge{% endif %}  
+  **Source File:** `{{ step.file }}`
+</div>
+
+## Overview
+
+{{ step.description }}
+
+::: {.callout-note}
+## 🎯 Learning Objectives
+
+This tutorial will help you understand:
+
+{% for concept in step.concepts %}
+- **{{ concept|title }}**: Core concepts and practical application
+{% endfor %}
+
+**💻 Hands-on Learning:** Each code block is executable - run them step-by-step to build understanding progressively.
+:::
+
+{% if step.concepts %}
+### Key Concepts
+
+{% for concept in step.concepts %}
+- **{{ concept|title }}**: {% if concept == "ProjectFlow" %}The foundation of all Hazelbean projects - manages directories, tasks, and data organization{% elif concept == "get_path" %}Intelligent file discovery system that searches multiple data locations automatically{% elif concept == "raster operations" %}Core spatial data processing functions for analysis and transformation{% else %}Important concept for effective Hazelbean workflows{% endif %}
+{% endfor %}
+
+{% endif %}
+
+## Tutorial
+
+::: {.callout-tip}
+## 🚀 Getting Started
+
+1. Make sure you have the Hazelbean environment activated  
+2. Run each code block in order to see the functionality in action
+3. Try modifying parameters to experiment with different results
+4. Refer back to the Key Concepts if you need clarification
+
+**📁 Working Directory:** This tutorial assumes you're running from the project root directory.
+:::
+
+### Complete Example
+
+The following code demonstrates the complete workflow for this step:
+
+```python
+#| echo: true
+
+{{ cleaned_code }}
+```
+
+### Step-by-Step Breakdown
+
+{% if code_sections %}
+{% for section in code_sections %}
+#### {{ section.title }}
+
+{% if section.description %}
+{{ section.description }}
+{% endif %}
+
+```{python}
+#| label: {{ step_id }}-section-{{ loop.index }}
+#| echo: true
+#| eval: false
+
+{{ section.code }}
+```
+
+{% if section.explanation %}
+::: {.callout-note}
+## Understanding This Code
+
+{{ section.explanation }}
+:::
+{% endif %}
+
+{% endfor %}
+{% endif %}
+
+## Expected Output
+
+When you run this tutorial, you should see output similar to:
+
+```
+{{ expected_output }}
+```
+
+## Learning Tips
+
+::: {.callout-tip}
+## 📚 Try This Next
+
+- Modify the example parameters to see how results change
+- Combine concepts from this step with previous tutorials
+- Experiment with your own data using the same patterns
+{% if step.next_step and step.next_step in steps %}
+- Continue to [{{ steps[step.next_step].title }}]({{ step.next_step }}.html) for the next learning step
+{% endif %}
+
+**🔍 Troubleshooting:** If you encounter issues, check that your environment is properly activated and all required data files are accessible.
+:::
+
+## Navigation
+
+<div class="tutorial-navigation">
+{% if step.previous_step and step.previous_step in steps %}
+  <a href="{{ step.previous_step }}.html" class="btn btn-outline-primary">← Previous: {{ steps[step.previous_step].title }}</a>
+{% endif %}
+{% if step.next_step and step.next_step in steps %}
+  <a href="{{ step.next_step }}.html" class="btn btn-primary">Next: {{ steps[step.next_step].title }} →</a>
+{% endif %}
+</div>
+
+---
+
+<div class="footer-info">
+  <small>
+    Generated from: `{{ step.file }}`  
+    Last updated: {{ generated_at.strftime('%Y-%m-%d %H:%M:%S') }}
+  </small>
+</div>

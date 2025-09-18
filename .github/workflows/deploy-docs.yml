@@ -1,0 +1,177 @@
+# Deploy MkDocs Documentation to GitHub Pages
+#
+# Automatically builds and deploys MkDocs documentation when changes are made.
+# Supports both manual triggering and automatic deployment on main branch changes.
+
+name: Deploy Documentation
+
+on:
+  # Trigger on pushes to main branch
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'docs-site/**'
+      - 'examples/**'
+      - 'hazelbean/**'
+      - 'hazelbean_tests/**'
+      - '.github/workflows/deploy-docs.yml'
+  
+  # Allow manual triggering
+  workflow_dispatch:
+    inputs:
+      force_deploy:
+        description: 'Force deployment even if no changes detected'
+        type: boolean
+        default: false
+
+# Sets permissions for GitHub Pages deployment
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash -l {0}
+
+jobs:
+  # Build job
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Fetch full history for git information
+          fetch-depth: 0
+      
+      - name: Setup Mambaforge with hazelbean_env
+        uses: mamba-org/setup-micromamba@v1
+        with:
+          environment-file: environment.yml
+          environment-name: hazelbean_env
+          cache-environment: true
+          init-shell: bash
+      
+      - name: Install additional MkDocs packages
+        run: |
+          echo "📦 Installing MkDocs packages..."
+          
+          # Install MkDocs and extensions
+          conda install -c conda-forge -y \
+            mkdocs \
+            mkdocs-material \
+            mkdocstrings \
+            mkdocstrings-python-legacy \
+            pymdown-extensions
+          
+          # Verify installation
+          mkdocs --version
+          python -c "import mkdocstrings; print('✅ MkDocstrings installed')"
+          
+          echo "✅ Package installation complete"
+      
+      - name: Update mkdocs.yml with repository information
+        run: |
+          echo "🔧 Updating mkdocs.yml for GitHub Pages deployment..."
+          cd docs-site
+          
+          # Get repository information from GitHub context
+          REPO_NAME="${{ github.repository }}"
+          REPO_URL="https://github.com/${{ github.repository }}"
+          SITE_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
+          
+          # Update site_url and repository information
+          sed -i "s|site_url: https://{user}\.github\.io/hazelbean_dev/|site_url: $SITE_URL|" mkdocs.yml
+          sed -i "s|repo_name: {user}/hazelbean_dev|repo_name: $REPO_NAME|" mkdocs.yml  
+          sed -i "s|repo_url: https://github.com/{user}/hazelbean_dev|repo_url: $REPO_URL|" mkdocs.yml
+          
+          echo "✅ Configuration updated for deployment"
+          echo "📍 Site URL: $SITE_URL"
+          echo "📍 Repository: $REPO_NAME"
+      
+      - name: Generate complete site with fresh data
+        run: |
+          echo "🏗️ Generating complete site with fresh test data..."
+          cd "${{ github.workspace }}"
+          
+          # Generate complete site with fresh test results and reports
+          chmod +x tools/generate_complete_site.sh
+          ./tools/generate_complete_site.sh
+          
+          echo "✅ Complete site generation finished"
+          
+      - name: Build MkDocs site
+        run: |
+          echo "🏗️ Building MkDocs site..."
+          cd docs-site
+          
+          # Build the documentation
+          mkdocs build --clean --strict
+          
+          echo "✅ Site built successfully"
+          
+          # Show build statistics
+          echo "📊 Build Statistics:"
+          find site -name "*.html" | wc -l | xargs echo "HTML files:"
+          du -sh site | cut -f1 | xargs echo "Total size:"
+      
+      - name: Setup GitHub Pages
+        uses: actions/configure-pages@v4
+      
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs-site/site
+
+  # Deployment job
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+      
+      - name: Create deployment summary
+        run: |
+          echo "📊 Creating deployment summary..."
+          
+          # Create summary
+          cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+          # 📄 Documentation Deployment Summary
+          
+          ## Results
+          - **Deployment Status:** ✅ Success
+          - **Site URL:** ${{ steps.deployment.outputs.page_url }}
+          - **Repository:** ${{ github.repository }}
+          - **Branch:** ${{ github.ref_name }}
+          - **Commit:** ${{ github.sha }}
+          
+          ## Content Deployed
+          - ✅ Educational examples from `examples/` directory
+          - ✅ Test documentation from `hazelbean_tests/` directory  
+          - ✅ API documentation from `hazelbean/` directory
+          - ✅ Enhanced Material theme with search and navigation
+          
+          ## Access Your Documentation
+          🔗 **[View Documentation Site](${{ steps.deployment.outputs.page_url }})**
+          
+          ## Next Steps
+          - 📖 Review the deployed documentation
+          - 🔍 Test search functionality and navigation
+          - 📝 Make content updates by editing source files
+          - 🔄 Changes will auto-deploy on next push to main branch
+          EOF
+          
+          echo "✅ Deployment summary created"

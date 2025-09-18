@@ -1,0 +1,176 @@
+---
+title: "Setting Up a Hazelbean Project - Hazelbean Tutorial"
+format: 
+  html:
+    toc: true
+    toc-depth: 2
+    code-fold: false
+    code-tools: true
+execute:
+  eval: false
+  echo: true
+  freeze: auto
+  error: true
+---
+
+<!-- Navigation breadcrumbs -->
+<div class="navigation-breadcrumbs">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="../index.html">Hazelbean Documentation</a></li>
+      <li class="breadcrumb-item"><a href="index.html">Educational Tutorials</a></li>
+      <li class="breadcrumb-item active" aria-current="page">Setting Up a Hazelbean Project</li>
+    </ol>
+  </nav>
+</div>
+
+# Setting Up a Hazelbean Project
+
+<div class="tutorial-metadata">
+  **Learning Time:** 5 minutes  
+  **Prerequisites:** Basic Python knowledge  
+  **Source File:** `examples/step_1_project_setup.py`
+</div>
+
+## Overview
+
+Learn how to initialize a Hazelbean ProjectFlow for organized geospatial workflows
+
+::: {.callout-note}
+## 🎯 Learning Objectives
+
+This tutorial will help you understand:
+
+
+- **Projectflow**: Core concepts and practical application
+
+- **Directory Setup**: Core concepts and practical application
+
+- **Project Initialization**: Core concepts and practical application
+
+
+**💻 Hands-on Learning:** Each code block is executable - run them step-by-step to build understanding progressively.
+:::
+
+
+### Key Concepts
+
+
+- **Projectflow**: The foundation of all Hazelbean projects - manages directories, tasks, and data organization
+
+- **Directory Setup**: Important concept for effective Hazelbean workflows
+
+- **Project Initialization**: Important concept for effective Hazelbean workflows
+
+
+
+
+## Tutorial
+
+::: {.callout-tip}
+## 🚀 Getting Started
+
+1. Make sure you have the Hazelbean environment activated  
+2. Run each code block in order to see the functionality in action
+3. Try modifying parameters to experiment with different results
+4. Refer back to the Key Concepts if you need clarification
+
+**📁 Working Directory:** This tutorial assumes you're running from the project root directory.
+:::
+
+### Complete Example
+
+The following code demonstrates the complete workflow for this step:
+
+```python
+#| echo: true
+
+"""
+Demonstrates ProjectFlow initialization and basic project organization.
+"""
+
+# Create a new project with automatic directory structure
+# This will create the project directory if it doesn't exist
+project_name = 'hazelbean_tutorial'
+p = hb.ProjectFlow(project_name)
+
+print("=== Hazelbean Project Setup Demo ===")
+print(f"Project name: {project_name}")
+print(f"Project directory: {p.project_dir}")
+print()
+
+# ProjectFlow automatically creates these standard directories:
+print("=== Standard Project Directories ===")
+print(f"Input directory: {p.input_dir}")
+print(f"Intermediate directory: {p.intermediate_dir}")
+print(f"Output directory: {p.output_dir}")
+print()
+
+# Show data discovery paths (where ProjectFlow looks for files)
+print("=== Data Discovery Hierarchy ===")
+print("When you use p.get_path(), Hazelbean searches in this order:")
+print(f"1. Base data directory: {p.base_data_dir}")
+print(f"2. Model base data directory: {p.model_base_data_dir}")
+print(f"3. Project base data directory: {p.project_base_data_dir}")
+print(f"4. Current directory: {p.project_dir}")
+print()
+
+# Verify directories exist
+print("=== Directory Status ===")
+for dir_name, dir_path in [
+    ("Input", p.input_dir),
+    ("Intermediate", p.intermediate_dir), 
+    ("Output", p.output_dir)
+]:
+    exists = "✓ EXISTS" if os.path.exists(dir_path) else "✗ CREATED"
+    print(f"{dir_name:12}: {exists}")
+
+print()
+print("🎉 Project setup complete!")
+print("Next: Run step_2_data_loading.py to learn about intelligent file discovery")
+```
+
+### Step-by-Step Breakdown
+
+
+
+## Expected Output
+
+When you run this tutorial, you should see output similar to:
+
+```
+Tutorial execution completed successfully.
+```
+
+## Learning Tips
+
+::: {.callout-tip}
+## 📚 Try This Next
+
+- Modify the example parameters to see how results change
+- Combine concepts from this step with previous tutorials
+- Experiment with your own data using the same patterns
+
+- Continue to [Data Loading and File Discovery](step_2.html) for the next learning step
+
+
+**🔍 Troubleshooting:** If you encounter issues, check that your environment is properly activated and all required data files are accessible.
+:::
+
+## Navigation
+
+<div class="tutorial-navigation">
+
+
+  <a href="step_2.html" class="btn btn-primary">Next: Data Loading and File Discovery →</a>
+
+</div>
+
+---
+
+<div class="footer-info">
+  <small>
+    Generated from: `examples/step_1_project_setup.py`  
+    Last updated: 2025-09-17 08:26:16
+  </small>
+</div>

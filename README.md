@@ -3,38 +3,77 @@ Hazelbean is a collection of geospatial processing tools based on gdal, numpy, s
 
 Hazelbean started as a personal research package of scripts for Justin Johnson and is was not originally intended for broad release. However, hazelbean is transitioning towards having full-support, primarily because it underlies several important software releases, including some from the Natural Capital Project. Thus, even in this transitory state, it is available via "pip install hazelbean". Note that hazelbean only provides a Python 3+, 64 bit, Windows version, however with the exception of precompiled cython files, it should be cross-platform and cross-version. The precompiled files are only loaded as needed.
 
-See the Hazelbean documentation in the docs folder of this repository.
+## 📚 Complete Documentation Site
+
+**🌐 [Full Documentation Site](https://jandrewjohnson.github.io/hazelbean_dev/)** - Your comprehensive resource for all things Hazelbean
+
+Our integrated documentation system provides everything in one searchable, organized location:
+
+- **🚀 [Getting Started](https://jandrewjohnson.github.io/hazelbean_dev/educational/)** - Progressive learning path with hands-on tutorials
+- **🧪 [Test Documentation](https://jandrewjohnson.github.io/hazelbean_dev/tests/)** - 50+ test examples showing real-world usage patterns
+- **📊 [Live Reports](https://jandrewjohnson.github.io/hazelbean_dev/reports/)** - Current test results and performance metrics
+- **🔍 [Searchable Content](https://jandrewjohnson.github.io/hazelbean_dev/)** - Find anything across tutorials, tests, and guides
+
+### Alternative Access (Individual Files)
+- **📝 [Getting Started](docs/getting-started.md)** - Complete setup guide with current project structure
+- **📚 [Testing Guide](hazelbean_tests/README.md)** - Test infrastructure overview
+
+### Quick Navigation by Role
+- **🎓 New Users:** [Educational Journey](https://jandrewjohnson.github.io/hazelbean_dev/educational/) → [Hands-on Examples](https://jandrewjohnson.github.io/hazelbean_dev/educational/examples/)
+- **💻 Contributors:** [Test Documentation](https://jandrewjohnson.github.io/hazelbean_dev/tests/) → [Getting Started](docs/getting-started.md)
+- **🔧 Maintainers:** [Live Reports](https://jandrewjohnson.github.io/hazelbean_dev/reports/) → [Test Documentation](https://jandrewjohnson.github.io/hazelbean_dev/tests/)
+
+> **💡 Local Development:** Run `conda activate hazelbean_env && cd docs-site && mkdocs serve` to serve documentation locally at `http://127.0.0.1:8000`
+
+## ⚡ Quick Start (5 minutes)
+
+### Option 1: Complete Environment (Recommended)
+```bash
+# 1. Clone repository and setup complete environment
+git clone https://github.com/jandrewjohnson/hazelbean_dev.git
+cd hazelbean_dev
+
+# 2. Create environment from included configuration
+mamba env create -f environment.yml
+mamba activate hazelbean_env
+
+# 3. Test installation
+python -c "import hazelbean as hb; print('✅ Hazelbean ready!')"
+
+# 4. Try educational examples
+cd examples && python step_1_project_setup.py
+
+# 5. Explore documentation locally  
+cd docs-site && mkdocs serve  # Visit http://127.0.0.1:8000
+```
+
+### Option 2: Package Only
+```bash
+# Basic installation for using Hazelbean in existing environment
+mamba install -c conda-forge natcap.invest geopandas pygeoprocessing taskgraph cython
+pip install hazelbean
+```
+
+**Next steps:** Visit the [Educational Journey](https://jandrewjohnson.github.io/hazelbean_dev/educational/) for guided learning.
 
 
-## Installation
+## Detailed Installation Notes
 
--   Install Mambaforge from https://github.com/conda-forge/miniforge#mambaforge
--   For convenience, during installation, I select yes for "Add Mambaforge to my PATH environment Variable"
--   (PC) Open the Miniforge Prompt (search for it in the start menu) or (Mac) just type "mamba init"
--   Create a new mamba environment with the following commands (here it is named hazelbean_env):
+### Prerequisites
+- Install Mambaforge from https://github.com/conda-forge/miniforge#mambaforge
+- For convenience, during installation, select "Add Mambaforge to my PATH environment Variable"
 
-`mamba create -n hazelbean_env -c conda-forge`
+### Troubleshooting
 
--   Activate the environment
+**Numpy Compatibility Issues:**
+If numpy throws "wrong size or changes size binary" errors, upgrade numpy after installation:
+```bash
+mamba update numpy
+```
+See details: https://stackoverflow.com/questions/66060487/valueerror-numpy-ndarray-size-changed-may-indicate-binary-incompatibility-exp
 
-`mamba activate hazelbean_env`
-
--   Install libraries using conda command:
-
-`mamba install -c conda-forge natcap.invest geopandas rasterstats netCDF4 cartopy xlrd markdown qtpy qtawesome plotly descartes pygeoprocessing taskgraph cython rioxarray dask google-cloud-datastore google-cloud-storage aenum anytree statsmodels openpyxl seaborn twine pyqt ipykernel imageio pandoc conda`
-
--   And then finally, install non-conda distributions via pip:
-
-`pip install mglearn pandoc datascience hazelbean`
-
-
-## Numpy errors
-
-If numpy throws "wrong size or changes size binary": upgrade numpy at the end of the installation process. See for details: https://stackoverflow.com/questions/66060487/valueerror-numpy-ndarray-size-changed-may-indicate-binary-incompatibility-exp
-
-# Mac specific errors
-
-Your python environment has to have permissions to access and write to the base data folder.
+**macOS Permissions:**
+Your Python environment needs permissions to access and write to the base data folder. Grant necessary permissions in System Preferences if needed.
 
 ## More information
 See the author's personal webpage, https://justinandrewjohnson.com/ for more details about the underlying research.

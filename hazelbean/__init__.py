@@ -281,6 +281,15 @@ if import_extras:
 
         except:
             pass
+
+# Integration testing utilities (Story 5)
+try:
+    import hazelbean.integration_testing_utils
+    from hazelbean.integration_testing_utils import *
+    if report_import_times:
+        hb.timer('integration_testing_utils')
+except:
+    pass
         
 if report_import_times:
     print('Total Hazelbean import time: ' + str(time.time() - import_start_time))
