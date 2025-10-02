@@ -3,7 +3,7 @@
 import os
 import hazelbean as hb
 import numpy as np
-from hazelbean.raster_vector_interface import *
+# from hazelbean.raster_vector_interface import *
 import pygeoprocessing as pgp
 from hazelbean.calculation_core import cython_functions
 print('This test file also compares pgp performance against hazelbean. '
@@ -44,7 +44,7 @@ if test_zonal_statistics_merge_sum:
                                         set_ndv_below_value=None,
                                         verbose=True)
 
-    returned_dfs = zonal_statistics_merge(
+    returned_dfs = hb.zonal_statistics_merge(
         input_raster_paths=input_paths_list,
         zones_vector_path=ee_r264_correspondence_vector_path,
         verbose=False, remove_zone_ids_raster_path=True)
@@ -88,7 +88,7 @@ if test_all:
 
     zone_ids_raster_temp_path = hb.temp('.tif', 'zone_ids', remove_at_exit=True)
     csv_output_path = hb.temp('.csv', 'df_output', remove_at_exit=True)
-    hb.raster_vector_interface.zonal_statistics(zone_values_path, aggregate_vector_path, zone_ids_raster_path=zone_ids_raster_temp_path, csv_output_path=csv_output_path, output_column_prefix='prefixed_value')
+    hb.zonal_statistics(zone_values_path, aggregate_vector_path, zone_ids_raster_path=zone_ids_raster_temp_path, csv_output_path=csv_output_path, output_column_prefix='prefixed_value')
     hb.timer('zonal_statistics_flex with values read and rasterization of vector.')
 
     zone_ids_raster_temp_path = hb.temp('.tif', 'zone_ids', remove_at_exit=True)
@@ -96,7 +96,7 @@ if test_all:
     csv_output_path = hb.temp('.csv', 'df_output', remove_at_exit=True)
 
     hb.save_array_as_geotiff(np.random.randint(1, 4, hb.get_shape_from_dataset_path(zone_ids_raster_path)), values_temp_path, zone_ids_raster_path)
-    hb.raster_vector_interface.zonal_statistics(values_temp_path,
+    hb.zonal_statistics(values_temp_path,
                                 aggregate_vector_path,
                                 zone_ids_raster_path=zone_ids_raster_temp_path,
                                 stats_to_retrieve='enumeration',

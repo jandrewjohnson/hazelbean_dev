@@ -13,6 +13,36 @@ def get_num_rows(vector_path, layer_id_or_label=0):
     return num_rows
 
 def read_vector(vector_path, layer_id_or_label=0, return_slice_list=False, chunk_size=128, logger_level=10):
+    """
+    Reads a vector file (such as a shapefile or GeoPackage) into a GeoDataFrame, with support for chunked reading of large files.
+    Parameters
+    ----------
+    vector_path : str or geopandas.GeoDataFrame
+        Path to the vector file to read, or an already loaded GeoDataFrame. If a GeoDataFrame is provided, it is returned as-is.
+    layer_id_or_label : int or str, optional
+        The layer index or name to read from the vector file, if applicable. Default is 0.
+    return_slice_list : bool, optional
+        If True, returns a list of GeoDataFrames (one per chunk). If False, returns a single concatenated GeoDataFrame. Default is False.
+    chunk_size : int, optional
+        Number of rows per chunk when reading large files. Default is 128.
+    logger_level : int, optional
+        Logging level. If >= 10, progress messages are printed. Default is 10.
+    Returns
+    -------
+    geopandas.GeoDataFrame or list of geopandas.GeoDataFrame
+        The loaded vector data as a GeoDataFrame, or a list of GeoDataFrames if `return_slice_list` is True.
+    Notes
+    -----
+    - If the file size exceeds a threshold (4 MB), the file is read in chunks to avoid memory issues.
+    - Uses `gpd.read_file` for reading vector data.
+    - If `vector_path` is already a GeoDataFrame, it is returned directly.
+    """
+
+    # If the input is already a gdf, just return it
+    # Thhis allows optimization by just initializing it as a string and only loading it when needed, and not reloading it subsequent times.
+    if isinstance(vector_path, gpd.GeoDataFrame):
+        return vector_path
+        
     # Get the size of the file using os.stat
     file_size = os.stat(vector_path).st_size  
     
