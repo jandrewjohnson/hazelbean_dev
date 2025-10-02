@@ -52,11 +52,12 @@ jobs:
           fetch-depth: 0
       
       - name: Setup Mambaforge with hazelbean_env
-        uses: mamba-org/setup-micromamba@v1
+        uses: mamba-org/setup-micromamba@v2
         with:
           environment-file: environment.yml
           environment-name: hazelbean_env
           cache-environment: true
+          cache-downloads: true
           init-shell: bash
       
       - name: Install additional MkDocs packages

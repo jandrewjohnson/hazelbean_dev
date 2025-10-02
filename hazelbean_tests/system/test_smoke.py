@@ -84,11 +84,15 @@ class TestBasicSmokeTests:
         with tempfile.TemporaryDirectory() as temp_dir:
             p = hb.ProjectFlow(temp_dir)
             
-            # Test basic get_path functionality
+            # Test basic get_path functionality with an existing file
+            test_file = os.path.join(temp_dir, "test_file.txt")
+            with open(test_file, 'w') as f:
+                f.write("test content")
+            
             path = p.get_path("test_file.txt")
             assert path is not None
             assert "test_file.txt" in path
-            assert temp_dir in path
+            assert os.path.exists(path)
 
     @pytest.mark.smoke
     def test_common_hazelbean_functions_available(self):
@@ -125,18 +129,28 @@ class TestBasicSmokeTests:
 
     @pytest.mark.smoke
     def test_basic_error_handling(self):
-        """Test that basic error conditions are handled gracefully"""
+        """Test that get_path raises NameError for unresolvable paths.
+        
+        Note: get_path() intentionally raises NameError (not FileNotFoundError) because
+        it performs complex path resolution logic beyond simple file existence checking:
+        - Resolves paths relative to project structure
+        - Searches multiple possible_dirs
+        - Attempts cloud bucket downloads
+        
+        NameError semantically indicates "name/reference resolution failed" which is
+        more accurate than "file at specific path not found".
+        See docs/plans/exception-handling-analysis.md for detailed rationale.
+        """
         with tempfile.TemporaryDirectory() as temp_dir:
             p = hb.ProjectFlow(temp_dir)
             
-            # Test with non-existent file (should not crash)
-            try:
+            # get_path should raise NameError when path cannot be resolved
+            with pytest.raises(NameError) as exc_info:
                 path = p.get_path("definitely_does_not_exist.txt")
-                # Should return a path even if file doesn't exist
-                assert path is not None
-            except Exception as e:
-                # If it does raise an exception, it should be a reasonable one
-                assert isinstance(e, (FileNotFoundError, ValueError, RuntimeError))
+            
+            # Verify error message provides useful context
+            error_msg = str(exc_info.value)
+            assert "does not exist" in error_msg.lower()
 
 
 class TestDocumentationGeneration:
@@ -146,6 +160,11 @@ class TestDocumentationGeneration:
         """Smoke-test + write example QMD."""
         # ---------- Test behaviour -------------------------------------------
         p = hb.ProjectFlow(project_dir=str(tmp_path))     # cast Path → str
+        
+        # Create the file so get_path can find it
+        test_file = tmp_path / "foo.txt"
+        test_file.write_text("test content")
+        
         resolved = p.get_path("foo.txt")
 
         assert resolved.endswith("foo.txt")               # file name correct
@@ -330,8 +349,8 @@ class TestSystemIntegration:
             
             assert os.path.exists(sub_path)
             
-            # get_path should work with nested paths
-            nested_file_path = p.get_path("subdir/nested/test.txt")
+            # get_path should construct paths without validation when raise_error_if_fail=False
+            nested_file_path = p.get_path("subdir/nested/test.txt", raise_error_if_fail=False)
             assert "nested" in nested_file_path
             assert "test.txt" in nested_file_path
 
@@ -343,9 +362,9 @@ class TestSystemIntegration:
                 p1 = hb.ProjectFlow(temp_dir1)
                 p2 = hb.ProjectFlow(temp_dir2)
                 
-                # Each should resolve to its own directory
-                path1 = p1.get_path("test.txt")
-                path2 = p2.get_path("test.txt")
+                # Each should resolve to its own directory (without validation)
+                path1 = p1.get_path("test.txt", raise_error_if_fail=False)
+                path2 = p2.get_path("test.txt", raise_error_if_fail=False)
                 
                 assert temp_dir1 in path1
                 assert temp_dir2 in path2

@@ -38,6 +38,8 @@ dependencies:
   - google-auth-oauthlib
   - python-pptx
   - pytest
+  - pytest-benchmark  # Required for performance smoke tests
+  - pytest-cov        # Required for coverage reporting in workflows
   - quarto
   - jupyter
   - nbformat

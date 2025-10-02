@@ -69,11 +69,12 @@ jobs:
           fetch-depth: 1
           
       - name: Setup Mambaforge with hazelbean_env
-        uses: mamba-org/setup-micromamba@v1
+        uses: mamba-org/setup-micromamba@v2
         with:
           environment-file: environment.yml
           environment-name: hazelbean_env
           cache-environment: true
+          cache-downloads: true
           init-shell: bash
           
       - name: Verify environment setup
@@ -121,11 +122,12 @@ jobs:
         uses: actions/checkout@v4
         
       - name: Setup Mambaforge with hazelbean_env  
-        uses: mamba-org/setup-micromamba@v1
+        uses: mamba-org/setup-micromamba@v2
         with:
           environment-file: environment.yml
           environment-name: hazelbean_env
           cache-environment: true
+          cache-downloads: true
           
       - name: Run core functionality tests
         id: core-tests
@@ -171,11 +173,12 @@ jobs:
         uses: actions/checkout@v4
         
       - name: Setup Mambaforge with hazelbean_env
-        uses: mamba-org/setup-micromamba@v1
+        uses: mamba-org/setup-micromamba@v2
         with:
           environment-file: environment.yml
           environment-name: hazelbean_env
           cache-environment: true
+          cache-downloads: true
           
       - name: Run integration tests
         id: integration  
@@ -219,11 +222,12 @@ jobs:
         uses: actions/checkout@v4
         
       - name: Setup Mambaforge with hazelbean_env
-        uses: mamba-org/setup-micromamba@v1
+        uses: mamba-org/setup-micromamba@v2
         with:
           environment-file: environment.yml
           environment-name: hazelbean_env
           cache-environment: true
+          cache-downloads: true
           
       - name: Run performance regression tests with STRICT enforcement
         id: performance
