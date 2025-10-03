@@ -113,6 +113,9 @@ jobs:
       fail-fast: false
       matrix:
         test-category: ['get_path', 'tile_iterator', 'add_task', 'add_iterator']
+        # Note: add_task includes 2 xfail tests documenting known bug in project_flow.py
+        # These tests will show as xfailed (not failed) in CI output
+        # See hazelbean_tests/KNOWN_BUGS.md #add_task_error_handling for details
         
     outputs:
       core-status: ${{ steps.core-tests.outputs.status }}
@@ -134,12 +137,17 @@ jobs:
         run: |
           echo "🎯 Testing core functionality: ${{ matrix.test-category }}"
           
-          # Run with coverage for core components
+          # Install pytest-json-report for failure tracking
+          pip install pytest-json-report
+          
+          # Run with coverage and JSON report for failure tracking
           python -m pytest hazelbean_tests/unit/test_${{ matrix.test-category }}.py -v \
             --tb=short \
             --cov=hazelbean \
             --cov-report=term-missing \
             --cov-report=xml:coverage-${{ matrix.test-category }}.xml \
+            --json-report \
+            --json-report-file=test-results-${{ matrix.test-category }}.json \
             --maxfail=3 || {
               echo "status=failed" >> $GITHUB_OUTPUT
               echo "❌ Core functionality tests failed for ${{ matrix.test-category }}"
@@ -148,6 +156,26 @@ jobs:
           
           echo "status=passed" >> $GITHUB_OUTPUT
           echo "✅ Core functionality tests passed for ${{ matrix.test-category }}"
+
+      - name: Generate failure rate report
+        if: always()
+        run: |
+          echo "📊 Generating test failure rate report..."
+          python tools/test_failure_tracking.py test-results-${{ matrix.test-category }}.json \
+            --compare-to metrics/test-failures/baseline-${{ matrix.test-category }}.json \
+            --save-baseline metrics/test-failures/current-${{ matrix.test-category }}.json || true
+          
+          # Add summary to GitHub Actions output
+          python -c "
+          import json
+          try:
+              with open('test-results-${{ matrix.test-category }}.json') as f:
+                  data = json.load(f)
+                  summary = data.get('summary', {})
+                  print(f'::notice::Tests: {summary.get(\"total\", 0)} total, {summary.get(\"passed\", 0)} passed, {summary.get(\"xfailed\", 0)} known bugs')
+          except Exception as e:
+              print(f'::warning::Could not parse test results: {e}')
+          "
           
       - name: Upload coverage reports
         if: always()
@@ -156,6 +184,16 @@ jobs:
           name: coverage-${{ matrix.test-category }}
           path: coverage-${{ matrix.test-category }}.xml
           retention-days: 30
+          
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.test-category }}
+          path: |
+            test-results-${{ matrix.test-category }}.json
+            metrics/test-failures/current-${{ matrix.test-category }}.json
+          retention-days: 90
 
   # Quality Gate 3: Integration Testing
   integration-testing:
@@ -296,6 +334,9 @@ jobs:
           
           # Generate summary
           echo "## 🎯 Quality Gate Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Note:** Some tests marked as xfail document known bugs in original hazelbean code." >> $GITHUB_STEP_SUMMARY
+          echo "These are expected and tracked in KNOWN_BUGS.md" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Quality Gate | Status | Result |" >> $GITHUB_STEP_SUMMARY
           echo "|--------------|--------|--------|" >> $GITHUB_STEP_SUMMARY

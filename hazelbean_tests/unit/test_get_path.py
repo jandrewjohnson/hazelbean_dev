@@ -36,7 +36,14 @@ class GetPathUnitTest(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures and data paths"""
         self.test_dir = tempfile.mkdtemp()
-        self.data_dir = os.path.join(os.path.dirname(__file__), "../../data")
+        
+        # Get absolute path to repository data directory
+        # Works in both local development and CI environments
+        test_file_path = os.path.abspath(__file__)
+        hazelbean_tests_dir = os.path.dirname(os.path.dirname(test_file_path))
+        repo_root = os.path.dirname(hazelbean_tests_dir)
+        self.data_dir = os.path.join(repo_root, "data")
+        
         self.test_data_dir = os.path.join(self.data_dir, "tests")
         self.cartographic_data_dir = os.path.join(self.data_dir, "cartographic/ee")
         self.pyramid_data_dir = os.path.join(self.data_dir, "pyramids")
@@ -51,6 +58,10 @@ class GetPathUnitTest(unittest.TestCase):
         
         # Create ProjectFlow instance
         self.p = hb.ProjectFlow(self.test_dir)
+        
+        # CRITICAL FIX: Configure base_data_dir to point to repository data
+        # This allows get_path() to find test data files in CI and local environments
+        self.p.base_data_dir = self.data_dir
         
         # Create test directory structure
         os.makedirs(os.path.join(self.test_dir, "intermediate"), exist_ok=True)

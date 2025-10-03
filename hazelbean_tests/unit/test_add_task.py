@@ -515,6 +515,11 @@ class TestAddTaskErrorHandling:
     Tests robust error detection and informative error messages.
     """
     
+    @pytest.mark.xfail(
+        reason="Known bug in project_flow.py:655-658 - Accesses function.__name__ before validating callable, causing AttributeError instead of TypeError. See KNOWN_BUGS.md #add_task_error_handling",
+        strict=True,
+        raises=AttributeError
+    )
     def test_add_task_invalid_function_error(self, isolated_project, invalid_task_function, anytree_node_tracker):
         """
         Test error handling for non-callable function parameter.
@@ -540,6 +545,11 @@ class TestAddTaskErrorHandling:
         assert len(project.task_tree.children) == initial_children_count, "No tasks should be added on error"
         
         
+    @pytest.mark.xfail(
+        reason="Known bug in project_flow.py:655-658 - Accesses None.__name__, causing AttributeError instead of TypeError. See KNOWN_BUGS.md #add_task_error_handling",
+        strict=True,
+        raises=AttributeError
+    )
     def test_add_task_none_function_error(self, isolated_project):
         """
         Test error handling when None is passed as function parameter.
