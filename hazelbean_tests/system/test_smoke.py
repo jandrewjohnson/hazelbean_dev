@@ -372,22 +372,34 @@ class TestSystemIntegration:
 
     @pytest.mark.smoke
     def test_relative_vs_absolute_paths(self):
-        """Test handling of relative vs absolute paths"""
+        """Test handling of relative vs absolute paths with actual files"""
         with tempfile.TemporaryDirectory() as temp_dir:
             p = hb.ProjectFlow(temp_dir)
+            
+            # Create test file for relative path testing
+            rel_file = os.path.join(temp_dir, "relative_file.txt")
+            with open(rel_file, 'w') as f:
+                f.write("relative test content")
             
             # Test relative path
             rel_path = p.get_path("relative_file.txt")
             assert "relative_file.txt" in rel_path
+            assert os.path.exists(rel_path)
+            
+            # Create test file for absolute path testing
+            abs_file = os.path.join(temp_dir, "absolute_file.txt")
+            with open(abs_file, 'w') as f:
+                f.write("absolute test content")
             
             # Test absolute path
-            abs_input = os.path.abspath(os.path.join(temp_dir, "absolute_file.txt"))
+            abs_input = os.path.abspath(abs_file)
             abs_path = p.get_path(abs_input)
             assert "absolute_file.txt" in abs_path
+            assert os.path.exists(abs_path)
 
     @pytest.mark.smoke
     def test_special_characters_in_paths(self):
-        """Test handling of special characters in file paths"""
+        """Test handling of special characters in file paths with actual files"""
         with tempfile.TemporaryDirectory() as temp_dir:
             p = hb.ProjectFlow(temp_dir)
             
@@ -403,17 +415,24 @@ class TestSystemIntegration:
             ]
             
             for special_file in special_files:
+                # Create file with special characters
+                file_path = os.path.join(temp_dir, special_file)
                 try:
+                    with open(file_path, 'w') as f:
+                        f.write(f"test content for {special_file}")
+                    
+                    # Test get_path with actual file
                     path = p.get_path(special_file)
                     assert special_file in path or os.path.basename(path) == special_file
+                    assert os.path.exists(path)
                 except Exception as e:
-                    # Some special characters might not be supported
-                    # That's OK as long as we don't crash
-                    assert isinstance(e, (ValueError, OSError))
+                    # Some special characters might not be supported on some systems
+                    # NameError indicates path resolution failure (hazelbean's design)
+                    assert isinstance(e, (ValueError, OSError, NameError))
 
     @pytest.mark.smoke
     def test_concurrent_access(self):
-        """Test basic concurrent access patterns"""
+        """Test basic concurrent access patterns with actual files"""
         import threading
         import time
         
@@ -422,6 +441,13 @@ class TestSystemIntegration:
             
             results = []
             errors = []
+            
+            # Pre-create all files before threads start (avoid race conditions)
+            for thread_id in range(3):
+                for i in range(10):
+                    file_path = os.path.join(temp_dir, f"thread_{thread_id}_file_{i}.txt")
+                    with open(file_path, 'w') as f:
+                        f.write(f"Thread {thread_id} file {i}")
             
             def worker_thread(thread_id):
                 try:
@@ -432,7 +458,7 @@ class TestSystemIntegration:
                 except Exception as e:
                     errors.append((thread_id, e))
             
-            # Create multiple threads
+            # Create and start multiple threads
             threads = []
             for i in range(3):
                 t = threading.Thread(target=worker_thread, args=(i,))
@@ -447,9 +473,10 @@ class TestSystemIntegration:
             assert len(errors) == 0, f"Errors in concurrent access: {errors}"
             assert len(results) == 30, f"Expected 30 results, got {len(results)}"
             
-            # Verify all paths are unique per thread
+            # Verify all paths exist and are unique per thread
             thread_paths = {}
             for thread_id, path in results:
+                assert os.path.exists(path), f"Path {path} doesn't exist"
                 if thread_id not in thread_paths:
                     thread_paths[thread_id] = []
                 thread_paths[thread_id].append(path)
@@ -462,16 +489,25 @@ class TestSystemEnvironment:
 
     @pytest.mark.smoke
     def test_python_version_compatibility(self):
-        """Test Python version compatibility"""
+        """Test Python version compatibility with actual file"""
         import sys
         
         # Should work with Python 3.7+
         assert sys.version_info >= (3, 7), f"Python version {sys.version_info} may not be supported"
         
         # Test that hazelbean works with current Python version
-        p = hb.ProjectFlow(".")
-        path = p.get_path("test.txt")
-        assert path is not None
+        with tempfile.TemporaryDirectory() as temp_dir:
+            p = hb.ProjectFlow(temp_dir)
+            
+            # Create test file
+            test_file = os.path.join(temp_dir, "test.txt")
+            with open(test_file, 'w') as f:
+                f.write("Python version compatibility test")
+            
+            # Test basic get_path functionality
+            path = p.get_path("test.txt")
+            assert path is not None
+            assert os.path.exists(path)
 
     @pytest.mark.smoke
     def test_required_dependencies_available(self):
