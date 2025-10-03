@@ -40,7 +40,13 @@ dependencies:
   - pytest
   - pytest-benchmark  # Required for performance smoke tests
   - pytest-cov        # Required for coverage reporting in workflows
+  - gitpython         # Required for git workflow integration tests
   - quarto
   - jupyter
   - nbformat
+  # Documentation dependencies (pinned to working legacy handler)
+  - mkdocs=1.6.1
+  - mkdocs-material>=9.0.0
+  - mkdocstrings=0.30.1
+  - mkdocstrings-python-legacy=0.2.7  # Using legacy handler (see docs/plans/mkdocs-griffe-import-resolution-fix.md)
 prefix: /opt/homebrew/Caskroom/mambaforge/base/envs/hazelbean_env

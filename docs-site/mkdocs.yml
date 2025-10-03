@@ -114,7 +114,6 @@ nav:
   - Educational: 
     - educational/index.md
     - Tutorial Examples: educational/examples.md
-    - MkDocstrings Test: educational/test-mkdocstrings.md
   - Tests: 
     - tests/index.md
     - Unit Tests: tests/unit.md

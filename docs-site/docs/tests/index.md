@@ -36,29 +36,6 @@ graph TD
     style E fill:#fce4ec
 ```
 
-## Test Category Relationships
-
-Understanding how different test categories work together:
-
-```mermaid
-flowchart LR
-    UT[Unit Tests<br/>Fast & Isolated] --> IT[Integration Tests<br/>Component Interaction]
-    IT --> PT[Performance Tests<br/>Efficiency & Benchmarks]
-    PT --> ST[System Tests<br/>End-to-End Validation]
-    
-    UT -.-> ST
-    
-    classDef unit fill:#f3e5f5,stroke:#9c27b0
-    classDef integration fill:#e8f5e8,stroke:#4caf50
-    classDef performance fill:#fff3e0,stroke:#ff9800
-    classDef system fill:#fce4ec,stroke:#e91e63
-    
-    class UT unit
-    class IT integration  
-    class PT performance
-    class ST system
-```
-
 ## Test Development Workflow
 
 The testing workflow follows Test-Driven Development (TDD) principles:

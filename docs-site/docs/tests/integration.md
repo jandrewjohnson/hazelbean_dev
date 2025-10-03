@@ -51,7 +51,9 @@ Tests for the ProjectFlow framework, ensuring that project management and task e
 - ✅ Task dependency management and execution
 - ✅ Multi-step project processing pipelines
 
+<!-- TODO: Re-enable when upgrading to modern handler (see docs/plans/mkdocs-griffe-import-resolution-fix.md)
 ::: hazelbean_tests.integration.test_project_flow
+-->
 
 ---
 
@@ -64,7 +66,9 @@ Tests for concurrent operations, thread safety, and parallel processing workflow
 - ✅ Thread safety validation for shared resources
 - ✅ Parallel workflow performance testing
 
+<!-- TODO: Re-enable when upgrading to modern handler (see docs/plans/mkdocs-griffe-import-resolution-fix.md)
 ::: hazelbean_tests.integration.test_parallel_processing
+-->
 
 ---
 

@@ -31,7 +31,7 @@ Comprehensive learning resources with progressive tutorials, extensive test docu
     <h3 style="color: #1976d2; margin-top: 0;">🎓 New to Hazelbean?</h3>
     <p><strong>Perfect for:</strong> First-time users, students, guided learning</p>
     <p><strong>Time:</strong> ~65 minutes of hands-on practice</p>
-    <a href="educational/index.md" style="
+    <a href="educational/" style="
       background: linear-gradient(45deg, #1976d2, #42a5f5);
       color: white;
       padding: 10px 20px;
@@ -46,7 +46,7 @@ Comprehensive learning resources with progressive tutorials, extensive test docu
     <h3 style="color: #388e3c; margin-top: 0;">🔬 Technical Deep Dive</h3>
     <p><strong>Perfect for:</strong> Developers, maintainers, advanced users</p>
     <p><strong>Focus:</strong> Implementation details and patterns</p>
-    <a href="tests/index.md" style="
+    <a href="tests/" style="
       background: linear-gradient(45deg, #388e3c, #66bb6a);
       color: white;
       padding: 10px 20px;
@@ -63,7 +63,7 @@ Comprehensive learning resources with progressive tutorials, extensive test docu
     <h3 style="color: #f57c00; margin-top: 0;">📊 Performance & Metrics</h3>
     <p><strong>Perfect for:</strong> Quality assessment, system monitoring</p>
     <p><strong>Content:</strong> Test results, benchmarks, system health</p>
-    <a href="reports/index.md" style="
+    <a href="reports/" style="
       background: linear-gradient(45deg, #f57c00, #ffb74d);
       color: white;
       padding: 10px 20px;
@@ -127,26 +127,6 @@ Explore over **50+ test cases** that demonstrate real-world usage patterns:
 | **[Performance Tests](tests/performance.md)** | Benchmarks & optimization | 3 modules | Efficiency tracking |
 | **[System Tests](tests/system.md)** | Complete system validation | 2 modules | Smoke testing |
 
-### 📈 Live System Metrics
-
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 25px 0;">
-  <div style="text-align: center; padding: 15px; background: #e8f5e8; border-radius: 8px;">
-    <div style="font-size: 24px; font-weight: bold; color: #2e7d32;">94.1%</div>
-    <div style="color: #666;">Test Pass Rate</div>
-  </div>
-  <div style="text-align: center; padding: 15px; background: #e3f2fd; border-radius: 8px;">
-    <div style="font-size: 24px; font-weight: bold; color: #1976d2;">51</div>
-    <div style="color: #666;">Total Tests</div>
-  </div>
-  <div style="text-align: center; padding: 15px; background: #fff3e0; border-radius: 8px;">
-    <div style="font-size: 24px; font-weight: bold; color: #f57c00;">1.24s</div>
-    <div style="color: #666;">Test Duration</div>
-  </div>
-  <div style="text-align: center; padding: 15px; background: #f3e5f5; border-radius: 8px;">
-    <div style="font-size: 24px; font-weight: bold; color: #7b1fa2;">4</div>
-    <div style="color: #666;">Test Categories</div>
-  </div>
-</div>
 
 *Metrics updated automatically from latest test runs*
 
@@ -219,7 +199,7 @@ output_path = p.get_path('processed_result.tif', 'output')
 The most effective way to learn Hazelbean is through hands-on practice with our carefully designed tutorial progression.
 
 <div style="text-align: center; margin: 40px 0;">
-  <a href="educational/index.md" style="
+  <a href="educational/" style="
     background: linear-gradient(45deg, #1976d2, #42a5f5);
     color: white;
     padding: 20px 40px;
