@@ -943,7 +943,7 @@ def pptx_to_markdown_slide_dict(pptx_path, output_dir=None):
             
     return output_dict
 
-def markdown_slide_dict_to_qmd(markdown_slide_dict, output_path, theme='sky'):
+def markdown_slide_dict_to_qmd(markdown_slide_dict, output_path, theme='serif'):
 
     output_string = ""
     for slide_number, slide in markdown_slide_dict.items():
@@ -1022,15 +1022,17 @@ def qmd_path_to_marked_qmd_path(qmd_path, marked_qmd_path):
 format: 
     revealjs:
         theme: simple
-        margin: 0       
-        self-contained: false
+        margin: 10       
+        self-contained: true
         scrollable: true
         code-fold: show
         slide-number: true  
         preview-links: auto
         css: styles.css
         incremental: true  
-        auto-stretch: false
+        auto-stretch: true
+        width: 1920
+        height: 1080
 ---""".split('\n')
         
         # Iterate through content_lines
