@@ -279,6 +279,200 @@ def __init__(self, function, project=None, parent=None, type='task', run=1, skip
 
 ---
 
+## 🐛 Error Handling Bug in ProjectFlow.add_task() {#add_task_error_handling}
+
+**Status:** 🐛 Open  
+**Discovered:** 2025-10-03  
+**Severity:** Medium  
+**Component:** `hazelbean/project_flow.py`
+
+### Description
+The `add_task()` method has incorrect error handling logic that causes `AttributeError` instead of the intended `TypeError` when non-callable objects are passed as function parameters. This is the same bug pattern as `add_iterator()` but in a different method.
+
+### Root Cause
+The error handling code tries to access the `__name__` attribute of invalid objects before checking if they are callable:
+
+**Lines 655-658 in `project_flow.py`:**
+```python
+if not hasattr(function, '__call__'):
+    raise TypeError(
+        'Fuction passed to add_task() must be callable. ' + str(function.__name__) + ' was not.')
+        #                                                    ^^^^^^^^^^^^^^^^^
+        #                                                    This causes AttributeError!
+```
+
+### Reproduction
+```python
+import hazelbean as hb
+
+p = hb.ProjectFlow('/tmp/test')
+
+# These should raise TypeError but raise AttributeError instead
+p.add_task("not_a_function")  # AttributeError: 'str' object has no attribute '__name__'
+p.add_task(None)              # AttributeError: 'NoneType' object has no attribute '__name__'
+```
+
+### Expected Behavior
+Should raise `TypeError` with message like:
+```
+TypeError: Function passed to add_task() must be callable. 'not_a_function' was not.
+```
+
+### Actual Behavior
+Raises `AttributeError` with message like:
+```
+AttributeError: 'str' object has no attribute '__name__'. Did you mean: '__ne__'?
+```
+
+### Affected Code Locations
+1. **`hazelbean/project_flow.py:655-658`** - `add_task()` method error handler
+
+### Failing Tests (Intentionally)
+These tests fail because they expect correct behavior - **the test failures are valuable and correct**:
+
+**Core Proof Tests (Story 1):**
+- `unit/test_add_task.py::TestAddTaskErrorHandling::test_add_task_invalid_function_error` ⚠️ **xfail**
+- `unit/test_add_task.py::TestAddTaskErrorHandling::test_add_task_none_function_error` ⚠️ **xfail**
+
+### Test Status & xfail Markers
+
+**These tests are marked with `@pytest.mark.xfail` to allow CI to pass while documenting the bug:**
+
+- ✅ Tests still run and validate expected (correct) behavior
+- ✅ CI passes (xfailed tests don't fail builds)
+- ✅ Automatic alert when bug is fixed (tests will show XPASSED)
+- ✅ Bug is tracked and documented
+
+**When this bug is fixed in hazelbean:**
+1. These tests will show as "XPASSED" (unexpected pass)
+2. Remove the `@pytest.mark.xfail` decorators
+3. Tests will run as normal passing tests
+4. Update this bug status to ✅ Fixed
+
+**xfail marker format:**
+```python
+@pytest.mark.xfail(
+    reason="Known bug: project_flow.py:655-658 - See KNOWN_BUGS.md #add_task_error_handling",
+    strict=True,  # Alert on unexpected pass
+    raises=AttributeError  # Current buggy behavior
+)
+```
+
+### Suggested Fix
+Check if the function is callable before trying to access its `__name__` attribute:
+
+```python
+if not hasattr(function, '__call__'):
+    # Safe way to get function name/description for error message
+    func_desc = getattr(function, '__name__', repr(function))
+    raise TypeError(
+        f'Function passed to add_task() must be callable. {func_desc} was not.')
+```
+
+### Additional Notes
+- There's also a typo: "Fuction" should be "Function"
+- This is the same bug pattern as in `add_iterator()` (see bug above)
+- This bug affects error message quality but doesn't break core functionality
+- Tests correctly expose this issue by expecting the proper `TypeError`
+- Related to existing `add_iterator()` bug - same root cause, different method
+
+---
+
+## 🐛 Unusual Exception Type in get_path() for Missing Files {#get_path_exception_type}
+
+**Status:** 🐛 Open - Investigation Needed  
+**Discovered:** 2025-10-03  
+**Severity:** Medium  
+**Component:** `hazelbean/project_flow.py` (lines 612, 618)
+
+### Description
+The `get_path()` method raises `NameError` when files are not found, which violates Python conventions. The standard Python exception for missing files is `FileNotFoundError` (available since Python 3.3). Using `NameError` is confusing because this exception is typically reserved for undefined variables/names in code, not file system operations.
+
+### Investigation Needed
+**It is unclear whether this is:**
+1. **Intentional design** - Using `NameError` deliberately to distinguish hazelbean's path resolution from OS-level errors
+2. **A bug** - Should be using `FileNotFoundError` to follow Python conventions
+
+**The method has no docstring**, making it impossible to determine intended behavior from documentation.
+
+### Root Cause (If Bug)
+The error handling code explicitly raises `NameError`:
+
+**Lines 612, 618 in `project_flow.py`:**
+```python
+raise NameError('The path given to hb.get_path() does not exist...')
+```
+
+**Python convention would be:**
+```python
+raise FileNotFoundError('The path given to hb.get_path() does not exist...')
+```
+
+### Investigation Results (2025-10-03)
+
+**Tested behavior:**
+1. ✅ `NameError` is raised for missing files (confirmed)
+2. ✅ `leave_ref_path_if_fail=True` works correctly (returns constructed path)
+3. ✅ `raise_error_if_fail=False` works correctly (returns constructed path)
+4. ❌ No docstring exists for the method
+5. ❌ Error message has grammatical issues ("and or is not available")
+
+**Conclusion:** The parameters work correctly, but the exception type choice is questionable and undocumented.
+
+### Affected Tests
+These tests are marked xfail while investigation is pending:
+
+**Edge Case Tests:**
+- `unit/test_get_path.py::TestErrorHandlingAndEdgeCases::test_invalid_characters_in_path` ⚠️ **xfail**
+- `unit/test_get_path.py::TestErrorHandlingAndEdgeCases::test_path_with_special_characters` ⚠️ **xfail**
+- `unit/test_get_path.py::TestErrorHandlingAndEdgeCases::test_missing_file_fallback` ⚠️ **xfail**
+- `unit/test_get_path.py::TestErrorHandlingAndEdgeCases::test_very_long_path` ⚠️ **xfail**
+
+**Cloud Storage Tests:**
+- `unit/test_get_path.py::TestCloudStorageIntegration::test_google_cloud_bucket_integration` ⚠️ **xfail**
+- `unit/test_get_path.py::TestCloudStorageIntegration::test_cloud_path_fallback` ⚠️ **xfail**
+
+### Test Status & xfail Markers
+
+**These tests are marked with `@pytest.mark.xfail` while investigation is pending:**
+
+- ✅ Tests still run (not skipped)
+- ✅ CI passes (xfailed tests don't fail builds)
+- ✅ Alerts when behavior changes
+- ✅ Investigation needed to determine intended behavior
+
+**xfail marker format:**
+```python
+@pytest.mark.xfail(
+    reason="Investigation needed: get_path() raises NameError for missing files (unusual - Python convention is FileNotFoundError). Need to determine if this is intended behavior. See KNOWN_BUGS.md #get_path_exception_type",
+    strict=False,
+    raises=NameError
+)
+```
+
+### Possible Fixes (Pending Investigation Results)
+
+**If NameError is a bug (recommended if no strong reason exists):**
+```python
+# In project_flow.py, lines 612, 618:
+if file_not_found:
+    if raise_error_if_fail:
+        raise FileNotFoundError(f'The path given to hb.get_path() does not exist...')
+```
+
+**If NameError is intentional:**
+1. Add comprehensive docstring documenting the exception type and why
+2. Update tests to expect `NameError`
+3. Improve error message grammar ("and or" → proper phrasing)
+
+### Additional Notes
+- Parameters (`leave_ref_path_if_fail`, `raise_error_if_fail`) work correctly
+- Main issues: unusual exception type, no docstring, poor error message
+- Impact: Confusion for users expecting standard Python exceptions
+- Decision needed from hazelbean maintainers on whether `NameError` is intentional
+
+---
+
 ## How to Use This Document
 
 ### For Hazelbean Maintainers
@@ -340,5 +534,5 @@ When adding new bugs, use this template:
 
 ---
 
-*Last Updated: 2025-09-18 (Added Story 4 integration bugs)*  
+*Last Updated: 2025-10-03 (Added add_task error handling bug and get_path test design issues for CI fix)*  
 *Next Review: When hazelbean bugs are addressed*
