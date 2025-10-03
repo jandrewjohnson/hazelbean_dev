@@ -266,6 +266,28 @@ jobs:
           environment-name: hazelbean_env
           cache-environment: true
           cache-downloads: true
+      
+      # Download baseline from main branch for regression comparison
+      - name: Download baseline from main branch
+        uses: dawidd6/action-download-artifact@v3
+        with:
+          workflow: testing-quality-gates.yml
+          branch: main
+          name: performance-baseline
+          path: metrics/baselines/
+          if_no_artifact_found: warn
+        continue-on-error: true
+      
+      # Ensure baseline exists (download or establish)
+      - name: Ensure baseline exists
+        run: |
+          if [ ! -f metrics/baselines/current_performance_baseline.json ]; then
+            echo "📊 No baseline from main - establishing baseline..."
+            python scripts/run_performance_benchmarks.py --establish-baseline --runs 3
+          else
+            echo "✅ Using baseline from main branch"
+            ls -lh metrics/baselines/current_performance_baseline.json
+          fi
           
       - name: Run performance regression tests with STRICT enforcement
         id: performance
@@ -289,6 +311,16 @@ jobs:
         run: |
           echo "📊 Establishing performance baseline for main branch..."
           python scripts/run_performance_benchmarks.py --establish-baseline --runs 3
+      
+      # Upload baseline artifact for PR branches to use
+      - name: Upload baseline artifact for future runs
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-baseline
+          path: metrics/baselines/current_performance_baseline.json
+          retention-days: 90
+          overwrite: true
           
       - name: Upload performance artifacts
         if: always()
