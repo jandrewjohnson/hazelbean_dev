@@ -21,18 +21,24 @@ report_import_times = 0
 
 # Importing GDAL is tricky. Here we use the path of the current python interpretter to guess at the conda env path
 # in order to set any missing GDAL environment variables.
-conda_env_path = os.path.split(sys.executable)[0]
-
-if 'GDAL_DATA' not in os.environ.__dict__:
-    os.environ['GDAL_DATA'] = os.path.join(conda_env_path, 'Library', 'share', 'gdal')
-elif not os.isdir(os.environ['GDAL_DATA']):
-    os.environ['GDAL_DATA'] = os.path.join(conda_env_path, 'Library', 'share', 'gdal')
-    
-if 'PROJ_LIB' not in os.environ.__dict__:
-    os.environ['PROJ_LIB'] = os.path.join(conda_env_path, 'Library', 'share', 'proj')
-elif not os.path.exists(os.path.join(os.environ['PROJ_LIB'], 'proj.db')):
-    os.environ['PROJ_LIB'] = os.path.join(conda_env_path, 'Library', 'share', 'proj')
-
+# Determine the base environment path based on the platform
+if sys.platform == "darwin":
+    conda_env_path = sys.prefix
+    gdal_subpath = os.path.join('share', 'gdal')
+    proj_subpath = os.path.join('share', 'proj')
+else:  # assume windows
+    conda_env_path = os.path.split(sys.executable)[0]
+    gdal_subpath = os.path.join('Library', 'share', 'gdal')
+    proj_subpath = os.path.join('Library', 'share', 'proj')
+# Environment variables to set
+env_vars = {
+    'GDAL_DATA': os.path.join(conda_env_path, gdal_subpath),
+    'PROJ_LIB': os.path.join(conda_env_path, proj_subpath),
+    'PROJ_DATA': os.path.join(conda_env_path, proj_subpath)
+}
+# Set environment variables
+for var_name, path in env_vars.items():
+    os.environ[var_name] = path
 
 import hazelbean.config # Needs to be imported before core so that hb.config.LAST_TIME_CHECK is set for hb.timer()
 from hazelbean.config import *
