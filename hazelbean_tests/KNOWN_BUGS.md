@@ -66,14 +66,38 @@ These tests fail because they expect correct behavior:
 **Story 1 & 2 Core Proof Tests:**
 - `unit/test_add_task.py::TestAddTaskErrorHandling::test_add_task_invalid_function_error`
 - `unit/test_add_task.py::TestAddTaskErrorHandling::test_add_task_none_function_error`
-- `unit/test_add_iterator.py::TestAddIteratorErrorHandling::test_add_iterator_invalid_function_error`
-- `unit/test_add_iterator.py::TestAddIteratorErrorHandling::test_add_iterator_none_function_error`
+- `unit/test_add_iterator.py::TestAddIteratorErrorHandling::test_add_iterator_invalid_function_error` ⚠️ **xfail**
+- `unit/test_add_iterator.py::TestAddIteratorErrorHandling::test_add_iterator_none_function_error` ⚠️ **xfail**
 
 **Story 3 Comprehensive Unit Tests:**
-- `unit/test_add_iterator.py::TestErrorHandlingB5::test_non_callable_function_parameter`
-- `unit/test_add_iterator.py::TestErrorHandlingB5::test_none_function_parameter`
+- `unit/test_add_iterator.py::TestErrorHandlingB5::test_non_callable_function_parameter` ⚠️ **xfail**
+- `unit/test_add_iterator.py::TestErrorHandlingB5::test_none_function_parameter` ⚠️ **xfail**
 
 **Note:** When this bug is fixed, these tests will automatically start passing.
+
+### Test Status & xfail Markers
+
+**These tests are marked with `@pytest.mark.xfail` to allow CI to pass while documenting the bug:**
+
+- ✅ Tests still run and validate correct behavior
+- ✅ CI passes (xfailed tests don't fail builds)
+- ✅ Automatic alert when bug is fixed (tests will show XPASSED)
+- ✅ Clear tracking of failure rates
+
+**When this bug is fixed in hazelbean:**
+1. These tests will show as "XPASSED" (unexpected pass)
+2. Remove the `@pytest.mark.xfail` decorators
+3. Tests will run as normal passing tests
+4. Update this bug status to ✅ Fixed
+
+**xfail marker format:**
+```python
+@pytest.mark.xfail(
+    reason="Known bug: project_flow.py:772 - See KNOWN_BUGS.md",
+    strict=True,  # Alert on unexpected pass
+    raises=AttributeError  # Current buggy behavior
+)
+```
 
 ### Suggested Fix
 Check if the function is callable before trying to access its `__name__` attribute:

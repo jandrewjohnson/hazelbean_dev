@@ -1,0 +1,16 @@
+{
+  "total": 27,
+  "passed": 23,
+  "failed": 0,
+  "xfailed": 4,
+  "xpassed": 0,
+  "skipped": 0,
+  "passed_pct": 85.2,
+  "failed_pct": 0.0,
+  "xfailed_pct": 14.8,
+  "xpassed_pct": 0.0,
+  "timestamp": "2025-10-03T00:00:00",
+  "duration": 6.71,
+  "notes": "Initial baseline after adding xfail markers for known bugs in add_iterator error handling (4 tests marked as xfail)"
+}
+

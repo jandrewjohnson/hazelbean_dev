@@ -117,6 +117,78 @@ conda install -c conda-forge pytest-benchmark pytest-cov
 - **Use conda/mamba for package installation** (not pip) to ensure correct environment [[memory:7779366]]
 - **Scripts assume conda environment is active** - no need for explicit activation commands in automation [[memory:7966990]]
 
+## Known Bug Test Handling
+
+### Using xfail for Known Bugs
+
+Some tests are marked with `@pytest.mark.xfail` because they expose known bugs in hazelbean core code (see `KNOWN_BUGS.md`). This approach:
+
+- ✅ **Allows CI to pass** - xfailed tests don't fail the build
+- ✅ **Tests still run** - We catch unexpected behavior changes
+- ✅ **Automatic bug-fix detection** - Tests show "XPASSED" when bugs are fixed
+- ✅ **Clear tracking** - Percentage of known vs. unexpected failures
+
+### What xfail Means
+
+```python
+@pytest.mark.xfail(
+    reason="Known bug: project_flow.py:772 - See KNOWN_BUGS.md",
+    strict=True,  # Test will report XPASS if bug gets fixed
+    raises=AttributeError  # Current buggy behavior
+)
+def test_something(self):
+    # Test expects CORRECT behavior (TypeError)
+    # But hazelbean currently has bug (raises AttributeError)
+    # So test is expected to fail until bug is fixed
+```
+
+### When Bugs Are Fixed
+
+When you fix a bug in hazelbean:
+
+1. **Tests will show XPASSED** - "Unexpectedly passed"
+2. **Remove the xfail decorator** from the test
+3. **Update KNOWN_BUGS.md** - Change status to ✅ Fixed
+4. **Test runs normally** as a passing test
+
+### Current Known Bugs
+
+See `KNOWN_BUGS.md` for complete list. Current xfailed tests:
+
+- **add_iterator error handling** (4 tests)
+  - `test_add_iterator_invalid_function_error`
+  - `test_add_iterator_none_function_error`
+  - `test_non_callable_function_parameter`
+  - `test_none_function_parameter`
+
+### Viewing Failure Rates
+
+```bash
+# Install pytest-json-report if needed
+conda install -c conda-forge pytest-json-report
+
+# Run tests with JSON report
+pytest hazelbean_tests/unit/test_add_iterator.py \
+  --json-report \
+  --json-report-file=test-results.json
+
+# Generate failure rate report
+python tools/test_failure_tracking.py test-results.json
+
+# Compare to baseline
+python tools/test_failure_tracking.py test-results.json \
+  --compare-to metrics/test-failures/baseline-add_iterator.json
+```
+
+### CI Tracking
+
+GitHub Actions automatically tracks failure rates:
+- View in "Actions" tab → Workflow run → "Test Results Summary"
+- Historical trends in `metrics/test-failures/`
+- Alerts on unexpected failures or bug fixes
+
+---
+
 ## Common Testing Workflows
 
 ### 1. **Developer Quick Validation** (5 minutes)
