@@ -40,6 +40,7 @@ dependencies:
   - pytest
   - pytest-benchmark  # Required for performance smoke tests
   - pytest-cov        # Required for coverage reporting in workflows
+  - pytest-json-report  # Required for test failure tracking in quality gates
   - gitpython         # Required for git workflow integration tests
   - quarto
   - jupyter

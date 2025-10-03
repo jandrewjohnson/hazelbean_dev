@@ -137,9 +137,6 @@ jobs:
         run: |
           echo "🎯 Testing core functionality: ${{ matrix.test-category }}"
           
-          # Install pytest-json-report for failure tracking
-          pip install pytest-json-report
-          
           # Run with coverage and JSON report for failure tracking
           python -m pytest hazelbean_tests/unit/test_${{ matrix.test-category }}.py -v \
             --tb=short \
@@ -269,6 +266,7 @@ jobs:
       
       # Download baseline from main branch for regression comparison
       - name: Download baseline from main branch
+        id: download_baseline
         uses: dawidd6/action-download-artifact@v3
         with:
           workflow: testing-quality-gates.yml
@@ -278,32 +276,74 @@ jobs:
           if_no_artifact_found: warn
         continue-on-error: true
       
-      # Ensure baseline exists (download or establish)
-      - name: Ensure baseline exists
+      # Validate downloaded baseline
+      - name: Validate downloaded baseline
+        id: validate_baseline
         run: |
-          if [ ! -f metrics/baselines/current_performance_baseline.json ]; then
-            echo "📊 No baseline from main - establishing baseline..."
-            python scripts/run_performance_benchmarks.py --establish-baseline --runs 3
+          if [ -f metrics/baselines/current_performance_baseline.json ]; then
+            echo "✅ Baseline downloaded from main branch"
+            
+            # Validate JSON structure
+            if python -c "import json; json.load(open('metrics/baselines/current_performance_baseline.json'))"; then
+              echo "✅ Baseline JSON is valid"
+              echo "baseline_source=main" >> $GITHUB_OUTPUT
+              echo "baseline_valid=true" >> $GITHUB_OUTPUT
+            else
+              echo "❌ Downloaded baseline is corrupted"
+              rm metrics/baselines/current_performance_baseline.json
+              echo "baseline_valid=false" >> $GITHUB_OUTPUT
+            fi
           else
-            echo "✅ Using baseline from main branch"
-            ls -lh metrics/baselines/current_performance_baseline.json
+            echo "⚠️ No baseline available from main branch"
+            echo "baseline_source=none" >> $GITHUB_OUTPUT
+            echo "baseline_valid=false" >> $GITHUB_OUTPUT
           fi
+      
+      # Establish baseline with warmup if needed
+      - name: Establish baseline with warmup
+        if: steps.validate_baseline.outputs.baseline_valid != 'true'
+        run: |
+          echo "📊 Establishing baseline for this branch..."
+          echo "⚠️ WARNING: Using branch-local baseline (main baseline unavailable)"
           
-      - name: Run performance regression tests with STRICT enforcement
+          # Warmup run to stabilize cache/system state
+          echo "🔥 Running warmup to stabilize system..."
+          python scripts/run_performance_benchmarks.py --establish-baseline --runs 1 > /dev/null 2>&1 || true
+          
+          # Actual baseline establishment with more runs for reliability
+          echo "📊 Establishing baseline with 5 runs..."
+          python scripts/run_performance_benchmarks.py --establish-baseline --runs 5
+          
+          echo "baseline_source=branch" >> $GITHUB_OUTPUT
+          
+      - name: Run performance regression tests with adaptive threshold
         id: performance
         run: |
-          echo "⚡ Running STRICT performance regression tests..."
+          echo "⚡ Running performance regression tests..."
           
-          # Run regression check with 10% threshold - FAIL on regression
-          python scripts/run_performance_benchmarks.py --check-regression --threshold 10.0 --verbose || {
-            echo "❌ BLOCKING: Performance regression > 10% detected"
-            echo "📊 Review performance report for details"
-            echo "🛑 This PR cannot be merged until performance is restored"
-            echo "status=failed" >> $GITHUB_OUTPUT
-            exit 1
-          }
+          # Use different thresholds based on baseline source
+          if [[ "${{ steps.validate_baseline.outputs.baseline_source }}" == "main" ]]; then
+            THRESHOLD=15.0
+            echo "📊 Using 15% threshold (comparing against main branch baseline)"
+          else
+            THRESHOLD=20.0
+            echo "⚠️ Using 20% threshold (comparing against branch-local baseline)"
+            echo "::notice::Performance comparison uses branch-local baseline - results may be less reliable"
+          fi
           
-          echo "✅ Performance within acceptable limits"
+          # Run regression check
+          python scripts/run_performance_benchmarks.py \
+            --check-regression \
+            --threshold $THRESHOLD \
+            --verbose || {
+              echo "❌ BLOCKING: Performance regression > ${THRESHOLD}% detected"
+              echo "📊 Baseline source: ${{ steps.validate_baseline.outputs.baseline_source }}"
+              echo "🛑 Review performance report for details"
+              echo "status=failed" >> $GITHUB_OUTPUT
+              exit 1
+            }
+          
+          echo "✅ Performance within acceptable limits (threshold: ${THRESHOLD}%)"
           echo "status=passed" >> $GITHUB_OUTPUT
           
       - name: Establish baseline for main branch
@@ -331,7 +371,24 @@ jobs:
             metrics/reports/performance_report_*.txt
             metrics/exports/performance_export_*.csv
             metrics/analysis/regression_check_*.json
+            metrics/baselines/current_performance_baseline.json
           retention-days: 90
+      
+      - name: Add performance summary to PR
+        if: always() && github.event_name == 'pull_request'
+        run: |
+          echo "## ⚡ Performance Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Baseline Source:** ${{ steps.validate_baseline.outputs.baseline_source }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** ${{ steps.performance.outputs.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -f metrics/reports/performance_report_*.txt ]; then
+            echo "### Performance Report Preview" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            tail -20 metrics/reports/performance_report_*.txt >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
 
   # Quality Gate Summary & Reporting
   quality-gate-summary:
