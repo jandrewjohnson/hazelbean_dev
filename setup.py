@@ -37,6 +37,7 @@ setup(
       "pyyaml",
       "qtawesome",
       "qtpy",
+      "requests",
       "rioxarray",
       "scikit-learn",
       "scipy",
