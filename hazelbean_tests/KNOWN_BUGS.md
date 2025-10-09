@@ -2,6 +2,22 @@
 
 This document tracks known bugs discovered through comprehensive testing. These bugs cause certain tests to fail intentionally - the test failures are **correct and valuable** as they document bugs that need fixing.
 
+## 🔍 Important Distinction: CI Infrastructure vs Hazelbean Bugs
+
+### CI Infrastructure Issues (Test Framework - Our Responsibility)
+These are problems with the test infrastructure, build process, or CI configuration - NOT bugs in hazelbean functionality:
+
+- ✅ **RESOLVED: Cython Extension Import in CI**
+  - **Problem:** Cython extensions not importable in CI environment, causing `ImportError: cannot import name 'cython_functions'`
+  - **Root Cause:** Package not installed before running tests - extensions existed but weren't in Python's import path
+  - **Solution:** Added `pip install -e .` step in CI workflow to build and install package before tests
+  - **Status:** Fixed in `.github/workflows/testing-quality-gates.yml` (lines 88-111, 159-163, 248-251, 302-305)
+  - **Impact:** This was blocking ALL tests from running - now resolved
+  - **Note:** This is a packaging/build issue, not a hazelbean logic bug
+
+### Known Hazelbean Bugs (Core Software - Upstream Responsibility)
+These are actual bugs in hazelbean's core functionality that need fixing by maintainers:
+
 ## Bug Status Legend
 - 🐛 **Open** - Bug exists and needs fixing
 - ✅ **Fixed** - Bug has been resolved (tests will pass)
