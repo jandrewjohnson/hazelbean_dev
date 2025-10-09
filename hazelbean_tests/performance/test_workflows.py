@@ -126,7 +126,7 @@ class TestPerformanceIntegration(BaseWorkflowPerformanceTest):
         
         # get_path performance
         path_start = time.time()
-        result = self.p.get_path("test_file.txt")
+        result = self.p.get_path("test_file.txt", raise_error_if_fail=False)
         measured_metrics["get_path_single_call"] = time.time() - path_start
         
         # Array operations performance
