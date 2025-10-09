@@ -5,7 +5,7 @@ import pandas as pd
 from hazelbean.os_utils import *
 
 class DataStructuresTester(TestCase):
-    def setUp(self):        
+    def setUp(self):
         self.data_dir = os.path.join(os.path.dirname(__file__), "../../data")
         self.test_data_dir = os.path.join(self.data_dir, "tests")
         self.cartographic_data_dir = os.path.join(self.data_dir, "cartographic/ee")        
@@ -15,9 +15,11 @@ class DataStructuresTester(TestCase):
         self.ee_r264_correspondence_vector_path = os.path.join(self.cartographic_data_dir, "ee_r264_simplified900sec.gpkg")
         self.ee_r264_correspondence_csv_path = os.path.join(self.cartographic_data_dir, "ee_r264_correspondence.csv")        
         self.maize_calories_path = os.path.join(self.data_dir, "crops/johnson/crop_calories/maize_calories_per_ha_masked.tif")
-        self.ha_per_cell_column_900sec_path = hb.get_path(hb.ha_per_cell_column_ref_paths[900])
-        self.ha_per_cell_900sec_path = hb.get_path(hb.ha_per_cell_ref_paths[900])
-        self.pyramid_match_900sec_path = hb.get_path(hb.pyramid_match_ref_paths[900])      
+        
+        # Use prepend_possible_dirs to help get_path find files in data directory
+        self.ha_per_cell_column_900sec_path = hb.get_path(hb.ha_per_cell_column_ref_paths[900], prepend_possible_dirs=self.data_dir)
+        self.ha_per_cell_900sec_path = hb.get_path(hb.ha_per_cell_ref_paths[900], prepend_possible_dirs=self.data_dir)
+        self.pyramid_match_900sec_path = hb.get_path(hb.pyramid_match_ref_paths[900], prepend_possible_dirs=self.data_dir)
     
     def test_misc(self):
         input_dict = {
