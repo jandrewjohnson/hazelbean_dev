@@ -6,27 +6,29 @@ Hazelbean is a collection of geospatial processing tools based on gdal, numpy, s
 
 Hazelbean started as a personal research package of scripts for Justin Johnson and is was not originally intended for broad release. However, hazelbean is transitioning towards having full-support, primarily because it underlies several important software releases, including some from the Natural Capital Project. Thus, even in this transitory state, it is available via "pip install hazelbean". Note that hazelbean only provides a Python 3+, 64 bit, Windows version, however with the exception of precompiled cython files, it should be cross-platform and cross-version. The precompiled files are only loaded as needed.
 
-## 📚 Complete Documentation Site
+## 📚 Documentation
 
-**🌐 [Full Documentation Site](https://jandrewjohnson.github.io/hazelbean_dev/)** - Your comprehensive resource for all things Hazelbean
+Our integrated documentation system provides comprehensive guides and examples:
 
-Our integrated documentation system provides everything in one searchable, organized location:
-
-- **🚀 [Getting Started](https://jandrewjohnson.github.io/hazelbean_dev/educational/)** - Progressive learning path with hands-on tutorials
-- **🧪 [Test Documentation](https://jandrewjohnson.github.io/hazelbean_dev/tests/)** - 50+ test examples showing real-world usage patterns
-- **📊 [Live Reports](https://jandrewjohnson.github.io/hazelbean_dev/reports/)** - Current test results and performance metrics
-- **🔍 [Searchable Content](https://jandrewjohnson.github.io/hazelbean_dev/)** - Find anything across tutorials, tests, and guides
-
-### Alternative Access (Individual Files)
 - **📝 [Getting Started](docs/getting-started.md)** - Complete setup guide with current project structure
 - **📚 [Testing Guide](hazelbean_tests/README.md)** - Test infrastructure overview
+- **🎓 [Examples](examples/)** - Hands-on tutorials and demonstrations
 
-### Quick Navigation by Role
-- **🎓 New Users:** [Educational Journey](https://jandrewjohnson.github.io/hazelbean_dev/educational/) → [Hands-on Examples](https://jandrewjohnson.github.io/hazelbean_dev/educational/examples/)
-- **💻 Contributors:** [Test Documentation](https://jandrewjohnson.github.io/hazelbean_dev/tests/) → [Getting Started](docs/getting-started.md)
-- **🔧 Maintainers:** [Live Reports](https://jandrewjohnson.github.io/hazelbean_dev/reports/) → [Test Documentation](https://jandrewjohnson.github.io/hazelbean_dev/tests/)
+### Local Documentation Site
 
-> **💡 Local Development:** Run `conda activate hazelbean_env && cd docs-site && mkdocs serve` to serve documentation locally at `http://127.0.0.1:8000`
+You can serve the full documentation site locally with searchable content, test examples, and live reports:
+
+```bash
+conda activate hazelbean_env
+cd docs-site
+mkdocs serve  # Visit http://127.0.0.1:8000
+```
+
+The local site includes:
+- Progressive learning path with tutorials
+- 50+ test examples showing real-world usage patterns
+- Current test results and performance metrics
+- Searchable content across all documentation
 
 ## ⚡ Quick Start (5 minutes)
 
@@ -57,7 +59,7 @@ mamba install -c conda-forge natcap.invest geopandas pygeoprocessing taskgraph c
 pip install hazelbean
 ```
 
-**Next steps:** Visit the [Educational Journey](https://jandrewjohnson.github.io/hazelbean_dev/educational/) for guided learning.
+**Next steps:** Explore the [examples/](examples/) directory for guided learning.
 
 
 ## Detailed Installation Notes
