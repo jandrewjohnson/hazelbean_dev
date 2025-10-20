@@ -1263,9 +1263,18 @@ def df_merge(left_input,
         
         if not supress_warnings:
             if len(comparison_dict['left_only']) > 0:
-                hb.log(f'\nWARNING!\nIn hb.df_merge, left had non-shared values in merge-col. N=: {str(len(comparison_dict['left_only']))}. First few values:' + str(comparison_dict['left_only'])[:100] + '...')
+                hb.log(
+                    f"\nWARNING:\nIn hb.df_merge, left had non-shared values in merge-col. "
+                    f"N= {len(comparison_dict['left_only'])}. "
+                    f"First few values: {str(comparison_dict['left_only'][:100])}..."
+                )
+
             if len(comparison_dict['right_only']) > 0:
-                hb.log(f'\nWARNING!\nIn hb.df_merge, left had non-shared values in merge-col. N=: {str(len(comparison_dict['right_only']))}. First few values:' + str(comparison_dict['right_only'])[:100] + '...')
+                hb.log(
+                    f"\nWARNING:\nIn hb.df_merge, right had non-shared values in merge-col. "
+                    f"N= {len(comparison_dict['right_only'])}. "
+                    f"First few values: {str(comparison_dict['right_only'][:100])}..."
+                )
             
     else:
         if left_on == 'index' and right_on == 'index':
