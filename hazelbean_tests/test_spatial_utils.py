@@ -129,17 +129,17 @@ class DataStructuresTester(TestCase):
         p.data_credentials_path = None
         p.input_bucket_name = 'gtap_invest_seals_2023_04_21'
         
-        test_path = p.get_path('cartographic/gadm/gadm_410_adm0_labels_test.csv', verbose=True)
+        test_path = p.get_path('cartographic/gadm/gadm_410_adm0_labels.csv', verbose=True)
         df = pd.read_csv(test_path)
         assert len(df) > 0
         hb.remove_path(test_path)
         
-        # Now try it WITH credentials
-        p.data_credentials_path = p.get_path('api_key_credentials.json')
-        test_path = p.get_path('cartographic/gadm/gadm_410_adm0_labels_test.csv', verbose=True)
-        df = pd.read_csv(test_path)
-        assert len(df) > 0
-        hb.remove_path(test_path)        
+        # Now try it WITH credentials # DEACTIVATED bECAUSE I GOT RID OF THE API KEY in the root
+        # p.data_credentials_path = p.get_path('api_key_credentials.json')
+        # test_path = p.get_path('cartographic/gadm/gadm_410_adm0_labels.csv', verbose=True)
+        # df = pd.read_csv(test_path)
+        # assert len(df) > 0
+        # hb.remove_path(test_path)        
         
         
 
