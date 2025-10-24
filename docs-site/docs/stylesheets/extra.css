@@ -1,0 +1,126 @@
+/* Custom styles for Hazelbean documentation */
+
+/* Enhanced code block styling */
+.highlight {
+  border-radius: 4px;
+  margin: 1rem 0;
+}
+
+/* Improve table readability */
+.md-typeset table:not([class]) {
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  border-radius: 4px;
+}
+
+/* Custom admonition styling for test results */
+.md-typeset .admonition.test-pass {
+  border-color: #4caf50;
+}
+
+.md-typeset .admonition.test-fail {
+  border-color: #f44336;
+}
+
+.md-typeset .admonition.benchmark {
+  border-color: #2196f3;
+}
+
+/* Enhanced navigation for deep content structure */
+.md-nav__item--nested > .md-nav__link {
+  font-weight: 600;
+}
+
+/* Code copy button improvements */
+.md-clipboard {
+  transition: opacity 0.2s ease;
+}
+
+/* Enhanced search results */
+.md-search-result__article {
+  border-radius: 4px;
+  margin: 0.5rem 0;
+}
+
+/* Ensure bullet points are always visible in test documentation */
+.md-typeset ul li {
+  list-style-type: disc !important;
+  margin-left: 1.2em;
+}
+
+.md-typeset ul {
+  padding-left: 0;
+}
+
+/* Collapsible helper methods styling */
+.helper-methods-section {
+  margin: 1em 0;
+  border: 1px solid var(--md-default-fg-color--lighter);
+  border-radius: 4px;
+}
+
+.helper-methods-section summary {
+  padding: 0.75em 1em;
+  background-color: var(--md-code-bg-color);
+  cursor: pointer;
+  font-weight: 500;
+  user-select: none;
+  list-style: none; /* Remove default marker */
+  position: relative;
+}
+
+.helper-methods-section summary:hover {
+  background-color: var(--md-accent-fg-color--transparent);
+}
+
+.helper-methods-section[open] summary {
+  border-bottom: 1px solid var(--md-default-fg-color--lighter);
+}
+
+/* Hide default disclosure triangle */
+.helper-methods-section summary::-webkit-details-marker {
+  display: none;
+}
+
+.helper-methods-section summary::marker {
+  display: none;
+}
+
+/* Custom chevron - pointing up when closed, down when open */
+.helper-methods-section summary::before {
+  content: '▲'; /* Up arrow when closed */
+  display: inline-block;
+  margin-right: 0.5em;
+  font-size: 0.8em;
+  color: var(--md-accent-fg-color);
+  transition: transform 0.2s ease;
+}
+
+/* Rotate chevron down when opened */
+.helper-methods-section[open] summary::before {
+  content: '▼'; /* Down arrow when open */
+}
+
+.helper-methods-content {
+  padding: 1em;
+}
+
+/* Hide helper methods by default, will be moved into collapsible sections by JS */
+h3[id*="setUp"],
+h3[id*="tearDown"], 
+h3[id*="delete_on_finish"],
+h4[id*="setUp"],
+h4[id*="tearDown"], 
+h4[id*="delete_on_finish"],
+div[id*="setUp"],
+div[id*="tearDown"], 
+div[id*="delete_on_finish"] {
+  display: none;
+}
+
+/* Also target by content text */
+h3:has-text("setUp"),
+h3:has-text("tearDown"),
+h4:has-text("setUp"),
+h4:has-text("tearDown") {
+  display: none;
+}

@@ -1,0 +1,26 @@
+
+---
+title: "Hazelbean – get_path Error Handling"
+execute: true
+freeze: auto
+---
+
+## Error Handling Examples
+
+```{python}
+import hazelbean as hb, tempfile
+
+# Test with non-existent file
+with tempfile.TemporaryDirectory() as tmp:
+    p = hb.ProjectFlow(project_dir=tmp)
+
+    # This should work even if file doesn't exist
+    try:
+        path = p.get_path("missing_file.txt")
+        print(f"Resolved path: {path}")
+        print("get_path handles missing files gracefully")
+    except Exception as e:
+        print(f"Error occurred: {e}")
+```
+
+The above demonstrates how `get_path` handles missing files.

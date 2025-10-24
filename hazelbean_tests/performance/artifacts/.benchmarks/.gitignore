@@ -1,0 +1,6 @@
+# Benchmark artifacts - keep directory structure but ignore individual benchmark files
+*.json
+!.gitignore
+
+# Keep a sample benchmark file for reference if needed
+!sample.json

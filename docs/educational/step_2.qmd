@@ -1,0 +1,208 @@
+---
+title: "Data Loading and File Discovery - Hazelbean Tutorial"
+format: 
+  html:
+    toc: true
+    toc-depth: 2
+    code-fold: false
+    code-tools: true
+execute:
+  eval: false
+  echo: true
+  freeze: auto
+  error: true
+---
+
+<!-- Navigation breadcrumbs -->
+<div class="navigation-breadcrumbs">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="../index.html">Hazelbean Documentation</a></li>
+      <li class="breadcrumb-item"><a href="index.html">Educational Tutorials</a></li>
+      <li class="breadcrumb-item active" aria-current="page">Data Loading and File Discovery</li>
+    </ol>
+  </nav>
+</div>
+
+# Data Loading and File Discovery
+
+<div class="tutorial-metadata">
+  **Learning Time:** 10 minutes  
+  **Prerequisites:** [Setting Up a Hazelbean Project](step_1.html)  
+  **Source File:** `examples/step_2_data_loading.py`
+</div>
+
+## Overview
+
+Understand intelligent file discovery and data loading with Hazelbean
+
+::: {.callout-note}
+## 🎯 Learning Objectives
+
+This tutorial will help you understand:
+
+
+- **Get_path**: Core concepts and practical application
+
+- **Raster Loading**: Core concepts and practical application
+
+- **File Discovery**: Core concepts and practical application
+
+
+**💻 Hands-on Learning:** Each code block is executable - run them step-by-step to build understanding progressively.
+:::
+
+
+### Key Concepts
+
+
+- **Get_path**: Intelligent file discovery system that searches multiple data locations automatically
+
+- **Raster Loading**: Important concept for effective Hazelbean workflows
+
+- **File Discovery**: Important concept for effective Hazelbean workflows
+
+
+
+
+## Tutorial
+
+::: {.callout-tip}
+## 🚀 Getting Started
+
+1. Make sure you have the Hazelbean environment activated  
+2. Run each code block in order to see the functionality in action
+3. Try modifying parameters to experiment with different results
+4. Refer back to the Key Concepts if you need clarification
+
+**📁 Working Directory:** This tutorial assumes you're running from the project root directory.
+:::
+
+### Complete Example
+
+The following code demonstrates the complete workflow for this step:
+
+```python
+#| echo: true
+
+"""
+Demonstrates intelligent file location and basic raster loading.
+"""
+
+# Initialize project (builds on step 1)
+p = hb.ProjectFlow('hazelbean_tutorial')
+
+print("=== Hazelbean Data Loading Demo ===")
+print()
+
+# Demonstrate get_path() - Hazelbean's intelligent file finder
+print("=== Intelligent File Discovery with get_path() ===")
+
+# Try to find a test raster (get_path searches multiple locations)
+try:
+    raster_path = p.get_path('tests/ee_r264_ids_900sec.tif')
+    # Verify the file actually exists
+    if hb.path_exists(raster_path):
+        print(f"✓ Found raster: {raster_path}")
+        found_raster = True
+    else:
+        raise FileNotFoundError("Path found but file doesn't exist")
+except:
+    print("✗ Test raster not found, using alternative...")
+    # Fallback to any available data
+    try:
+        raster_path = p.get_path('pyramids/ha_per_cell_900sec.tif')
+        if hb.path_exists(raster_path):
+            print(f"✓ Found alternative raster: {raster_path}")
+            found_raster = True
+        else:
+            raise FileNotFoundError("Alternative path found but file doesn't exist")
+    except:
+        print("✗ No sample raster found in data directories")
+        found_raster = False
+
+if found_raster:
+    print()
+    print("=== Loading and Examining Raster Data ===")
+
+    # Load raster information without reading full data
+    raster_info = hb.get_raster_info_hb(raster_path)
+
+    print(f"Raster size: {raster_info['raster_size']} (width x height)")
+    print(f"Pixel size: {raster_info['pixel_size']}")
+    print(f"Number of bands: {raster_info['n_bands']}")
+    print(f"Data type: {raster_info.get('datatype', 'Unknown')}")
+    print(f"NoData value: {raster_info['ndv']}")
+
+    # Load raster data as numpy array
+    print()
+    print("=== Loading Raster as Array ===")
+    raster_array = hb.as_array(raster_path)
+
+    print(f"Array shape: {raster_array.shape}")
+    print(f"Array data type: {raster_array.dtype}")
+    print(f"Min value: {np.nanmin(raster_array):.2f}")
+    print(f"Max value: {np.nanmax(raster_array):.2f}")
+    print(f"Mean value: {np.nanmean(raster_array):.2f}")
+
+else:
+    print()
+    print("=== Alternative: Create Sample Data ===")
+    print("When sample data isn't available, you can create test arrays:")
+
+    # Create a simple test array
+    test_array = np.random.rand(100, 100) * 1000
+    print(f"Created test array shape: {test_array.shape}")
+    print(f"Test array range: {test_array.min():.1f} to {test_array.max():.1f}")
+
+print()
+print("🎉 Data loading complete!")
+print("Next: Run step_3_basic_processing.py to learn raster operations")
+```
+
+### Step-by-Step Breakdown
+
+
+
+## Expected Output
+
+When you run this tutorial, you should see output similar to:
+
+```
+Tutorial execution completed successfully.
+```
+
+## Learning Tips
+
+::: {.callout-tip}
+## 📚 Try This Next
+
+- Modify the example parameters to see how results change
+- Combine concepts from this step with previous tutorials
+- Experiment with your own data using the same patterns
+
+- Continue to [Basic Processing Operations](step_3.html) for the next learning step
+
+
+**🔍 Troubleshooting:** If you encounter issues, check that your environment is properly activated and all required data files are accessible.
+:::
+
+## Navigation
+
+<div class="tutorial-navigation">
+
+  <a href="step_1.html" class="btn btn-outline-primary">← Previous: Setting Up a Hazelbean Project</a>
+
+
+  <a href="step_3.html" class="btn btn-primary">Next: Basic Processing Operations →</a>
+
+</div>
+
+---
+
+<div class="footer-info">
+  <small>
+    Generated from: `examples/step_2_data_loading.py`  
+    Last updated: 2025-09-17 08:26:16
+  </small>
+</div>

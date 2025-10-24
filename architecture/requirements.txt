@@ -1,0 +1,7 @@
+# Requirements for generating architecture diagrams
+graphviz>=0.20.0
+
+# Note: You also need the system Graphviz installation:
+# macOS: brew install graphviz
+# Ubuntu/Debian: sudo apt-get install graphviz
+# Windows: Download from https://graphviz.org/download/

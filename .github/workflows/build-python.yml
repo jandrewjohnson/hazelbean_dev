@@ -42,15 +42,18 @@ jobs:
             fail-fast: false
             matrix:
                 os: [ubuntu-latest, windows-latest, macos-latest]
-                python-version: [3.9, "3.10", "3.11", "3.12", "3.13"]
+                python-version: ["3.10", "3.11", "3.12", "3.13"]
         steps:
             - uses: actions/checkout@v4
               with:
                   fetch-depth: 0
             - name: Set up Python ${{ matrix.python-version }}
-              uses: mamba-org/setup-micromamba@v1
+              uses: mamba-org/setup-micromamba@v2
               with:
-                  environment-name: env
+                  environment-file: environment.yml
+                  environment-name: hazelbean_env
+                  cache-environment: true
+                  cache-downloads: true
                   create-args: >-
                       python=${{ matrix.python-version }}
                       python-build
@@ -80,9 +83,12 @@ jobs:
               with:
                   fetch-depth: 0
             - name: Set up Python 3.12
-              uses: mamba-org/setup-micromamba@v1
+              uses: mamba-org/setup-micromamba@v2
               with:
-                  environment-name: env
+                  environment-file: environment.yml
+                  environment-name: hazelbean_env
+                  cache-environment: true
+                  cache-downloads: true
                   create-args: >-
                       python=3.12
                       python-build
