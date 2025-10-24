@@ -1,0 +1,21 @@
+# Generated diagram files (can be regenerated from source)
+*.png
+*.svg
+*.pdf
+
+# Keep the DOT source file and generation script
+!hazelbean_architecture.dot
+!generate_diagram.py
+!README.md
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Temporary files
+*.tmp
+*.temp
+.DS_Store

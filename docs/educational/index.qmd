@@ -1,0 +1,235 @@
+---
+title: "Hazelbean Educational Tutorials - Learning Path"
+format: 
+  html:
+    toc: true
+    toc-depth: 2
+    code-fold: false
+execute:
+  eval: false
+  echo: false
+---
+
+# Hazelbean Educational Tutorials
+
+Welcome to the Hazelbean educational tutorial series! This progressive learning path will guide you from basic project setup through advanced geospatial analysis workflows.
+
+## 🎯 Learning Path Overview
+
+This tutorial series is designed to take you from beginner to confident Hazelbean user through hands-on, practical examples. Each tutorial builds on the previous ones, creating a comprehensive understanding of the library's capabilities.
+
+::: {.callout-important}
+## 📋 Prerequisites
+
+Before starting these tutorials, make sure you have:
+
+- Basic Python programming knowledge
+- Hazelbean environment properly installed and activated
+- Access to the sample data files included with Hazelbean
+- 60-90 minutes total time for complete series
+
+**💡 Pro Tip:** You can complete tutorials individually, but following the sequence provides the best learning experience.
+:::
+
+## 📚 Tutorial Sequence
+
+<div class="tutorial-sequence">
+
+
+### 1. [Setting Up a Hazelbean Project](step_1.html)
+
+**Time Required:** 5 minutes  
+**Focus Areas:** ProjectFlow, directory setup, project initialization
+
+Learn how to initialize a Hazelbean ProjectFlow for organized geospatial workflows
+
+
+**Key Learning Points:**
+
+- Projectflow
+
+- Directory Setup
+
+- Project Initialization
+
+
+
+<div class="tutorial-links">
+  <a href="step_1.html" class="btn btn-primary">Start Tutorial →</a>
+</div>
+
+---
+
+
+### 2. [Data Loading and File Discovery](step_2.html)
+
+**Time Required:** 10 minutes  
+**Focus Areas:** get_path, raster loading, file discovery
+
+Understand intelligent file discovery and data loading with Hazelbean
+
+
+**Key Learning Points:**
+
+- Get_path
+
+- Raster Loading
+
+- File Discovery
+
+
+
+<div class="tutorial-links">
+  <a href="step_2.html" class="btn btn-primary">Start Tutorial →</a>
+</div>
+
+---
+
+
+### 3. [Basic Processing Operations](step_3.html)
+
+**Time Required:** 15 minutes  
+**Focus Areas:** raster operations, transformations, coordinate systems
+
+Perform basic raster transformations and processing operations
+
+
+**Key Learning Points:**
+
+- Raster Operations
+
+- Transformations
+
+- Coordinate Systems
+
+
+
+<div class="tutorial-links">
+  <a href="step_3.html" class="btn btn-primary">Start Tutorial →</a>
+</div>
+
+---
+
+
+### 4. [Spatial Analysis](step_4.html)
+
+**Time Required:** 20 minutes  
+**Focus Areas:** spatial analysis, multi-raster operations, statistics
+
+Implement spatial analysis workflows and combine multiple datasets
+
+
+**Key Learning Points:**
+
+- Spatial Analysis
+
+- Multi-Raster Operations
+
+- Statistics
+
+
+
+<div class="tutorial-links">
+  <a href="step_4.html" class="btn btn-primary">Start Tutorial →</a>
+</div>
+
+---
+
+
+### 5. [Export Results](step_5.html)
+
+**Time Required:** 10 minutes  
+**Focus Areas:** results export, project organization, output management
+
+Save processed results and organize outputs in project structure
+
+
+**Key Learning Points:**
+
+- Results Export
+
+- Project Organization
+
+- Output Management
+
+
+
+<div class="tutorial-links">
+  <a href="step_5.html" class="btn btn-primary">Start Tutorial →</a>
+</div>
+
+---
+
+
+
+</div>
+
+## 🗺️ Learning Progression
+
+```mermaid
+flowchart TD
+    A[Project Setup<br/>5 min] --> B[Data Loading<br/>10 min]
+    B --> C[Basic Processing<br/>15 min]  
+    C --> D[Spatial Analysis<br/>20 min]
+    D --> E[Export Results<br/>10 min]
+    
+    A -.-> F[ProjectFlow Concepts]
+    B -.-> G[File Discovery System]  
+    C -.-> H[Raster Operations]
+    D -.-> I[Analysis Workflows]
+    E -.-> J[Output Management]
+```
+
+## 🚀 Quick Start
+
+Ready to begin? Here's how to get the most from these tutorials:
+
+1. **Start with Tutorial 1** - Even experienced users benefit from understanding Hazelbean's project organization
+2. **Run code step-by-step** - Don't just read, execute the examples to see results
+3. **Experiment freely** - Try modifying parameters and inputs to see how things change
+4. **Build progressively** - Each tutorial introduces concepts used in later ones
+
+::: {.callout-tip}
+## 💡 Learning Tips
+
+- **Keep a notebook** - Jot down insights and questions as you work through examples
+- **Use real data** - Once comfortable, try applying concepts to your own datasets  
+- **Join the community** - Connect with other Hazelbean users for support and advanced tips
+- **Reference documentation** - Use these tutorials alongside the full API documentation
+
+**Time Investment:** Plan about 60-90 minutes total for the complete series, or tackle individual tutorials as needed.
+:::
+
+## 🎓 Learning Outcomes
+
+After completing this tutorial series, you will be able to:
+
+- **Initialize and manage** Hazelbean projects with proper organization
+- **Load and discover** geospatial data using intelligent file resolution
+- **Process and transform** raster data for analysis workflows
+- **Conduct spatial analysis** combining multiple datasets effectively
+- **Export and organize** results following best practices
+- **Apply these patterns** to your own geospatial analysis projects
+
+## 📖 Additional Resources
+
+### Getting Help
+- **[Generation Guide](../../examples/README.md)** - How to regenerate and modify these tutorials
+- **Hazelbean Documentation** - Complete API reference and advanced guides
+- **Community Forum** - Connect with other users and developers
+- **GitHub Issues** - Report bugs or request features
+
+### Sample Data
+All tutorials use sample data included with Hazelbean. The intelligent file discovery system will locate these automatically, but you can also find them in:
+- `data/tests/` - Basic test datasets
+- `data/pyramids/` - Multi-resolution examples
+- `data/cartographic/` - Real-world geospatial data
+
+---
+
+<div class="footer-info">
+  <small>
+    Educational content generated: 2025-09-17 08:26:16  
+    Source examples: `examples/step_*.py`
+  </small>
+</div>

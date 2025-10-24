@@ -1,0 +1,86 @@
+// Hazelbean Architecture
+digraph hazelbean_architecture {
+	dpi=300 rankdir=TB size="16,12"
+	node [fontname=Arial shape=box style="rounded,filled"]
+	edge [fontname=Arial fontsize=10]
+	subgraph cluster_ui {
+		color="#E8F4FD" label="User Interface Layer" style=filled
+		jupyter [label="Jupyter\nNotebooks" color="#E8F4FD"]
+		cli [label="CLI Tools\n(cli.py)" color="#E8F4FD"]
+		gui [label="Qt GUI\n(ui/)" color="#E8F4FD"]
+		api [label="Python API\n(import hazelbean)" color="#E8F4FD"]
+	}
+	subgraph cluster_projectflow {
+		color="#FFF2CC" fontcolor=red label="ProjectFlow Management Layer (🎯 Testing Focus)" style=filled
+		projectflow [label="ProjectFlow Object\n• Task orchestration\n• Directory management\n• Dependency resolution" color="#FFF2CC" style="filled,bold"]
+		get_path [label="get_path() System\n• Local file resolution\n• Cloud storage integration\n• Base data hierarchy" color="#FFEBEE" style="filled,bold"]
+		task_mgmt [label="Task Management\n• add_task()\n• run_task()\n• Parallel execution" color="#FFF2CC" style="filled,bold"]
+		tiling [label="Tiling Iterator\n• Spatial chunking\n• Parallel processing\n• Memory management" color="#FFEBEE" style="filled,bold"]
+	}
+	subgraph cluster_processing {
+		color="#E1F5FE" label="Geospatial Processing Layer" style=filled
+		raster [label="Raster Operations\n• pyramids.py\n• cog.py\n• pog.py" color="#E1F5FE"]
+		vector [label="Vector Operations\n• vector.py\n• geoprocessing_extension.py" color="#E1F5FE"]
+		spatial [label="Spatial Utilities\n• spatial_utils.py\n• spatial_projection.py" color="#E1F5FE"]
+		file_io [label="File I/O\n• file_io.py\n• Format conversion" color="#E1F5FE"]
+	}
+	subgraph cluster_data {
+		color="#F3E5F5" label="Data Structure & Analysis Layer" style=filled
+		arrayframe [label="ArrayFrame\n• Spatial DataFrames\n• Geo-aware operations" color="#F3E5F5"]
+		stats [label="Statistics\n• stats.py\n• RegressionFrame" color="#F3E5F5"]
+		calc_core [label="Calculation Core\n• Cython functions\n• High-performance ops" color="#F3E5F5"]
+		viz [label="Visualization\n• matplotlib integration\n• seaborn, cartopy" color="#F3E5F5"]
+	}
+	subgraph cluster_external {
+		color="#EFEBE9" label="External Dependencies" style=filled
+		gdal [label="GDAL/OGR\nGeopandas\nShapely" color="#EFEBE9"]
+		numpy [label="NumPy/SciPy\nPandas\nXarray" color="#EFEBE9"]
+		cloud [label="Google Cloud\n• Storage\n• Authentication" color="#FFEBEE" style="filled,bold"]
+		parallel [label="Parallel Computing\n• TaskGraph\n• multiprocessing\n• Dask" color="#EFEBE9"]
+	}
+	subgraph cluster_testing {
+		color="#FFEBEE" fontcolor=red label="Testing Infrastructure (🚀 Sprint Goal)" style=filled
+		pytest [label="pytest Framework\n• pytest-benchmark\n• pytest-cov\n• Coverage reporting" color="#FFEBEE" style="filled,bold"]
+		vignettes [label="Quarto Vignettes\n• .qmd generation\n• Educational docs\n• Static parsing" color="#FFEBEE" style="filled,bold"]
+		ci_cd [label="CI/CD Pipeline\n• GitHub Actions\n• Quality gates\n• Automated testing" color="#FFEBEE" style="filled,bold"]
+	}
+	subgraph cluster_core {
+		color="#E8F5E8" label="Core Utilities" style=filled
+		config [label="Configuration\n• config.py\n• globals.py" color="#E8F5E8"]
+		utils [label="General Utils\n• utils.py\n• os_utils.py" color="#E8F5E8"]
+		logging [label="Logging System\n• Custom loggers\n• Performance timing" color="#E8F5E8"]
+	}
+	jupyter -> projectflow [label=uses]
+	cli -> projectflow [label=uses]
+	gui -> projectflow [label=uses]
+	api -> projectflow [label=uses]
+	projectflow -> get_path [label=manages color=red style=bold]
+	projectflow -> task_mgmt [label=orchestrates color=red style=bold]
+	projectflow -> tiling [label=controls color=red style=bold]
+	get_path -> cloud [label=resolves color=red style=bold]
+	task_mgmt -> raster [label=executes]
+	task_mgmt -> vector [label=executes]
+	task_mgmt -> spatial [label=executes]
+	tiling -> raster [label=chunks color=red]
+	tiling -> parallel [label=parallelizes color=red]
+	raster -> arrayframe [label=creates]
+	vector -> arrayframe [label=creates]
+	arrayframe -> stats [label=analyzes]
+	arrayframe -> viz [label=visualizes]
+	get_path -> file_io [label=locates color=red style=bold]
+	file_io -> raster [label=loads]
+	file_io -> vector [label=loads]
+	raster -> gdal [label="depends on"]
+	vector -> gdal [label="depends on"]
+	arrayframe -> numpy [label="depends on"]
+	stats -> numpy [label="depends on"]
+	calc_core -> numpy [label=accelerates]
+	projectflow -> config [label=configures]
+	projectflow -> utils [label=utilizes]
+	projectflow -> logging [label="logs to"]
+	pytest -> projectflow [label=tests color=red style=bold]
+	pytest -> get_path [label=validates color=red style=bold]
+	pytest -> tiling [label=benchmarks color=red style=bold]
+	vignettes -> pytest [label=documents color=red style=bold]
+	ci_cd -> pytest [label=automates color=red style=bold]
+}

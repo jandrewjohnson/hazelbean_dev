@@ -1,0 +1,49 @@
+================================================================================
+HAZELBEAN PERFORMANCE BENCHMARK REPORT
+================================================================================
+Generated: 2025-09-18 07:43:17
+Total benchmarks analyzed: 94
+
+TILING OPERATIONS PERFORMANCE:
+----------------------------------------
+Number of tiling benchmarks: 3
+Mean execution time: 0.0373s
+Median execution time: 0.0377s
+Min execution time: 0.0281s
+Max execution time: 0.0460s
+Standard deviation: 0.0089s
+
+Slowest tiling operations:
+
+  1. test_medium_raster_tiling_benchmark: 0.0460s
+  2. test_large_raster_tiling_benchmark: 0.0377s
+  3. test_small_raster_tiling_benchmark: 0.0281s
+
+PATH RESOLUTION PERFORMANCE:
+----------------------------------------
+Number of path resolution benchmarks: 32
+Mean execution time: 0.0001s
+Median execution time: 0.0001s
+Min execution time: 0.0000s
+Max execution time: 0.0002s
+Standard deviation: 0.0001s
+
+PERFORMANCE RECOMMENDATIONS:
+----------------------------------------
+Identified 7 benchmarks significantly slower than average:
+
+  • Consider optimizing: test_small_raster_tiling_benchmark
+    Current: 0.0281s (Average: 0.0116s)
+  • Consider optimizing: test_medium_raster_tiling_benchmark
+    Current: 0.0460s (Average: 0.0116s)
+  • Consider optimizing: test_large_raster_tiling_benchmark
+    Current: 0.0377s (Average: 0.0116s)
+
+SUMMARY:
+--------------------
+Overall mean execution time: 0.0116s
+Performance variability (std dev): 0.0491s
+Fastest benchmark: 0.0000s
+Slowest benchmark: 0.4383s
+
+================================================================================

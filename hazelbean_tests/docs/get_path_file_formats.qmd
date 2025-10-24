@@ -1,0 +1,33 @@
+
+---
+title: "Hazelbean – get_path File Format Support"
+execute: true
+freeze: auto
+---
+
+## Supported File Formats
+
+```{python}
+import hazelbean as hb, tempfile, os
+
+with tempfile.TemporaryDirectory() as tmp:
+    p = hb.ProjectFlow(project_dir=tmp)
+
+    # Test different file extensions
+    file_types = [
+        "data.csv",
+        "raster.tif", 
+        "vector.shp",
+        "config.json",
+        "script.py",
+        "document.txt"
+    ]
+
+    print("Testing file format resolution:")
+    for file_type in file_types:
+        path = p.get_path(file_type)
+        print(f"  {file_type} -> {os.path.basename(path)}")
+```
+
+The `get_path` method works with various file formats commonly used
+in geospatial and scientific computing workflows.

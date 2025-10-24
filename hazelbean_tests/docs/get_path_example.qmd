@@ -1,0 +1,17 @@
+
+---
+title: "Hazelbean example – get_path"
+execute: true          # run the chunk when rendering
+freeze: auto
+---
+
+```{python}
+import hazelbean as hb, tempfile, os
+with tempfile.TemporaryDirectory() as tmp:
+    p = hb.ProjectFlow(project_dir=tmp)
+    print(p.get_path("foo.txt"))
+```
+
+Above we create a throw-away project directory and ask Hazelbean for
+`"foo.txt"`.  The printed path shows how *get_path* resolves files relative
+to the project workspace.

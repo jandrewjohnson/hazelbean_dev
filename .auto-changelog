@@ -1,0 +1,15 @@
+{
+  "template": "compact",
+  "title": "Hazelbean Changelog",
+  "description": "All notable changes to this project will be documented in this file.",
+  "unreleased": true,
+  "output": "CHANGELOG.md",
+  "remote": "github.com",
+  "commit-limit": false,
+  "backfillLimit": false,
+  "tag-prefix": "v",
+  "sort-commits": "date",
+  "hide-credit": true,
+  "starting-commit": "v1.6.7"
+}
+

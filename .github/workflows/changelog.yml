@@ -1,0 +1,66 @@
+name: Update Changelog
+
+on:
+  release:
+    types: [published]
+
+defaults:
+  run:
+    shell: bash -l {0}
+
+jobs:
+  update-changelog:
+    name: Generate and commit changelog
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history needed for changelog generation
+          ref: main       # Checkout main branch
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+      
+      - name: Install auto-changelog
+        run: |
+          pip install auto-changelog>=0.6.0
+      
+      - name: Generate changelog
+        run: |
+          chmod +x scripts/generate_changelog.sh
+          ./scripts/generate_changelog.sh
+      
+      - name: Check if changelog changed
+        id: changelog_check
+        run: |
+          if git diff --quiet CHANGELOG.md; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "No changes to CHANGELOG.md"
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "CHANGELOG.md has changes"
+          fi
+      
+      - name: Commit and push changelog
+        if: steps.changelog_check.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md
+          git commit -m "docs: update changelog for ${{ github.event.release.tag_name }}"
+          git push origin main
+      
+      - name: Summary
+        run: |
+          if [[ "${{ steps.changelog_check.outputs.changed }}" == "true" ]]; then
+            echo "✅ Changelog updated and committed to main branch"
+          else
+            echo "ℹ️ No changelog changes needed"
+          fi
+

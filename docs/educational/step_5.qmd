@@ -1,0 +1,284 @@
+---
+title: "Export Results - Hazelbean Tutorial"
+format: 
+  html:
+    toc: true
+    toc-depth: 2
+    code-fold: false
+    code-tools: true
+execute:
+  eval: false
+  echo: true
+  freeze: auto
+  error: true
+---
+
+<!-- Navigation breadcrumbs -->
+<div class="navigation-breadcrumbs">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="../index.html">Hazelbean Documentation</a></li>
+      <li class="breadcrumb-item"><a href="index.html">Educational Tutorials</a></li>
+      <li class="breadcrumb-item active" aria-current="page">Export Results</li>
+    </ol>
+  </nav>
+</div>
+
+# Export Results
+
+<div class="tutorial-metadata">
+  **Learning Time:** 10 minutes  
+  **Prerequisites:** [Spatial Analysis](step_4.html)  
+  **Source File:** `examples/step_5_export_results.py`
+</div>
+
+## Overview
+
+Save processed results and organize outputs in project structure
+
+::: {.callout-note}
+## 🎯 Learning Objectives
+
+This tutorial will help you understand:
+
+
+- **Results Export**: Core concepts and practical application
+
+- **Project Organization**: Core concepts and practical application
+
+- **Output Management**: Core concepts and practical application
+
+
+**💻 Hands-on Learning:** Each code block is executable - run them step-by-step to build understanding progressively.
+:::
+
+
+### Key Concepts
+
+
+- **Results Export**: Important concept for effective Hazelbean workflows
+
+- **Project Organization**: Important concept for effective Hazelbean workflows
+
+- **Output Management**: Important concept for effective Hazelbean workflows
+
+
+
+
+## Tutorial
+
+::: {.callout-tip}
+## 🚀 Getting Started
+
+1. Make sure you have the Hazelbean environment activated  
+2. Run each code block in order to see the functionality in action
+3. Try modifying parameters to experiment with different results
+4. Refer back to the Key Concepts if you need clarification
+
+**📁 Working Directory:** This tutorial assumes you're running from the project root directory.
+:::
+
+### Complete Example
+
+The following code demonstrates the complete workflow for this step:
+
+```python
+#| echo: true
+
+"""
+Demonstrates proper result export and project organization.
+"""
+
+# Initialize project (builds on previous steps)
+p = hb.ProjectFlow('hazelbean_tutorial')
+
+print("=== Hazelbean Results Export Demo ===")
+print()
+
+# Create some example results to export
+print("=== Generating Sample Results ===")
+
+# Create a sample analysis result
+rows, cols = 50, 50
+result_array = np.random.rand(rows, cols) * 100
+
+# Create a classification result
+classification = np.random.choice([1, 2, 3], size=(rows, cols), 
+                                p=[0.4, 0.4, 0.2])
+
+print(f"Generated results array: {result_array.shape}")
+print(f"Generated classification: {classification.shape}")
+
+# Set up proper output organization
+print()
+print("=== Organizing Output Structure ===")
+
+# Create timestamped analysis folder
+timestamp = datetime.now().strftime("%Y%m%d_%H%M")
+analysis_dir = os.path.join(p.output_dir, f'tutorial_analysis_{timestamp}')
+
+# Create subdirectories for different output types
+rasters_dir = os.path.join(analysis_dir, 'rasters')
+reports_dir = os.path.join(analysis_dir, 'reports')
+
+for directory in [analysis_dir, rasters_dir, reports_dir]:
+    os.makedirs(directory, exist_ok=True)
+    print(f"✓ Created: {os.path.relpath(directory, p.project_dir)}")
+
+# Export raster results (simulate proper geospatial export)
+print()
+print("=== Exporting Raster Results ===")
+
+# In a real workflow, you'd save with proper geospatial metadata
+# For this tutorial, we'll save as simple arrays with documentation
+
+results_file = os.path.join(rasters_dir, 'analysis_results.npy')
+np.save(results_file, result_array)
+print(f"✓ Saved results array: {os.path.basename(results_file)}")
+
+classification_file = os.path.join(rasters_dir, 'classification.npy')
+np.save(classification_file, classification)
+print(f"✓ Saved classification: {os.path.basename(classification_file)}")
+
+# Create metadata file
+metadata_file = os.path.join(rasters_dir, 'metadata.txt')
+with open(metadata_file, 'w') as f:
+    f.write("Raster Metadata\n")
+    f.write("===============\n")
+    f.write(f"Analysis date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+    f.write(f"Results shape: {result_array.shape}\n")
+    f.write(f"Results range: {result_array.min():.2f} to {result_array.max():.2f}\n")
+    f.write(f"Classification classes: {sorted(np.unique(classification))}\n")
+    f.write("\nClass definitions:\n")
+    f.write("1 = Low values\n")
+    f.write("2 = Medium values\n") 
+    f.write("3 = High values\n")
+
+print(f"✓ Created metadata: {os.path.basename(metadata_file)}")
+
+# Generate comprehensive analysis report
+print()
+print("=== Creating Analysis Report ===")
+
+report_file = os.path.join(reports_dir, 'tutorial_analysis_report.md')
+
+with open(report_file, 'w') as f:
+    f.write("# Hazelbean Tutorial Analysis Report\n\n")
+
+    f.write(f"**Analysis Date:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+    f.write(f"**Project:** {p.project_name}\n\n")
+
+    f.write("## Summary\n\n")
+    f.write("This analysis demonstrates the complete Hazelbean workflow from ")
+    f.write("project setup through result export.\n\n")
+
+    f.write("## Data Processing Steps\n\n")
+    f.write("1. **Project Setup**: Initialized ProjectFlow with organized directories\n")
+    f.write("2. **Data Loading**: Used get_path() for intelligent file discovery\n")
+    f.write("3. **Processing**: Applied transformations and mathematical operations\n")
+    f.write("4. **Analysis**: Performed spatial analysis and multi-raster operations\n")
+    f.write("5. **Export**: Organized and documented results\n\n")
+
+    f.write("## Results Summary\n\n")
+    f.write(f"- **Results Array**: {result_array.shape} pixels\n")
+    f.write(f"- **Value Range**: {result_array.min():.2f} to {result_array.max():.2f}\n")
+    f.write(f"- **Mean Value**: {result_array.mean():.2f}\n")
+    f.write(f"- **Standard Deviation**: {result_array.std():.2f}\n\n")
+
+    f.write("## Classification Results\n\n")
+    for class_val in sorted(np.unique(classification)):
+        count = np.sum(classification == class_val)
+        percent = (count / classification.size) * 100
+        f.write(f"- **Class {class_val}**: {count} pixels ({percent:.1f}%)\n")
+
+    f.write("\n## Files Generated\n\n")
+    f.write("- `rasters/analysis_results.npy` - Main analysis results\n")
+    f.write("- `rasters/classification.npy` - Classification map\n")
+    f.write("- `rasters/metadata.txt` - Raster metadata\n")
+    f.write("- `reports/tutorial_analysis_report.md` - This report\n\n")
+
+    f.write("## Project Structure\n\n")
+    f.write("```\n")
+    f.write(f"{p.project_name}/\n")
+    f.write("├── inputs/           # Input data\n")
+    f.write("├── intermediate/     # Processing files\n") 
+    f.write("└── outputs/          # Final results\n")
+    f.write(f"    └── tutorial_analysis_{timestamp}/\n")
+    f.write("        ├── rasters/  # Geospatial outputs\n")
+    f.write("        └── reports/  # Documentation\n")
+    f.write("```\n\n")
+
+    f.write("## Next Steps\n\n")
+    f.write("- Modify parameters for your own analysis\n")
+    f.write("- Use real geospatial data with coordinate systems\n")
+    f.write("- Integrate with other Hazelbean functions\n")
+    f.write("- Add visualization and plotting\n")
+
+print(f"✓ Generated report: {os.path.basename(report_file)}")
+
+# Create quick summary for console
+print()
+print("=== Project Summary ===")
+print(f"Project name: {p.project_name}")
+print(f"Project directory: {p.project_dir}")
+print(f"Analysis outputs: {os.path.relpath(analysis_dir, p.project_dir)}")
+
+# Count files in each directory
+for subdir, name in [(rasters_dir, 'Rasters'), (reports_dir, 'Reports')]:
+    file_count = len([f for f in os.listdir(subdir) if os.path.isfile(os.path.join(subdir, f))])
+    print(f"{name}: {file_count} files")
+
+print()
+print("🎉 Tutorial complete! You've learned:")
+print("  ✓ ProjectFlow setup and directory management")
+print("  ✓ Intelligent file discovery with get_path()")
+print("  ✓ Basic raster processing and transformations")
+print("  ✓ Spatial analysis and multi-raster operations") 
+print("  ✓ Professional result organization and documentation")
+print()
+print(f"📁 Check your results in: {analysis_dir}")
+print("📖 Read the full report for next steps and customization ideas")
+```
+
+### Step-by-Step Breakdown
+
+
+
+## Expected Output
+
+When you run this tutorial, you should see output similar to:
+
+```
+Tutorial execution completed successfully.
+```
+
+## Learning Tips
+
+::: {.callout-tip}
+## 📚 Try This Next
+
+- Modify the example parameters to see how results change
+- Combine concepts from this step with previous tutorials
+- Experiment with your own data using the same patterns
+
+
+**🔍 Troubleshooting:** If you encounter issues, check that your environment is properly activated and all required data files are accessible.
+:::
+
+## Navigation
+
+<div class="tutorial-navigation">
+
+  <a href="step_4.html" class="btn btn-outline-primary">← Previous: Spatial Analysis</a>
+
+
+</div>
+
+---
+
+<div class="footer-info">
+  <small>
+    Generated from: `examples/step_5_export_results.py`  
+    Last updated: 2025-09-17 08:26:16
+  </small>
+</div>

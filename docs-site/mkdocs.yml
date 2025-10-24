@@ -1,0 +1,212 @@
+site_name: Hazelbean Documentation
+site_description: Comprehensive documentation for the Hazelbean geospatial Python library
+site_url: https://jandrewjohnson.github.io/hazelbean_dev/  # GitHub Pages URL
+
+# Repository information
+repo_name: jandrewjohnson/hazelbean_dev
+repo_url: https://github.com/jandrewjohnson/hazelbean_dev
+
+# Theme configuration with full Material features
+theme:
+  name: material
+  features:
+    # Navigation enhancements
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - navigation.indexes
+    - navigation.footer
+    
+    # Search enhancements
+    - search.highlight
+    - search.share
+    - search.suggest
+    
+    # Content enhancements  
+    - content.code.copy
+    - content.code.annotate
+    - content.code.select
+    - content.tooltips
+    
+    # Table of contents
+    - toc.follow
+    - toc.integrate
+    
+  palette:
+    # Light mode
+    - scheme: default
+      primary: blue
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Dark mode
+    - scheme: slate
+      primary: indigo
+      accent: blue
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+        
+  font:
+    text: Roboto
+    code: Roboto Mono
+
+# Plugin configuration
+plugins:
+  - search:
+      separator: '[\s\-,:!=\[\]()"/]+|(?!\b)(?=[A-Z][a-z])|\.(?!\d)|&[lg]t;'
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [".."]  # Relative path to hazelbean_dev root (GitHub Pages compatible)
+          options:
+            # Display options for test documentation
+            show_source: true
+            show_root_heading: false
+            show_root_toc_entry: false
+            show_bases: true
+            show_inheritance_diagram: false
+            
+            # Content options optimized for tests
+            merge_init_into_class: true
+            docstring_style: google
+            docstring_options:
+              ignore_init_summary: true
+              trim_doctest_flags: true
+              
+            # Signature options enhanced for test methods
+            show_signature_annotations: true
+            separate_signature: true
+            line_length: 100
+            show_symbol_type_heading: false
+            show_symbol_type_toc: false
+            
+            # Member options focused on test functions only
+            show_docstring_attributes: false
+            show_docstring_functions: true
+            show_docstring_classes: false
+            show_docstring_modules: false
+            show_object_full_path: false
+            show_submodules: false
+            
+            # Table of Contents control for test navigation
+            heading_level: 4
+            show_category_heading: false
+            group_by_category: false
+            
+            # Filtering to show ONLY test functions  
+            members_order: source
+            filters: ["^test_", "!^setUp", "!^tearDown", "!^delete_on_finish", "!^setUpClass", "!^tearDownClass"]
+            inherited_members: false
+            show_submodules: false
+            members: true
+            
+            # Test-specific enhancements
+            show_if_no_docstring: true
+            annotations_path: brief
+            preload_modules: [pytest, hazelbean]
+
+# Navigation structure (comprehensive test documentation)
+nav:
+  - Home: index.md
+  - Educational: 
+    - educational/index.md
+    - Tutorial Examples: educational/examples.md
+  - Tests: 
+    - tests/index.md
+    - Unit Tests: tests/unit.md
+    - Integration Tests: tests/integration.md
+    - Performance Tests: tests/performance.md
+    - System Tests: tests/system.md
+  - Reports: 
+    - reports/index.md
+    - "Live Test Results": reports/test-results.md
+    - "Performance Baselines": reports/performance-baselines.md
+    - "Coverage Analysis": reports/coverage-report.md
+    - "Benchmark Results": reports/benchmark-results.md
+
+# Enhanced markdown extensions
+markdown_extensions:
+  # Python Markdown
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - toc:
+      permalink: true
+      title: On this page
+      toc_depth: 3
+      
+  # Python Markdown Extensions
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+      use_pygments: true
+      pygments_style: default
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.snippets:
+      check_paths: true
+      base_path: docs
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+      combine_header_slug: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+# Additional configuration
+extra:
+  analytics:
+    provider: google
+    property: # Add Google Analytics ID when available
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/hazelbean/hazelbean
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/hazelbean/
+  version:
+    provider: mike
+    default: latest
+    
+extra_css:
+  - stylesheets/extra.css
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - javascripts/helper-methods-collapse.js
+  - https://polyfill.io/v3/polyfill.min.js?features=es6
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+
+# Build settings
+strict: false
+use_directory_urls: true
+dev_addr: '127.0.0.1:8000'
+
+# Watch settings for local development
+watch:
+  - docs/
+  - ../hazelbean/
+  - ../examples/
+  - ../hazelbean_tests/

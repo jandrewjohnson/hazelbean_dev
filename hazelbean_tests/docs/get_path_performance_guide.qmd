@@ -1,0 +1,39 @@
+
+---
+title: "Hazelbean – get_path Performance Guide"
+execute: true
+freeze: auto
+---
+
+## Performance Characteristics
+
+```{python}
+import hazelbean as hb, tempfile, time
+
+with tempfile.TemporaryDirectory() as tmp:
+    p = hb.ProjectFlow(project_dir=tmp)
+
+    # Create a test file
+    test_file = "performance_test.txt"
+    with open(f"{tmp}/{test_file}", 'w') as f:
+        f.write("test content")
+
+    # Benchmark single call
+    start = time.time()
+    path = p.get_path(test_file)
+    single_call_time = time.time() - start
+
+    print(f"Single get_path call: {single_call_time:.6f} seconds")
+    print(f"Resolved path: {path}")
+
+    # Benchmark multiple calls
+    start = time.time()
+    for i in range(100):
+        path = p.get_path(test_file)
+    multiple_calls_time = time.time() - start
+
+    print(f"100 get_path calls: {multiple_calls_time:.6f} seconds")
+    print(f"Average per call: {multiple_calls_time/100:.6f} seconds")
+```
+
+This shows typical performance characteristics of the `get_path` method.

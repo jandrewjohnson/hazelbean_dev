@@ -207,6 +207,7 @@ tests/optional_test_data
 *.mpk
 .idea/
 *.qgz
+.DS_Store
 */.DS_Store
 *.tmp
 *.msi
@@ -217,6 +218,11 @@ tests/optional_test_data
 /.quarto/
 .vscode/launch.json
 .vscode/settings.json
+
+# Development tools
+.cursor/
+.code-captain/
+.migration_checkpoints/
 
 # !/data/*
 !/data/cartographic/ee/ee_r264_ids_300sec.tif
