@@ -126,7 +126,7 @@ class TestPerformanceIntegration(BaseWorkflowPerformanceTest):
         
         # get_path performance
         path_start = time.time()
-        result = self.p.get_path("test_file.txt")
+        result = self.p.get_path("test_file.txt", raise_error_if_fail=False)
         measured_metrics["get_path_single_call"] = time.time() - path_start
         
         # Array operations performance
@@ -552,12 +552,34 @@ class TestPerformanceAggregation(BaseWorkflowPerformanceTest):
             assert analysis["consistency_percentage"] > 50, f"Metric '{metric}' consistency {analysis['consistency_percentage']:.1f}% too low"
     
     def _measure_get_path_performance(self):
-        """Helper method to measure get_path performance"""
+        """Helper method to measure get_path performance with actual files"""
         import time
+        
+        # Create a small set of actual test files in the project directory
+        test_files = []
+        for i in range(10):
+            test_file = os.path.join(self.test_dir, f"perf_get_path_test_{i}.txt")
+            with open(test_file, 'w') as f:
+                f.write(f"test content {i}")
+            test_files.append(f"perf_get_path_test_{i}.txt")
+        
+        # Measure get_path performance on existing files (100 iterations across 10 files)
         start_time = time.time()
         for i in range(100):
-            self.p.get_path(f"test_file_{i}.txt")
-        return time.time() - start_time
+            file_name = test_files[i % 10]  # Rotate through the 10 test files
+            resolved_path = self.p.get_path(file_name)
+            # Verify the path was actually resolved correctly
+            assert os.path.exists(resolved_path), f"get_path should resolve to existing file: {resolved_path}"
+        
+        duration = time.time() - start_time
+        
+        # Cleanup test files
+        for test_file in test_files:
+            file_path = os.path.join(self.test_dir, test_file)
+            if os.path.exists(file_path):
+                os.remove(file_path)
+        
+        return duration
     
     def _measure_array_processing(self):
         """Helper method to measure array processing performance"""

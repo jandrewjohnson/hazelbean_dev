@@ -226,7 +226,7 @@ class TestPathResolutionBenchmarks(BaseFunctionPerformanceTest):
         for path in nonexistent_paths:
             start_time = time.time()
             for _ in range(50):
-                result = self.p.get_path(path)  # Should still return a path
+                result = self.p.get_path(path, raise_error_if_fail=False)  # Return constructed path
             end_time = time.time()
             
             avg_time = (end_time - start_time) / 50

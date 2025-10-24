@@ -1,4 +1,5 @@
 import unittest, os, sys
+import pytest
 import hazelbean as hb
 
 from hazelbean.cog import *
@@ -36,8 +37,12 @@ class TestPOGCompliance(unittest.TestCase):
             self.assertFalse(result, f"{temp_path} is a valid POG")
             
             
+    @pytest.mark.skipif(
+        not os.path.exists(os.path.expanduser("~/Files/base_data/pyramids/ha_per_cell_900sec.tif")),
+        reason="Requires pyramid data files in ~/Files/base_data/ (not available in CI)"
+    )
     def test_make_path_pog_from_non_global_cog(self):
-        """Test make_path_pog"""
+        """Test make_path_pog - requires pyramid reference data"""
 
         with self.subTest(file=self.invalid_cog_path):
             

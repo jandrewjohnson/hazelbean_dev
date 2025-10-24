@@ -135,7 +135,7 @@ class TestGetPathPerformance(BasePerformanceTest):
         start_time = time.time()
         for i in range(call_count):
             for test_file in test_files:
-                resolved_path = self.p.get_path(test_file)
+                resolved_path = self.p.get_path(test_file, raise_error_if_fail=False)
         end_time = time.time()
         
         total_duration = end_time - start_time
@@ -150,9 +150,9 @@ class TestGetPathPerformance(BasePerformanceTest):
         """Benchmark get_path performance for missing files - Target: <0.2 seconds"""
         missing_file = "definitely_does_not_exist.txt"
         
-        # Benchmark missing file resolution
+        # Benchmark missing file resolution (use flag to return constructed path instead of raising error)
         start_time = time.time()
-        resolved_path = self.p.get_path(missing_file)
+        resolved_path = self.p.get_path(missing_file, raise_error_if_fail=False)
         end_time = time.time()
         
         call_duration = end_time - start_time
@@ -167,21 +167,8 @@ class TestGetPathPerformance(BasePerformanceTest):
 class TestSimpleBenchmarks(BasePerformanceTest):
     """Simple working performance benchmarks for testing the system (from test_simple_benchmarks.py)"""
 
-    @pytest.fixture
-    def test_setup(self):
-        """Set up test fixtures"""
-        test_dir = tempfile.mkdtemp()
-        p = hb.ProjectFlow(test_dir)
-        
-        # Create a simple test file
-        test_file_path = os.path.join(test_dir, "test_file.txt")
-        with open(test_file_path, 'w') as f:
-            f.write("test content")
-        
-        yield test_dir, p
-        
-        # Cleanup
-        shutil.rmtree(test_dir, ignore_errors=True)
+    # Note: test_setup fixture removed - was being called directly as a test which is incorrect
+    # The BasePerformanceTest class already provides setUp/tearDown for fixtures
 
     @pytest.mark.benchmark
     def test_array_operations_benchmark(self):
@@ -247,8 +234,8 @@ class TestSimpleBenchmarks(BasePerformanceTest):
             start_time = time.time()
             for i in range(10):
                 p = hb.ProjectFlow(temp_dir)
-                # Basic operation to ensure it's working
-                path = p.get_path("test.txt")
+                # Basic operation to ensure it's working (file may not exist, so use flag)
+                path = p.get_path("test.txt", raise_error_if_fail=False)
             end_time = time.time()
             
             duration = end_time - start_time
