@@ -84,9 +84,10 @@ class TestUtils(unittest.TestCase):
                 
                 # get the value
                 value = row[col]
+                print('about to parse', row, col, value)
                 parsed_value = hb.parse_flex_to_python_object(value)
+                print('parsed_value', row, col, parsed_value)
                 
-                # print('parsed_value', row, col, value, parsed_value)
 
 
 if __name__ == "__main__":
