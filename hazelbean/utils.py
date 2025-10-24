@@ -1263,9 +1263,18 @@ def df_merge(left_input,
         
         if not supress_warnings:
             if len(comparison_dict['left_only']) > 0:
-                hb.log(f'\nWARNING!\nIn hb.df_merge, left had non-shared values in merge-col. N=: {str(len(comparison_dict['left_only']))}. First few values:' + str(comparison_dict['left_only'])[:100] + '...')
+                hb.log(
+                    f"\nWARNING:\nIn hb.df_merge, left had non-shared values in merge-col. "
+                    f"N= {len(comparison_dict['left_only'])}. "
+                    f"First few values: {str(comparison_dict['left_only'][:100])}..."
+                )
+
             if len(comparison_dict['right_only']) > 0:
-                hb.log(f'\nWARNING!\nIn hb.df_merge, left had non-shared values in merge-col. N=: {str(len(comparison_dict['right_only']))}. First few values:' + str(comparison_dict['right_only'])[:100] + '...')
+                hb.log(
+                    f"\nWARNING:\nIn hb.df_merge, right had non-shared values in merge-col. "
+                    f"N= {len(comparison_dict['right_only'])}. "
+                    f"First few values: {str(comparison_dict['right_only'][:100])}..."
+                )
             
     else:
         if left_on == 'index' and right_on == 'index':
@@ -2621,21 +2630,21 @@ def parse_flex_to_python_object(input_df_element, verbose=False):
         is_json = False
         if (input_df_element.startswith('{') and input_df_element.endswith('}')) or (input_df_element.startswith('[') and input_df_element.endswith(']')):
             
-        #     if input_df_element.startswith('{'):
-        #         split_element = input_df_element[1:-1].split(',')
-        #         for i in split_element:
-        #             j = i.split(':')  
-        #             if len(j) > 1:                   
-        #                 for c, k in enumerate(j): # Strip leading and trailing spaces from each element
-        #                     j[c] = j[c].strip()                    
-        #                 # add quotation marks if needed
-        #                 if not j[0].startswith('"') and not j[0].startswith("'"):
-        #                     # no .isdigit() check because json spec says it has to be a string in the keys
-        #                     input_df_element = input_df_element.replace(j[0], '"' + j[0] + '"')
-        #                 if not j[1].startswith('"') and not j[1].startswith("'"):
-        #                     # Check if the first element is numeric
-        #                     if not j[1][0].isdigit():
-        #                         input_df_element = input_df_element.replace(j[1], '"' + j[1] + '"')
+            if input_df_element.startswith('{'):
+                split_element = input_df_element[1:-1].split(',')
+                for i in split_element:
+                    j = i.split(':')  
+                    if len(j) > 1:                   
+                        for c, k in enumerate(j): # Strip leading and trailing spaces from each element
+                            j[c] = j[c].strip()                    
+                        # add quotation marks if needed
+                        if not j[0].startswith('"') and not j[0].startswith("'"):
+                            # no .isdigit() check because json spec says it has to be a string in the keys
+                            input_df_element = input_df_element.replace(j[0], '"' + j[0] + '"')
+                        if not j[1].startswith('"') and not j[1].startswith("'"):
+                            # Check if the first element is numeric
+                            if not j[1][0].isdigit():
+                                input_df_element = input_df_element.replace(j[1], '"' + j[1] + '"')
                                 
                         
             
