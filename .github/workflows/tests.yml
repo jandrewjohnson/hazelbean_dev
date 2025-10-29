@@ -80,6 +80,13 @@ jobs:
               sys.exit(1)
           "
           
+      - name: Set PROJ_LIB environment variable
+        run: |
+          echo "🔧 Setting PROJ_LIB for GDAL..."
+          PROJ_LIB=$(python -c "from pyproj import datadir; print(datadir.get_data_dir())")
+          echo "PROJ_LIB=$PROJ_LIB" >> $GITHUB_ENV
+          echo "✅ PROJ_LIB set to: $PROJ_LIB"
+          
       - name: Install hazelbean package
         run: |
           echo "📦 Installing hazelbean package (builds Cython extensions)..."
@@ -144,6 +151,13 @@ jobs:
           environment-name: hazelbean_env
           cache-environment: true
           cache-downloads: true
+      
+      - name: Set PROJ_LIB environment variable
+        run: |
+          echo "🔧 Setting PROJ_LIB for GDAL..."
+          PROJ_LIB=$(python -c "from pyproj import datadir; print(datadir.get_data_dir())")
+          echo "PROJ_LIB=$PROJ_LIB" >> $GITHUB_ENV
+          echo "✅ PROJ_LIB set to: $PROJ_LIB"
       
       - name: Install hazelbean package
         run: |
