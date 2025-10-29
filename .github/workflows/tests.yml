@@ -48,6 +48,38 @@ jobs:
           python --version
           python -c "import pytest; print('✅ PyTest available')"
           
+      - name: Verify PROJ database
+        run: |
+          echo "🗺️ Verifying PROJ database setup..."
+          python -c "
+          import os
+          import sys
+          from osgeo import osr
+          from pyproj import datadir
+          
+          # Check proj.db exists
+          proj_data_dir = datadir.get_data_dir()
+          proj_db = os.path.join(proj_data_dir, 'proj.db')
+          
+          print(f'PROJ data directory: {proj_data_dir}')
+          print(f'proj.db path: {proj_db}')
+          print(f'proj.db exists: {os.path.exists(proj_db)}')
+          
+          if not os.path.exists(proj_db):
+              print('❌ ERROR: proj.db not found!')
+              print('This usually means proj-data package is not installed.')
+              sys.exit(1)
+          
+          # Test EPSG import works
+          try:
+              srs = osr.SpatialReference()
+              srs.ImportFromEPSG(4326)
+              print('✅ PROJ database verified - EPSG:4326 import successful')
+          except Exception as e:
+              print(f'❌ ERROR: Cannot import EPSG:4326: {e}')
+              sys.exit(1)
+          "
+          
       - name: Install hazelbean package
         run: |
           echo "📦 Installing hazelbean package (builds Cython extensions)..."

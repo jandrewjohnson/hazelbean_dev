@@ -6,6 +6,8 @@ dependencies:
   - geopandas
   - rasterstats
   - netcdf4
+  - proj              # PROJ coordinate transformation library
+  - proj-data         # PROJ database (provides proj.db with CRS definitions)
   - cartopy
   - xlrd
   - markdown
