@@ -26,7 +26,11 @@ if sys.platform == "darwin":
     conda_env_path = sys.prefix
     gdal_subpath = os.path.join('share', 'gdal')
     proj_subpath = os.path.join('share', 'proj')
-else:  # assume windows
+elif sys.platform.startswith('linux'):
+    conda_env_path = sys.prefix
+    gdal_subpath = os.path.join('share', 'gdal')
+    proj_subpath = os.path.join('share', 'proj')
+else:  # windows
     conda_env_path = os.path.split(sys.executable)[0]
     gdal_subpath = os.path.join('Library', 'share', 'gdal')
     proj_subpath = os.path.join('Library', 'share', 'proj')
