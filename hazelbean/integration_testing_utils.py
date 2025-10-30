@@ -14,6 +14,42 @@ from datetime import datetime
 import hazelbean as hb
 
 
+def _import_epsg_with_fallback(srs, epsg_code):
+    """
+    Safely import EPSG code with WGS84 fallback.
+    
+    For EPSG:4326 (WGS84), uses SetWellKnownGeogCS() as fallback which doesn't 
+    require proj.db. This provides resilience if proj.db is missing or inaccessible.
+    
+    Args:
+        srs: osr.SpatialReference object
+        epsg_code: EPSG code as int or string (e.g., 4326 or '4326')
+        
+    Raises:
+        RuntimeError: If EPSG code cannot be imported and no fallback available
+    """
+    # Normalize to int
+    if isinstance(epsg_code, str):
+        if epsg_code.startswith('EPSG:'):
+            epsg_int = int(epsg_code.split(':')[1])
+        else:
+            epsg_int = int(epsg_code)
+    else:
+        epsg_int = int(epsg_code)
+    
+    # Try standard import first
+    try:
+        srs.ImportFromEPSG(epsg_int)
+        return
+    except RuntimeError as e:
+        # If proj.db error and WGS84, use fallback
+        if "proj.db" in str(e) and epsg_int == 4326:
+            srs.SetWellKnownGeogCS("WGS84")
+            return
+        # Otherwise re-raise
+        raise
+
+
 def create_dummy_raster(output_path: str, 
                        width: int, 
                        height: int, 
@@ -59,7 +95,8 @@ def create_dummy_raster(output_path: str,
     
     # Set projection
     srs = osr.SpatialReference()
-    srs.ImportFromEPSG(4326 if projection == 'EPSG:4326' else int(projection.split(':')[1]))
+    epsg_code = 4326 if projection == 'EPSG:4326' else int(projection.split(':')[1])
+    _import_epsg_with_fallback(srs, epsg_code)
     dataset.SetProjection(srs.ExportToWkt())
     
     # Get the band and set nodata value if specified
@@ -159,7 +196,8 @@ def create_dummy_raster_with_pattern(output_path: str,
     
     # Set projection
     srs = osr.SpatialReference()
-    srs.ImportFromEPSG(4326 if projection == 'EPSG:4326' else int(projection.split(':')[1]))
+    epsg_code = 4326 if projection == 'EPSG:4326' else int(projection.split(':')[1])
+    _import_epsg_with_fallback(srs, epsg_code)
     dataset.SetProjection(srs.ExportToWkt())
     
     # Get the band and set nodata value if specified
@@ -264,7 +302,8 @@ def create_dummy_raster_with_known_sum(output_path: str,
     
     # Set projection
     srs = osr.SpatialReference()
-    srs.ImportFromEPSG(4326 if projection == 'EPSG:4326' else int(projection.split(':')[1]))
+    epsg_code = 4326 if projection == 'EPSG:4326' else int(projection.split(':')[1])
+    _import_epsg_with_fallback(srs, epsg_code)
     dataset.SetProjection(srs.ExportToWkt())
     
     # Get the band and set nodata value if specified

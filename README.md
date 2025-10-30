@@ -41,15 +41,20 @@ cd hazelbean_dev
 mamba env create -f environment.yml
 mamba activate hazelbean_env
 
-# 3. Test installation
+# 3. Install hazelbean package (builds Cython extensions)
+pip install -e . --no-deps
+
+# 4. Test installation
 python -c "import hazelbean as hb; print('✅ Hazelbean ready!')"
 
-# 4. Try educational examples
+# 5. Try educational examples
 cd examples && python step_1_project_setup.py
 
-# 5. Explore documentation locally  
+# 6. Explore documentation locally  
 cd docs-site && mkdocs serve  # Visit http://127.0.0.1:8000
 ```
+
+**Note:** The `pip install -e . --no-deps` command installs hazelbean in editable mode and compiles the Cython extensions. The `--no-deps` flag prevents pip from reinstalling conda packages, which is the correct approach for conda+pip hybrid environments.
 
 ### Option 2: Package Only
 
