@@ -2,7 +2,7 @@
 name = "hazelbean"
 description = "Collection of geospatial algorithms, parallel computation utilities and project management tools."
 readme = "README.md"
-requires-python = ">=3.6"  # TODO: verify; assuming 3.6 b/c fstrings
+requires-python = ">=3.10"  # Python 3.9 dropped due to NumPy 2.0 compatibility issues; 3.9 EOL October 2025
 license = { file = "LICENSE" }
 authors = [
         {name = "Justin Andrew Johnson"}
@@ -25,8 +25,7 @@ homepage = "https://github.com/jandrewjohnson/hazelbean_dev"
 [build-system]
 requires = [
         "setuptools>=61", "wheel", "cython>3",
-        'oldest-supported-numpy; python_version<="3.8"',
-        'numpy>=2; python_version>="3.9"',  # numpy 2 only available for 3.9+
+        'numpy>=2',  # Requires Python 3.10+ which all support NumPy 2.0
         'setuptools_scm>=8',
 ]
 build-backend = "setuptools.build_meta"

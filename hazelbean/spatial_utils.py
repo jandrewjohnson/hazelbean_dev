@@ -26,6 +26,43 @@ from osgeo import gdal
 # gdal.PushErrorHandler('CPLQuietErrorHandler')
 # .netcdf.get_cell_size_from_nc_path
 
+
+def _import_epsg_with_fallback(srs, epsg_code):
+    """
+    Safely import EPSG code with WGS84 fallback.
+    
+    For EPSG:4326 (WGS84), uses SetWellKnownGeogCS() as fallback which doesn't 
+    require proj.db. This provides resilience if proj.db is missing or inaccessible.
+    
+    Args:
+        srs: osr.SpatialReference object
+        epsg_code: EPSG code as int or string (e.g., 4326 or '4326')
+        
+    Raises:
+        RuntimeError: If EPSG code cannot be imported and no fallback available
+    """
+    # Normalize to int
+    if isinstance(epsg_code, str):
+        if epsg_code.startswith('EPSG:'):
+            epsg_int = int(epsg_code.split(':')[1])
+        else:
+            epsg_int = int(epsg_code)
+    else:
+        epsg_int = int(epsg_code)
+    
+    # Try standard import first
+    try:
+        srs.ImportFromEPSG(epsg_int)
+        return
+    except RuntimeError as e:
+        # If proj.db error and WGS84, use fallback
+        if "proj.db" in str(e) and epsg_int == 4326:
+            srs.SetWellKnownGeogCS("WGS84")
+            return
+        # Otherwise re-raise
+        raise
+
+
 # # Conditional imports
 # try:
 #     import geoecon as ge
@@ -1215,14 +1252,14 @@ def save_array_as_geotiff(array, out_uri, geotiff_uri_to_match=None, ds_to_match
             if projection_override in hb.common_epsg_codes_by_name:
                 projection_override = hb.common_epsg_codes_by_name[projection_override]
                 srs = osr.SpatialReference()
-                srs.ImportFromEPSG(int(projection_override))
+                _import_epsg_with_fallback(srs, int(projection_override))
                 projection = srs.ExportToWkt()
             else:
                 projection = projection_override # assume then it alreaydy was a wkt
 
         else:
             srs = osr.SpatialReference()
-            srs.ImportFromEPSG(int(projection_override))
+            _import_epsg_with_fallback(srs, int(projection_override))
             projection = srs.ExportToWkt()
 
     if n_cols_override:
@@ -2428,7 +2465,7 @@ def create_vector_from_bounding_box(bounding_box, output_path):
 
     # create the spatial reference, WGS84
     srs = osr.SpatialReference()
-    srs.ImportFromEPSG(4326)
+    _import_epsg_with_fallback(srs, 4326)
 
     # Create the output shapefile
     outDataSource = outDriver.CreateDataSource(output_path)

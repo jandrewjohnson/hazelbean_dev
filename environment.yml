@@ -1,0 +1,56 @@
+name: hazelbean_env
+channels:
+  - conda-forge
+dependencies:
+  - natcap.invest
+  - geopandas
+  - rasterstats
+  - netcdf4
+  - proj              # PROJ coordinate transformation library
+  - proj-data         # PROJ database (provides proj.db with CRS definitions)
+  - cartopy
+  - xlrd
+  - markdown
+  - qtpy
+  - qtawesome
+  - plotly
+  - descartes
+  - pygeoprocessing
+  - taskgraph
+  - cython
+  - rioxarray
+  - dask
+  - google-cloud-datastore
+  - google-cloud-storage
+  - requests
+  - aenum
+  - anytree
+  - statsmodels
+  - openpyxl
+  - seaborn
+  - twine
+  - pyqt
+  - ipykernel
+  - imageio
+  - pandoc
+  - conda
+  - google-api-python-client
+  - ca-certificates
+  - certifi
+  - openssl
+  - google-auth-oauthlib
+  - python-pptx
+  - pytest
+  - pytest-benchmark  # Required for performance smoke tests
+  - pytest-cov        # Required for coverage reporting in workflows
+  - pytest-json-report  # Required for test failure tracking in quality gates
+  - gitpython         # Required for git workflow integration tests
+  - quarto
+  - jupyter
+  - nbformat
+  # Documentation dependencies (pinned to working legacy handler)
+  - mkdocs=1.6.1
+  - mkdocs-material>=9.0.0
+  - mkdocstrings=0.30.1
+  - mkdocstrings-python-legacy=0.2.7  # Using legacy handler (see docs/plans/mkdocs-griffe-import-resolution-fix.md)
+prefix: /opt/homebrew/Caskroom/mambaforge/base/envs/hazelbean_env

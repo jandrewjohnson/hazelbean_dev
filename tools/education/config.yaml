@@ -1,0 +1,64 @@
+# Educational Content Generator Configuration
+# Simple configuration for generating QMD tutorials from Hazelbean educational examples
+
+educational_steps:
+  step_1:
+    title: "Setting Up a Hazelbean Project"
+    file: "examples/step_1_project_setup.py"
+    function: "main"
+    concepts: ["ProjectFlow", "directory setup", "project initialization"]
+    description: "Learn how to initialize a Hazelbean ProjectFlow for organized geospatial workflows"
+    learning_time: "5 minutes"
+    next_step: "step_2"
+  
+  step_2:
+    title: "Data Loading and File Discovery"
+    file: "examples/step_2_data_loading.py"
+    function: "main"
+    concepts: ["get_path", "raster loading", "file discovery"]
+    description: "Understand intelligent file discovery and data loading with Hazelbean"
+    learning_time: "10 minutes"
+    previous_step: "step_1"
+    next_step: "step_3"
+    
+  step_3:
+    title: "Basic Processing Operations"
+    file: "examples/step_3_basic_processing.py"
+    function: "main"
+    concepts: ["raster operations", "transformations", "coordinate systems"]
+    description: "Perform basic raster transformations and processing operations"
+    learning_time: "15 minutes"
+    previous_step: "step_2"
+    next_step: "step_4"
+    
+  step_4:
+    title: "Spatial Analysis"
+    file: "examples/step_4_analysis.py"
+    function: "main"
+    concepts: ["spatial analysis", "multi-raster operations", "statistics"]
+    description: "Implement spatial analysis workflows and combine multiple datasets"
+    learning_time: "20 minutes"
+    previous_step: "step_3"
+    next_step: "step_5"
+    
+  step_5:
+    title: "Export Results"
+    file: "examples/step_5_export_results.py"
+    function: "main"
+    concepts: ["results export", "project organization", "output management"]
+    description: "Save processed results and organize outputs in project structure"
+    learning_time: "10 minutes"
+    previous_step: "step_4"
+
+# Output configuration
+output:
+  directory: "docs/educational"
+  base_url: "../"
+  include_navigation: true
+  include_index: true
+
+# Generation settings
+generation:
+  clean_code: true           # Remove test artifacts
+  add_explanations: true     # Include learning explanations
+  include_output_samples: true  # Show expected outputs

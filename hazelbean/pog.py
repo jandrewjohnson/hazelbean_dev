@@ -7,7 +7,6 @@ import multiprocessing as mp
 from functools import partial # Useful for passing fixed arguments to worker
 
 import hazelbean as hb
-from hazelbean.pog import *
 
 
 def is_path_pog(path, check_tiled=True, full_check=False, raise_exceptions=False, verbose=False):

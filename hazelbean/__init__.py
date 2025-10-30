@@ -26,7 +26,11 @@ if sys.platform == "darwin":
     conda_env_path = sys.prefix
     gdal_subpath = os.path.join('share', 'gdal')
     proj_subpath = os.path.join('share', 'proj')
-else:  # assume windows
+elif sys.platform.startswith('linux'):
+    conda_env_path = sys.prefix
+    gdal_subpath = os.path.join('share', 'gdal')
+    proj_subpath = os.path.join('share', 'proj')
+else:  # windows
     conda_env_path = os.path.split(sys.executable)[0]
     gdal_subpath = os.path.join('Library', 'share', 'gdal')
     proj_subpath = os.path.join('Library', 'share', 'proj')
@@ -287,6 +291,15 @@ if import_extras:
 
         except:
             pass
+
+# Integration testing utilities (Story 5)
+try:
+    import hazelbean.integration_testing_utils
+    from hazelbean.integration_testing_utils import *
+    if report_import_times:
+        hb.timer('integration_testing_utils')
+except:
+    pass
         
 if report_import_times:
     print('Total Hazelbean import time: ' + str(time.time() - import_start_time))
