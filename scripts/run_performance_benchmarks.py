@@ -302,6 +302,45 @@ def run_benchmarks(args):
                 print(f"   🔗 Open file: {create_file_link(benchmark_file)}")
 
 
+def validate_benchmark_json(file_path, verbose=False):
+    """
+    Validate a benchmark JSON file and return its contents if valid.
+    
+    Returns:
+        Tuple[bool, Optional[dict], Optional[str]]: (success, data, error_message)
+    """
+    # Check if file exists
+    if not os.path.exists(file_path):
+        return False, None, f"File does not exist: {file_path}"
+    
+    # Check if file has content
+    file_size = os.path.getsize(file_path)
+    if file_size == 0:
+        return False, None, f"File is empty (0 bytes): {os.path.basename(file_path)}"
+    
+    # Attempt to parse JSON
+    try:
+        with open(file_path, 'r') as f:
+            data = json.load(f)
+    except json.JSONDecodeError as e:
+        return False, None, f"Invalid JSON in {os.path.basename(file_path)}: {e}"
+    except Exception as e:
+        return False, None, f"Error reading {os.path.basename(file_path)}: {e}"
+    
+    # Validate structure - must have benchmarks array
+    if "benchmarks" not in data:
+        return False, None, f"No 'benchmarks' key in {os.path.basename(file_path)}"
+    
+    if not isinstance(data["benchmarks"], list):
+        return False, None, f"'benchmarks' is not a list in {os.path.basename(file_path)}"
+    
+    if len(data["benchmarks"]) == 0:
+        return False, None, f"No benchmarks found in {os.path.basename(file_path)}"
+    
+    # Success!
+    return True, data, None
+
+
 def establish_baseline(args):
     """Establish performance baseline from multiple runs"""
     baseline_start_time = time.time()
@@ -314,6 +353,7 @@ def establish_baseline(args):
     os.makedirs(benchmarks_dir, exist_ok=True)
     
     baseline_results = []
+    failed_runs = []
     
     # Use tqdm for baseline run progress
     with tqdm(total=args.runs, desc="Baseline runs", 
@@ -341,23 +381,66 @@ def establish_baseline(args):
                 
             result = run_with_progress_feedback(cmd, args.verbose, show_pytest_progress=False)
             
-            # Extract results
+            # Check pytest return code
+            if result.returncode != 0:
+                error_msg = f"Pytest failed with exit code {result.returncode}"
+                if args.verbose:
+                    print(f"      ⚠️  {error_msg}")
+                    if result.stderr:
+                        print(f"      Error output: {result.stderr[:500]}")  # First 500 chars
+                failed_runs.append({
+                    "run_id": run_num,
+                    "error": error_msg,
+                    "returncode": result.returncode
+                })
+                run_elapsed = time.time() - run_start_time
+                pbar.set_postfix({"Last run": f"{format_duration(run_elapsed)} ⚠️"})
+                pbar.update(1)
+                continue  # Skip to next run
+            
+            # Validate and extract results
             baseline_file = os.path.join(benchmarks_dir, f"baseline_run_{run_num}.json")
-            if os.path.exists(baseline_file):
-                with open(baseline_file, 'r') as f:
-                    benchmark_data = json.load(f)
-                    baseline_results.append({
-                        "run_id": run_num,
-                        "timestamp": datetime.now().isoformat(),
-                        "benchmark_data": benchmark_data
-                    })
+            success, benchmark_data, error_msg = validate_benchmark_json(baseline_file, args.verbose)
+            
+            if success:
+                baseline_results.append({
+                    "run_id": run_num,
+                    "timestamp": datetime.now().isoformat(),
+                    "benchmark_data": benchmark_data
+                })
+                if args.verbose:
+                    num_benchmarks = len(benchmark_data.get("benchmarks", []))
+                    print(f"      ✅ Run {run_num + 1} successful ({num_benchmarks} benchmarks)")
+            else:
+                # Validation failed
+                if args.verbose:
+                    print(f"      ⚠️  Run {run_num + 1} failed: {error_msg}")
+                failed_runs.append({
+                    "run_id": run_num,
+                    "error": error_msg,
+                    "file": baseline_file
+                })
             
             run_elapsed = time.time() - run_start_time
-            pbar.set_postfix({"Last run": f"{format_duration(run_elapsed)}"})
+            status_emoji = "✅" if success else "⚠️"
+            pbar.set_postfix({"Last run": f"{format_duration(run_elapsed)} {status_emoji}"})
             pbar.update(1)
     
     # Calculate baseline statistics
     baseline_elapsed = time.time() - baseline_start_time
+    
+    # Print summary
+    successful_runs = len(baseline_results)
+    total_runs = args.runs
+    
+    if args.verbose or successful_runs < total_runs:
+        print(f"\n📊 Baseline Run Summary:")
+        print(f"   ✅ Successful: {successful_runs}/{total_runs}")
+        if failed_runs:
+            print(f"   ⚠️  Failed: {len(failed_runs)}/{total_runs}")
+            if args.verbose:
+                for failed in failed_runs:
+                    print(f"      • Run {failed['run_id'] + 1}: {failed['error']}")
     
     if baseline_results:
         baseline = calculate_baseline_from_runs(baseline_results)
@@ -370,11 +453,29 @@ def establish_baseline(args):
             json.dump(baseline, f, indent=2)
         
         if args.verbose:
-            print(f"✅ Baseline established and saved to: {os.path.basename(baseline_path)}")
+            print(f"\n✅ Baseline established and saved to: {os.path.basename(baseline_path)}")
             print(f"🔗 Open baseline file: {create_file_link(baseline_path)}")
             print(f"⏱️  Baseline establishment took: {format_duration(baseline_elapsed)}")
+        else:
+            # Non-verbose output for CI
+            print(f"✅ Baseline established from {successful_runs}/{total_runs} successful runs")
     else:
-        print("❌ Failed to establish baseline - no successful runs")
+        # Complete failure - no successful runs
+        error_summary = f"Failed to establish baseline - 0/{total_runs} runs succeeded"
+        print(f"\n❌ {error_summary}")
+        
+        if failed_runs:
+            print("\n🔍 Failure Details:")
+            for failed in failed_runs:
+                print(f"   • Run {failed['run_id'] + 1}: {failed['error']}")
+        
+        print("\n💡 Troubleshooting:")
+        print("   1. Check that pytest-benchmark is installed")
+        print("   2. Verify test files exist and are executable")
+        print("   3. Run with --verbose flag for detailed output")
+        print("   4. Try running pytest commands manually to debug")
+        
+        sys.exit(1)  # Exit with error since no baseline was established
 
 
 def calculate_baseline_from_runs(baseline_results):
