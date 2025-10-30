@@ -371,8 +371,7 @@ def establish_baseline(args):
                 "hazelbean_tests/performance/test_benchmarks.py::TestSimpleBenchmarks::test_array_operations_benchmark",
                 "hazelbean_tests/performance/test_functions.py::TestGetPathFunctionBenchmarks::test_get_path_function_overhead",
                 "--benchmark-json", os.path.join(benchmarks_dir, f"baseline_run_{run_num}.json"),
-                "-m", "benchmark",
-                "-q"  # Quiet output for cleaner baseline establishment
+                "-v"  # Verbose to see what's happening
             ]
             
             # Show progress during baseline run
@@ -387,11 +386,23 @@ def establish_baseline(args):
                 if args.verbose:
                     print(f"      ⚠️  {error_msg}")
                     if result.stderr:
-                        print(f"      Error output: {result.stderr[:500]}")  # First 500 chars
+                        stderr_preview = result.stderr[:1000]  # First 1000 chars
+                        print(f"      Stderr: {stderr_preview}")
+                    if result.stdout:
+                        stdout_preview = result.stdout[:1000]  # First 1000 chars
+                        print(f"      Stdout: {stdout_preview}")
+                else:
+                    # Even in non-verbose, show some error output for debugging
+                    print(f"      ⚠️  Run {run_num + 1} failed: {error_msg}")
+                    if result.stderr:
+                        print(f"      Error: {result.stderr[:300]}")
+                        
                 failed_runs.append({
                     "run_id": run_num,
                     "error": error_msg,
-                    "returncode": result.returncode
+                    "returncode": result.returncode,
+                    "stderr": result.stderr[:500] if result.stderr else None,
+                    "stdout": result.stdout[:500] if result.stdout else None
                 })
                 run_elapsed = time.time() - run_start_time
                 pbar.set_postfix({"Last run": f"{format_duration(run_elapsed)} ⚠️"})
@@ -555,8 +566,7 @@ def check_regression(args):
         "hazelbean_tests/performance/test_benchmarks.py::TestSimpleBenchmarks::test_array_operations_benchmark",
         "hazelbean_tests/performance/test_functions.py::TestGetPathFunctionBenchmarks::test_get_path_function_overhead",
         "--benchmark-json", current_results_file,
-        "-m", "benchmark",
-        "-q"
+        "-v"
     ]
     
     # Show progress during regression benchmarks
