@@ -908,5 +908,130 @@ rules.astype(np.int64)
 
 ---
 
-*Last Updated: 2025-10-29 (Added platform-specific dtype mismatch bug in reclassify functions)*  
+## 🐛 Missing Test Data File in CI {#missing_test_data_csv}
+
+**Status:** 🐛 Open  
+**Discovered:** 2025-10-29  
+**Severity:** Low  
+**Component:** Test Infrastructure (`hazelbean_tests/test_spatial_utils.py`)
+
+### Description
+The `test_reading_csvs` test fails in CI because it references a CSV file (`cartographic/gadm/gadm_410_adm0_labels.csv`) that is not available in the CI test environment. This is a **test setup issue**, not a core hazelbean bug.
+
+### Root Cause
+The test attempts to access a file via `hb.get_path()` that expects to download from cloud storage or access from local test data, but:
+- The file is not included in the test data directory
+- Cloud storage credentials/config are not set up in CI
+- The test data file is missing from the repository
+
+**Test code (line 134):**
+```python
+test_path = p.get_path('cartographic/gadm/gadm_410_adm0_labels.csv', verbose=True)
+# Fails with: NameError: The path given to hb.get_path() does not exist...
+```
+
+### Expected Behavior
+The test should either:
+1. Have the CSV file available in test data, OR
+2. Mock/skip the cloud download portion, OR
+3. Be skipped if test data is not available
+
+### Actual Behavior
+Test fails with `NameError` when trying to access missing file in CI environment.
+
+### Affected Tests
+- `test_spatial_utils.py::DataStructuresTester::test_reading_csvs` ⚠️ **skipped**
+
+### Test Status & Skip Marker
+
+**This test is marked with `@pytest.mark.skip` until test data is available:**
+
+```python
+@pytest.mark.skip(reason="Missing test data file: cartographic/gadm/gadm_410_adm0_labels.csv - test data not available in CI")
+def test_reading_csvs(self):
+```
+
+- ✅ Test is skipped (doesn't block CI)
+- ✅ Reason clearly documented
+- ✅ Can be re-enabled when test data is added
+
+### Suggested Fix
+**Option 1: Add test data file** (Preferred)
+- Add `cartographic/gadm/gadm_410_adm0_labels.csv` to `hazelbean_tests/data/` directory
+- Update test to use local test data path instead of cloud storage
+
+**Option 2: Mock the download**
+- Use mock/patch to simulate successful file download
+- Test the path resolution logic without requiring actual file
+
+**Option 3: Conditional skip**
+- Skip only if file doesn't exist (allows test to run when data is available)
+
+### Additional Notes
+- This is a **test infrastructure issue**, not a hazelbean core bug
+- The test logic itself is fine - it just needs the test data file
+- Low priority - test is skipped so doesn't block CI
+- Can be fixed when test data is properly set up
+
+---
+
+## 🐛 Cross-Platform Performance Consistency Test Design Issue {#cross_platform_perf_test}
+
+**Status:** 🐛 Open (Test Infrastructure Issue)  
+**Discovered:** 2025-10-29  
+**Severity:** Low  
+**Component:** `hazelbean_tests/performance/test_workflows.py::TestPerformanceAggregation::test_cross_platform_performance_consistency`
+
+### Description
+The `test_cross_platform_performance_consistency` test fails on CI with low consistency percentages (e.g., `file_io_performance` shows 6.7% consistency when >50% is required). The test is marked as `xfail` because it has a fundamental design flaw.
+
+### Root Cause
+**Test Design Flaw:** The test simulates cross-platform testing by running the same performance measurements 3 times on the **same platform** (Linux CI):
+
+```python
+platforms = ["linux", "windows", "macos"]  # Simulated platform data
+for platform in platforms:
+    measurements = {
+        "file_io_performance": self._measure_file_io_performance()  # Same measurement repeated
+    }
+```
+
+**Problems:**
+1. **Not actually testing cross-platform consistency** - All 3 "platforms" run on the same Linux CI environment
+2. **Measuring repeatability, not cross-platform behavior** - High variance between runs is expected
+3. **File I/O variance on CI is legitimate** - Factors include:
+   - Filesystem caching differences between runs
+   - System load variations
+   - I/O scheduler behavior
+   - CI environment resource contention
+   - Network filesystem latency (if applicable)
+
+**Failure Example:**
+```
+AssertionError: Metric 'file_io_performance' consistency 6.7% too low
+assert 6.736806380451387 > 50
+```
+
+### Expected Behavior
+The test should either:
+1. Actually compare performance across different platforms (requires running on multiple platforms)
+2. Compare against stored baseline metrics from different platforms
+3. Use more realistic thresholds for CI environment variance
+4. Skip when only one platform is available
+
+### Current Status
+- ✅ Test marked as `@pytest.mark.xfail` (won't fail CI)
+- ✅ Documented in this file
+- The test design needs refactoring to properly test cross-platform consistency
+
+### Additional Notes
+- This is a **test infrastructure issue**, not a hazelbean core bug
+- The test was intended to check cross-platform consistency but doesn't actually do so
+- File I/O performance variance on CI is expected behavior, not a bug
+- Low priority - test is xfail'd so doesn't block CI
+- Can be refactored later if cross-platform testing becomes a priority (Option 4 in proposal)
+
+---
+
+*Last Updated: 2025-10-29 (Added cross-platform performance test design issue)*  
 *Next Review: When hazelbean bugs are addressed*
