@@ -1,5 +1,21 @@
 # Hazelbean Changelog
 
+## v1.7.8 (2025-10-30)
+
+#### New Features
+
+* added another xfail
+#### Fixes
+
+* small change to test for regression testing
+* updating project testing util setup to find correct location for file
+* ensuring tests also have context of project db data
+#### Docs
+
+* update changelog for v1.7.7
+
+Full set of changes: [`v1.7.7...v1.7.8`](https://github.com/jandrewjohnson/hazelbean_dev/compare/v1.7.7...v1.7.8)
+
 ## v1.7.7 (2025-10-24)
 
 #### New Features
