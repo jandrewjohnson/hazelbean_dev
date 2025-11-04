@@ -1,21 +1,49 @@
 # Hazelbean Changelog
 
-## Unreleased (2025-10-16)
+## v1.7.8 (2025-10-30)
 
 #### New Features
 
+* added another xfail
+#### Fixes
+
+* small change to test for regression testing
+* updating project testing util setup to find correct location for file
+* ensuring tests also have context of project db data
+#### Docs
+
+* update changelog for v1.7.7
+
+Full set of changes: [`v1.7.7...v1.7.8`](https://github.com/jandrewjohnson/hazelbean_dev/compare/v1.7.7...v1.7.8)
+
+## v1.7.7 (2025-10-24)
+
+#### New Features
+
+* adding flake8 to build action flow
+* adding in changelog
 * added in updated path styling
 * infra change
 * simplifying quality gate ci
 * testing updates
-* Initial update to various documentation, scripts, and configuration files; enhance educational content and performance benchmarks, adding many tests and quality gate.
 #### Fixes
 
+* updating to fix the buggy build process
 * updated readme to reference non-hosted site for documentation
 * another test fix
 * adding xfail flag to known bugs
 * fixing path
 * adding presnetation
+
+Full set of changes: [`v1.7.6...v1.7.7`](https://github.com/jandrewjohnson/hazelbean_dev/compare/v1.7.6...v1.7.7)
+
+## v1.7.6 (2025-09-08)
+
+#### New Features
+
+* Initial update to various documentation, scripts, and configuration files; enhance educational content and performance benchmarks, adding many tests and quality gate.
+#### Fixes
+
 * add missing requests dependency
 * updated workflows, and added documentation surrounding cython files
 * updated site
@@ -30,7 +58,7 @@
 
 * updating with current state of develop
 
-Full set of changes: [`v1.7.5...dc174d9`](https://github.com/jandrewjohnson/hazelbean_dev/compare/v1.7.5...dc174d9)
+Full set of changes: [`v1.7.5...v1.7.6`](https://github.com/jandrewjohnson/hazelbean_dev/compare/v1.7.5...v1.7.6)
 
 ## v1.7.5 (2025-06-25)
 
