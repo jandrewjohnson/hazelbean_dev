@@ -214,7 +214,8 @@ def main():
         print("\n📚 Next steps:")
         print("   - Explore examples: cd examples && python step_1_project_setup.py")
         print("   - View documentation: cd docs-site && mkdocs serve")
-        print("   - Run tests: pytest hazelbean_tests/system/test_smoke.py -v")
+        print("   - Run tests (from project root, hazelbean_env activated):")
+        print("     python -m pytest hazelbean_tests/system/test_smoke.py -v")
         return True
     else:
         print_warning(f"Some checks failed ({passed}/{total} passed)")
