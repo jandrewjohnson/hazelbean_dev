@@ -1,0 +1,14 @@
+/.quarto/
+_site/
+
+# Generated test documentation (regenerated from source)
+tests/*.qmd
+
+# Educational pages are static markdown (kept in git, not generated)
+
+# Generated reports pages (regenerated from Python scripts)
+reports/test-results.qmd
+reports/performance-baselines.qmd
+reports/coverage-report.qmd
+reports/benchmark-results.qmd
+# Keep reports/index.qmd in git (static overview page)

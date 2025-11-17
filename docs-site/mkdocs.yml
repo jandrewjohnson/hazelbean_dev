@@ -1,4 +1,9 @@
-site_name: Hazelbean Documentation
+# ⚠️ DEPRECATED - This MkDocs configuration is legacy
+# Please use the Quarto documentation system instead: docs-site/quarto-docs/
+# See MKDOCS-DEPRECATED.md for details
+# Migration Date: November 15, 2024
+
+site_name: Hazelbean Documentation (LEGACY)
 site_description: Comprehensive documentation for the Hazelbean geospatial Python library
 site_url: https://jandrewjohnson.github.io/hazelbean_dev/  # GitHub Pages URL
 
