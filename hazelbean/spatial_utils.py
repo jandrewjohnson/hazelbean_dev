@@ -1355,16 +1355,58 @@ def save_array_as_geotiff(array, out_uri, geotiff_uri_to_match=None, ds_to_match
     if save_png:
         hb.full_show_array(array, output_uri=processed_out_uri.replace('.tif', '.png'), cbar_percentiles=[2,50,99])
 
-def extract_features_in_shapefile_by_attribute(input_path, output_path, column_name, column_filter):
+# def extract_features_in_shapefile_by_attribute(input_path, output_path, column_name, column_filter):
+#     gdf = gpd.read_file(input_path)
+    
+#     # hb.log('column_name: ' + str(column_name), level=100)
+#     # hb.log('column_filter: ' + str(column_filter), level=100)
+    
+#     gdf_out = gdf.loc[gdf[column_name].astype(str) == str(column_filter)]
+#     # 2704
+#     if len(gdf_out) == 0:
+#         raise NameError('No features found in ' + str(input_path) + ' with ' + str(column_name) + ' == ' + str(column_filter))
+
+#     hb.create_directories(output_path)
+#     gdf_out.to_file(output_path)
+
+def extract_features_in_shapefile_by_attribute(
+        input_path,
+        output_path,
+        column_name,
+        column_filters
+    ):
+    """
+    Extract features where `column_name` is in `column_filters`
+    and write them to `output_path`.
+
+    Parameters
+    ----------
+    input_path : str
+        Path to input vector file.
+    output_path : str
+        Path to output vector file.
+    column_name : str
+        Name of attribute column to filter on.
+    column_filters : list or iterable
+        Values of `column_name` to keep (inclusive filter).
+    """
     gdf = gpd.read_file(input_path)
-    
-    # hb.log('column_name: ' + str(column_name), level=100)
-    # hb.log('column_filter: ' + str(column_filter), level=100)
-    
-    gdf_out = gdf.loc[gdf[column_name].astype(str) == str(column_filter)]
-    # 2704
+
+    # Normalize to list in case someone passes a single value
+    if not isinstance(column_filters, (list, tuple, set)):
+        column_filters = [column_filters]
+
+    # Cast to string on both sides for robustness
+    filters_str = {str(v) for v in column_filters}
+    col_str = gdf[column_name].astype(str)
+
+    gdf_out = gdf.loc[col_str.isin(filters_str)]
+
     if len(gdf_out) == 0:
-        raise NameError('No features found in ' + str(input_path) + ' with ' + str(column_name) + ' == ' + str(column_filter))
+        raise NameError(
+            f"No features found in {input_path} with "
+            f"{column_name} in {list(filters_str)}"
+        )
 
     hb.create_directories(output_path)
     gdf_out.to_file(output_path)
