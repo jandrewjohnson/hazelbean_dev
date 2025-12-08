@@ -84,7 +84,28 @@ class ArrayFrame(object):
 
             # TODOO Consider eliminating data_type
             self.data_type = self.band.DataType
-            self.datatype = self.data_type
+            #self.datatype = self.data_type
+            @property
+            def data_type(self):
+                """Deprecated: Use 'datatype' instead."""
+                import warnings
+                warnings.warn(
+                    "ArrayFrame.data_type is deprecated, use ArrayFrame.datatype instead",
+                    DeprecationWarning,
+                    stacklevel=2
+                )
+                return self.datatype
+
+            @data_type.setter
+            def data_type(self, value):
+                """Deprecated: Use 'datatype' instead."""
+                import warnings
+                warnings.warn(
+                    "ArrayFrame.data_type is deprecated, use ArrayFrame.datatype instead",
+                    DeprecationWarning,
+                    stacklevel=2
+                )
+                self.datatype = value
 
             if self.ndv is None:
                 L.info('NDV for raster at ' + self.path + ' was not set. ')
