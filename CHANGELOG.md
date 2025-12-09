@@ -1,5 +1,19 @@
 # Hazelbean Changelog
 
+## v1.7.9 (2025-12-09)
+
+#### New Features
+
+* enhance feature extraction by allowing multiple filters in shapefiles
+#### Fixes
+
+* improve comments for clarity and enhance error message in get_path function
+#### Docs
+
+* update changelog for v1.7.8
+
+Full set of changes: [`v1.7.8...v1.7.9`](https://github.com/jandrewjohnson/hazelbean_dev/compare/v1.7.8...v1.7.9)
+
 ## v1.7.8 (2025-10-30)
 
 #### New Features
