@@ -84,7 +84,28 @@ class ArrayFrame(object):
 
             # TODOO Consider eliminating data_type
             self.data_type = self.band.DataType
-            self.datatype = self.data_type
+            #self.datatype = self.data_type
+            @property
+            def data_type(self):
+                """Deprecated: Use 'datatype' instead."""
+                import warnings
+                warnings.warn(
+                    "ArrayFrame.data_type is deprecated, use ArrayFrame.datatype instead",
+                    DeprecationWarning,
+                    stacklevel=2
+                )
+                return self.datatype
+
+            @data_type.setter
+            def data_type(self, value):
+                """Deprecated: Use 'datatype' instead."""
+                import warnings
+                warnings.warn(
+                    "ArrayFrame.data_type is deprecated, use ArrayFrame.datatype instead",
+                    DeprecationWarning,
+                    stacklevel=2
+                )
+                self.datatype = value
 
             if self.ndv is None:
                 L.info('NDV for raster at ' + self.path + ' was not set. ')
@@ -294,7 +315,7 @@ class ArrayFrame(object):
         raise NameError('Cannot directly set nonzero_mask. Use set_nonzero_mask() method.')
 
     def set_nonzero_mask(self):
-        self._nonzero_mask = np.where(self.data == 1, 1, 0).astype(np.ubyte)
+        self._nonzero_mask = np.where(self.data != 0, 1, 0).astype(np.ubyte)
         self.num_nonzero = np.count_nonzero(self._nonzero_mask)
         self.num_zero = self.size - self.num_nonzero
         self.nonzero_mask_set = True
@@ -349,13 +370,13 @@ class ArrayFrame(object):
 
     def __mul__(self, after):
         def op(left, right):
-            return left + right
+            return left * right
         output_path = hb.temp(filename_start='mul', remove_at_exit=True)
         return hb.raster_calculator_flex([self.path, after.path], op, output_path)
 
     def __truediv__(self, after):
         def op(left, right):
-            return left + right
+            return np.where(right != 0, left / right, 0)
         output_path = hb.temp(filename_start='div', remove_at_exit=True)
         return hb.raster_calculator_flex([self.path, after.path], op, output_path)
 
