@@ -1,0 +1,94 @@
+project:
+  type: website
+  output-dir: _site
+
+website:
+  title: "Hazelbean Documentation"
+  navbar:
+    left:
+      - text: "Home"
+        href: index.qmd
+      - text: "Educational"
+        menu:
+          - text: "Overview"
+            href: educational/index.qmd
+          - text: "---"
+          - text: "Tutorial Examples"
+            href: educational/examples.qmd
+      - text: "Reports"
+        menu:
+          - text: "Overview"
+            href: reports/index.qmd
+          - text: "---"
+          - text: "Test Results"
+            href: reports/test-results.qmd
+          - text: "Performance Baselines"
+            href: reports/performance-baselines.qmd
+          - text: "Coverage Report"
+            href: reports/coverage-report.qmd
+          - text: "Benchmark Results"
+            href: reports/benchmark-results.qmd
+      - text: "Tests"
+        menu:
+          - text: "Overview"
+            href: tests/index.qmd
+          - text: "---"
+          - text: "Unit Tests"
+            href: tests/unit.qmd
+          - text: "Integration Tests"
+            href: tests/integration.qmd
+          - text: "Performance Tests"
+            href: tests/performance.qmd
+          - text: "System Tests"
+            href: tests/system.qmd
+      - text: "Troubleshooting"
+        href: troubleshooting.qmd
+  sidebar:
+    - title: "Documentation"
+      style: "docked"
+      contents:
+        - section: "Educational"
+          contents:
+            - text: "Overview"
+              href: educational/index.qmd
+            - text: "Tutorial Examples"
+              href: educational/examples.qmd
+        - section: "Reports"
+          contents:
+            - text: "Overview"
+              href: reports/index.qmd
+            - text: "Test Results"
+              href: reports/test-results.qmd
+            - text: "Performance Baselines"
+              href: reports/performance-baselines.qmd
+            - text: "Coverage Report"
+              href: reports/coverage-report.qmd
+            - text: "Benchmark Results"
+              href: reports/benchmark-results.qmd
+        - section: "Test Suites"
+          contents:
+            - text: "Overview"
+              href: tests/index.qmd
+            - text: "Unit Tests"
+              href: tests/unit.qmd
+            - text: "Integration Tests"
+              href: tests/integration.qmd
+            - text: "Performance Tests"
+              href: tests/performance.qmd
+            - text: "System Tests"
+              href: tests/system.qmd
+        - section: "Help"
+          contents:
+            - text: "Troubleshooting"
+              href: troubleshooting.qmd
+
+format:
+  html:
+    theme: cosmo
+    toc: true
+    code-fold: false
+    code-line-numbers: true
+    code-copy: true
+    highlight-style: github
+    toc-depth: 3
+

@@ -88,12 +88,14 @@ def format_confidence_interval(interval: Dict) -> str:
     return f"[{lower_ms:.2f}, {upper_ms:.2f}]ms"
 
 def generate_baseline_markdown(current_data: Optional[Dict], snapshots: List[Dict]) -> str:
-    """Generate markdown dashboard from baseline data."""
+    """Generate Quarto markdown dashboard from baseline data."""
     
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     
     if not current_data:
-        return f"""# Performance Baselines Dashboard
+        return f"""---
+title: "Performance Baselines Dashboard"
+---
 
 **Status:** ❌ No baseline data available
 
@@ -132,7 +134,9 @@ python ../scripts/establish_performance_baseline.py
     
     confidence_level = metadata.get('statistical_confidence', '95%')
     
-    markdown = f"""# Performance Baselines Dashboard
+    markdown = f"""---
+title: "Performance Baselines Dashboard"
+---
 
 **Current Baseline:** {format_time_ms(mean_time)} ± {format_time_ms(std_dev)} ({confidence_level} confidence)  
 **Trend:** {trend}  
@@ -258,7 +262,7 @@ def main():
     
     baseline_path = project_root / 'metrics/baselines/current_performance_baseline.json'
     snapshots_dir = project_root / 'baselines/snapshots'  # Based on project layout
-    output_path = project_root / 'docs-site/docs/reports/performance-baselines.md'
+    output_path = project_root / 'docs-site/quarto-docs/reports/performance-baselines.qmd'
     
     print("📈 Generating performance baselines dashboard...")
     

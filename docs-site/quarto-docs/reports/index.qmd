@@ -1,0 +1,123 @@
+---
+title: "Test Results and Metrics"
+aliases:
+  - reports/
+  - reports/index
+---
+
+Automated reporting of test execution results, performance metrics, and system validation.
+
+## 📊 Live Test Dashboard
+
+For the most current test results, see our **[Latest Test Results](test-results.qmd)** with real-time metrics and detailed analysis.
+
+## Current Status
+
+### Test Execution Summary
+
+::: {.callout-info title="Live Test Metrics"}
+For the most current test metrics, see **[Latest Test Results](test-results.qmd)** - automatically updated with each test run.
+:::
+
+### Performance Metrics
+
+- **Benchmark Results** - Latest performance measurements
+- **Memory Usage** - Resource utilization tracking
+- **Execution Speed** - Processing time analysis
+- **Scalability Metrics** - Large dataset processing performance
+
+## 📋 Available Reports
+
+### 🔍 **[Test Results](test-results.qmd)**
+
+- Detailed test execution results with timing analysis
+- Failed test analysis and error reporting  
+- Performance metrics for all test categories
+- Generated automatically from pytest JSON output
+
+### 📈 **[Performance Baselines](performance-baselines.qmd)**
+
+**Available** - Real-time performance baseline tracking
+
+- Statistical confidence intervals and machine context
+- Historical snapshot comparisons and regression detection
+- Trend analysis with performance metrics
+
+### 📊 **[Coverage Reports](coverage-report.qmd)**
+
+**Available** - Module-by-module coverage analysis
+
+- Coverage trends and quality gate monitoring
+- Missing line identification and improvement suggestions
+- Detailed breakdowns per module
+
+### ⚡ **[Benchmark Results](benchmark-results.qmd)**
+
+**Available** - Latest benchmark execution results
+
+- Historical trend tracking and regression detection
+- Detailed timing statistics and system information
+- Performance analysis across test runs
+
+## 🔄 Report Generation
+
+### Automated Updates
+
+Reports are automatically generated from:
+
+- **pytest JSON output** → Test result tables and metrics
+- **Performance benchmarks** → Timing and efficiency analysis  
+- **Code coverage tools** → Coverage percentage and gap analysis
+- **Metrics data** → Baseline and benchmark tracking
+
+### Manual Report Generation
+
+To update all reports manually:
+
+```bash
+# From project root
+cd /Users/lucasralph/LJR_Projects/UMN/hazelbean_dev
+
+# Generate all reports
+python tools/generate_all_reports.py
+
+# Render Quarto site
+cd docs-site/quarto-docs
+quarto render
+```
+
+### Report Schedule
+
+- **Test Results**: Updated after each test run
+- **Performance Metrics**: Updated during development cycles
+- **Coverage Analysis**: Updated with major releases
+- **Quality Gates**: Continuous monitoring
+
+---
+
+## 📖 How to Use These Reports
+
+### For Developers
+
+1. **Before committing:** Check test results for any failures
+2. **During development:** Monitor coverage trends
+3. **Performance work:** Review baseline and benchmark reports
+4. **Quality review:** Verify all metrics meet thresholds
+
+### For Project Managers
+
+1. **Sprint planning:** Review test stability trends
+2. **Release decisions:** Check coverage and performance gates
+3. **Risk assessment:** Monitor failed tests and error rates
+
+### For Contributors
+
+1. **Adding features:** Ensure tests pass and coverage maintained
+2. **Bug fixes:** Verify fix with updated test results
+3. **Performance improvements:** Document in benchmark results
+
+---
+
+*Reports reflect the most recent test execution and system analysis. All data is generated from actual test runs and system measurements.*
+
+

@@ -112,10 +112,12 @@ def get_status_emoji(coverage_pct):
         return "❌ Needs Attention"
 
 def generate_coverage_markdown(coverage_data):
-    """Generate markdown report from coverage data."""
+    """Generate Quarto markdown report from coverage data."""
     
     if not coverage_data:
-        return """# Code Coverage Report
+        return """---
+title: "Code Coverage Report"
+---
 
 **Status:** ❌ No coverage data available
 
@@ -123,7 +125,7 @@ Please run tests with coverage enabled:
 ```bash
 conda activate hazelbean_env
 cd hazelbean_tests
-pytest unit/ --cov=hazelbean --cov-report=term-missing
+python -m pytest unit/ --cov=hazelbean --cov-report=term-missing
 ```
 
 *Last Updated: {}*
@@ -135,7 +137,9 @@ pytest unit/ --cov=hazelbean --cov-report=term-missing
     # Quality gate status
     quality_gate = "✅ Above 60% threshold" if coverage_data['overall_coverage'] >= 60 else "❌ Below 60% threshold"
     
-    markdown = f"""# Code Coverage Report
+    markdown = f"""---
+title: "Code Coverage Report"
+---
 
 **Overall Coverage:** {coverage_data['overall_coverage']:.1f}% ({coverage_data['covered_lines']:,} of {coverage_data['total_lines']:,} lines)  
 **Last Updated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
@@ -191,7 +195,7 @@ def main():
     
     # Get script directory and setup paths
     script_dir = Path(__file__).parent.absolute()
-    output_path = script_dir.parent / 'docs-site/docs/reports/coverage-report.md'
+    output_path = script_dir.parent / 'docs-site/quarto-docs/reports/coverage-report.qmd'
     
     print("📊 Generating coverage report from coverage.py data...")
     

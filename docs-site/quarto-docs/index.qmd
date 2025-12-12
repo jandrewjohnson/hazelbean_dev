@@ -1,0 +1,101 @@
+---
+title: "Hazelbean Documentation"
+---
+
+# Welcome to Hazelbean Documentation
+
+Hazelbean is a Python library for geospatial analysis and processing, built on top of GDAL, NumPy, and other geospatial tools.
+
+## Quick Links
+
+### [📚 Test Documentation](tests/index.qmd)
+
+Comprehensive test suite documentation with **277 test functions** across 4 categories:
+
+- [Unit Tests](tests/unit.qmd) - 118 tests covering core functionality
+- [Integration Tests](tests/integration.qmd) - 87 tests for component interactions
+- [Performance Tests](tests/performance.qmd) - 49 tests for benchmarking
+- [System Tests](tests/system.qmd) - 23 tests for end-to-end workflows
+
+---
+
+## Features
+
+### 🗺️ Geospatial Processing
+- **Raster Operations** - Read, write, and process raster datasets
+- **Vector Operations** - Work with shapefiles and GeoPackages
+- **Cloud Optimized GeoTIFFs** - COG creation and validation
+- **Performance Optimized GeoTIFFs** - POG processing for speed
+
+### 🔄 ProjectFlow
+- **Task Management** - Organize complex geospatial workflows
+- **Parallel Processing** - Multi-threaded raster operations
+- **Caching & Validation** - Smart task execution and results caching
+
+### 📊 Data Structures
+- **ArrayFrame** - Enhanced NumPy arrays for geospatial data
+- **Spatial Projections** - Coordinate system transformations
+- **File I/O** - Flexible path resolution and data loading
+
+---
+
+## Getting Started
+
+### Installation
+
+```bash
+# Create conda environment
+conda env create -f environment.yml
+
+# Activate environment
+conda activate hazelbean_env
+
+# Install hazelbean
+pip install hazelbean
+```
+
+### Quick Example
+
+```python
+import hazelbean as hb
+
+# Create a ProjectFlow
+p = hb.ProjectFlow('/path/to/project')
+
+# Load raster data
+raster_path = p.get_path('data/my_raster.tif')
+raster_array = hb.as_array(raster_path)
+
+# Process data
+result = hb.spatial_utils.reproject_raster(
+    raster_path, 
+    output_path='output/reprojected.tif',
+    target_sr='EPSG:4326'
+)
+```
+
+---
+
+## Documentation Structure
+
+This documentation includes:
+
+- **Test Documentation** - Detailed test suite with source code
+- **API Reference** - Function and class documentation
+- **Examples** - Common usage patterns
+- **Guides** - In-depth tutorials
+
+---
+
+## License
+
+Hazelbean is released under the BSD 3-Clause License. See [LICENSE](LICENSE) for details.
+
+---
+
+## Links
+
+- [GitHub Repository](https://github.com/jandrewjohnson/hazelbean_dev)
+- [PyPI Package](https://pypi.org/project/hazelbean/)
+- [Issue Tracker](https://github.com/jandrewjohnson/hazelbean_dev/issues)
+
