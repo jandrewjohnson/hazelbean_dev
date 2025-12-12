@@ -95,10 +95,10 @@ This page shows only the test functions without class setup/teardown methods.
 conda activate hazelbean_env
 
 # Run all {category_name} tests
-pytest hazelbean_tests/{category_name}/ -v
+python -m pytest hazelbean_tests/{category_name}/ -v
 
 # Run specific test file  
-pytest hazelbean_tests/{category_name}/test_example.py -v
+python -m pytest hazelbean_tests/{category_name}/test_example.py -v
 ```
 
 ## Complete Documentation

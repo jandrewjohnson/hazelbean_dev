@@ -24,7 +24,7 @@ fi
 
 # Step 1: Run tests with pytest-md-report (replaces complex 2-step process)
 echo "🧪 Running tests and generating markdown report directly..."
-pytest unit/ integration/ system/ \
+python -m pytest unit/ integration/ system/ \
     --md-report \
     --md-report-flavor gfm \
     --md-report-output ../docs-site/docs/reports/test-results.md \

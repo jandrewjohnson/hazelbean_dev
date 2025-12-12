@@ -179,12 +179,14 @@ def format_time_ms(time_seconds: float) -> str:
         return f"{ms:.1f}ms"
 
 def generate_benchmark_markdown(benchmark_files: List[Dict]) -> str:
-    """Generate markdown report from benchmark data."""
+    """Generate Quarto markdown report from benchmark data."""
     
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     
     if not benchmark_files:
-        return f"""# Benchmark Results Summary
+        return f"""---
+title: "Benchmark Results Summary"
+---
 
 **Status:** ❌ No benchmark data available
 
@@ -215,7 +217,9 @@ python ../scripts/run_performance_benchmarks.py
     commit_id = commit_info.get('id', 'Unknown')[:8] if commit_info.get('id') else 'Unknown'
     branch = commit_info.get('branch', 'Unknown')
     
-    markdown = f"""# Benchmark Results Summary
+    markdown = f"""---
+title: "Benchmark Results Summary"
+---
 
 **Latest Run:** {latest_timestamp}  
 **Status:** {latest_analysis['status']} ({latest_analysis['passed']} of {latest_analysis['total_benchmarks']} benchmarks)  
@@ -326,7 +330,7 @@ def main():
     project_root = script_dir.parent
     
     benchmarks_dir = project_root / 'metrics/benchmarks'
-    output_path = project_root / 'docs-site/docs/reports/benchmark-results.md'
+    output_path = project_root / 'docs-site/quarto-docs/reports/benchmark-results.qmd'
     
     print("⚡ Generating benchmark results summary...")
     
