@@ -1434,7 +1434,7 @@ def get_flex_as_path(input_flex, raise_file_exists_errors=True):
         return input_flex.path
 
 def copy_file_tree_to_new_root(input_dir, root_dir, **kwargs):
-    print('Not sure how/if this is different than copy_files_from_dir_by_filter_preserving_dir_structure')
+    # print('Not sure how/if this is different than copy_files_from_dir_by_filter_preserving_dir_structure')
 
     include_strings = kwargs.get('include_strings', None)
     include_extensions = kwargs.get('include_extensions', None)
