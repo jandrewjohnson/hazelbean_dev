@@ -391,7 +391,7 @@ class ProjectFlow(object):
             raise NotADirectoryError('A Project Flow object is based on defining a project_dir as its base, but we were unable to create the dir at the given path: ' + self.project_dir)
 
         # BIG ASS-MISTAKE here, repeating inputs
-        self.input_dir = os.path.join(self.project_dir, 'inputs')
+        self.input_dir = os.path.join(self.project_dir, 'input')
         self.inputs_dir = os.path.join(self.project_dir, 'inputs')
         self.intermediate_dir = os.path.join(self.project_dir, 'intermediate')
         self.output_dir = os.path.join(self.project_dir, 'outputs')
@@ -400,6 +400,34 @@ class ProjectFlow(object):
             self.data_credentials_path = None # If you want to use a different bucket than the default, provide the credentials here. Otherwise uses default public data 'gtap_invest_seals_2023_04_21'.
         if not getattr(self, 'input_bucket_name', None):
             self.input_bucket_name = None # If you want to use a different bucket than the default, provide the name here. Otherwise uses default public data 'gtap_invest_seals_2023_04_21'.
+
+    def set_base_data_dir(self, input_base_data_dir=None, match_string='seals/default_inputs'):
+                
+        # Search over multiple possible places to find a base data dir that contains correct data then use it.
+
+        # But first check the user inputted one if given
+        if input_base_data_dir is not None:            
+            if hb.path_exists(os.path.join(input_base_data_dir, match_string)):
+                hb.log(f'Found base data dir at USER GIVEN LOCATION {os.path.join(input_base_data_dir, match_string)} with abspath {os.path.abspath(os.path.join(input_base_data_dir, match_string))}. Setting p.base_data_dir to this value.')
+                self.base_data_dir = os.path.join(input_base_data_dir, match_string)
+                return
+            else:
+                hb.log(f'User given base data dir at {os.path.join(input_base_data_dir, match_string)} with abspath {os.path.abspath(os.path.join(input_base_data_dir, match_string))} does not exist. Searching other possible locations for base data dir instead.')
+        
+        files_bd = os.path.join(os.path.expanduser('~'), 'Files', 'base_data')
+        user_bd = os.path.join(os.path.expanduser('~'), 'base_data')
+        possible_base_data_roots = [self.project_dir, self.input_dir, self.base_data_dir, files_bd, user_bd, ]
+        for possible_root in possible_base_data_roots:
+            candidate_base_data_dir = os.path.join(possible_root, match_string)
+            if hb.path_exists(candidate_base_data_dir):
+                hb.log(f'Found base data dir at {candidate_base_data_dir} with abspath {os.path.abspath(candidate_base_data_dir)}. Setting p.base_data_dir to this value.')
+                self.base_data_dir = possible_root
+                return     
+            
+        # if nothing was found, set it to the project dir (not the project repo)
+        hb.log(f'Could not find a base data dir in any of the searched locations. Setting p.base_data_dir to user given location {input_base_data_dir} with abspath {os.path.abspath(input_base_data_dir)} even though it may be missing required files. This will then be used to download new stuff.')
+        
+        self.base_data_dir = input_base_data_dir
 
     def get_path(self, relative_path, *join_path_args, possible_dirs='default', prepend_possible_dirs=None, create_shortcut=False, download_destination_dir=None, strip_relative_paths_for_output=False, leave_ref_path_if_fail=False, raise_error_if_fail=True, verbose=False):
         ### NOTE: This is a PROJECT METHOD. There is currently no hb level function cause then you'd just have to pass the project.
