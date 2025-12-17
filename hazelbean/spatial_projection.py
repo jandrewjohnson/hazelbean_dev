@@ -11,7 +11,7 @@ from functools import reduce
 from osgeo import gdal
 # gdal.SetConfigOption("IGNORE_COG_LAYOUT_BREAK", "YES") 
 # gdal.PushErrorHandler('CPLQuietErrorHandler')
-L = hb.get_logger('spatial_projection')
+L = hb.config.get_logger('spatial_projection')
 
 def get_wkt_from_epsg_code(epsg_code):
     srs = osr.SpatialReference()

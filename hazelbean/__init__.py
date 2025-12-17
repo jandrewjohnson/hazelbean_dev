@@ -1,6 +1,9 @@
 from __future__ import division, absolute_import, print_function
 import sys, time, os
 
+import hazelbean.config # Needs to be imported before core so that hb.config.LAST_TIME_CHECK is set for hb.timer()
+from hazelbean.config import *
+
 from hazelbean import json_helper # This enables hb.json_helper.parse_json_with_detailed_error(5)
 
 # Set hb level options
@@ -44,8 +47,7 @@ env_vars = {
 for var_name, path in env_vars.items():
     os.environ[var_name] = path
 
-import hazelbean.config # Needs to be imported before core so that hb.config.LAST_TIME_CHECK is set for hb.timer()
-from hazelbean.config import *
+
 # The most important and fast-loading things are in core which will be * imported each time.
 from hazelbean import core    # Core is imported first so that I can use hb.timer() for import performance assessment.
 from hazelbean.core import *

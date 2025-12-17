@@ -20,6 +20,10 @@ import pygeoprocessing
 
 
 from osgeo import gdal
+
+from hazelbean import config as hb_config
+
+
 # gdal.SetConfigOption("IGNORE_COG_LAYOUT_BREAK", "YES") 
 # gdal.PushErrorHandler('CPLQuietErrorHandler')
 
@@ -33,7 +37,7 @@ from osgeo import gdal
 # from pygeoprocessing.geoprocessing import *
 # from pygeoprocessing.geoprocessing_core import *
 
-L = hb.get_logger('geoprocessing_extension')
+L = hb_config.get_logger('geoprocessing_extension')
 L.setLevel(logging.INFO)
 
 def align_and_resize_raster_stack_ensuring_fit(
