@@ -61,7 +61,7 @@ def parse_json_with_detailed_error(json_string):
             enhanced_message += f"Suggestion: {suggestion}\n"
         enhanced_message += f"Original String (check around char {e.pos}):\n{e.doc[:e.pos]} <--- ERROR ---> {e.doc[e.pos:]}"
 
-
+        # print("Enhanced JSON Error Message Constructed:", enhanced_message)  # Debug print?
         raise JsonSyntaxHelperError(enhanced_message, e) # from e # Optionally chain
 
 # # --- Test Cases ---

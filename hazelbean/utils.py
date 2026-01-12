@@ -2601,7 +2601,7 @@ def parse_flex_to_python_object(input_df_element, verbose=False):
     
     if input_df_element == 'year, counterfactual':
         pass
-    if input_df_element == 'aggregation:v11_s26_r50, year:2050':
+    if 'aggregation:' in str(input_df_element):
         pass
     # Check if it evaluates to none
     if hb.isnan(input_df_element):
@@ -2613,7 +2613,9 @@ def parse_flex_to_python_object(input_df_element, verbose=False):
     elif input_df_element == '':
         return None
     
-
+    # Do some trivial preprocessing to strip interior leading and trailing spaces by removing them wherever there is a ':' or ','
+    if isinstance(input_df_element, str):
+        input_df_element = input_df_element.replace(' ,', ',').replace(', ', ',').replace(' :', ':').replace(': ', ':')
     
     if 'int' in str(type(input_df_element)):
         return input_df_element
@@ -2626,6 +2628,8 @@ def parse_flex_to_python_object(input_df_element, verbose=False):
         # Strip leading and trailing spaces
         input_df_element = input_df_element.strip()    
     
+        if ':final_year' in input_df_element:
+            pass
         # Check if it's verbatim json
         is_json = False
         if (input_df_element.startswith('{') and input_df_element.endswith('}')) or (input_df_element.startswith('[') and input_df_element.endswith(']')):
@@ -2654,12 +2658,13 @@ def parse_flex_to_python_object(input_df_element, verbose=False):
                 return s
             except:
                 is_json = False
-                raise NameError('Failed to parse json: ' + str(input_df_element) + ' as json. If something starts with a { or [ and ends with a } or ] it should be json, but if you have syntax error, like a missing comma or qutation mark, it will fail.')  
+                # raise NameError('Failed to parse json: ' + str(input_df_element) + ' as json. If something starts with a { or [ and ends with a } or ] it should be json, but if you have syntax error, like a missing comma or qutation mark, it will fail.')  
             
-            
+                      
         could_be_json = False
         if not is_json and ',' in input_df_element and ':' not in input_df_element:
-            input_df_element = '[' + input_df_element + ']'
+            if not input_df_element.startswith('['):
+                input_df_element = '[' + input_df_element + ']'
             split_element = split_respecting_nesting(input_df_element[1:-1], ',')
             for c, i in enumerate(split_element):
                 split_element[c] = i.strip()
@@ -2675,17 +2680,19 @@ def parse_flex_to_python_object(input_df_element, verbose=False):
                 # split_element = input_df_element[1:-1].split(',')
                 for i in split_element:
                     j = i.split(':')  
-
+                    if i == 'year:final_year':
+                                pass
                     if len(j) > 1:                  
                         for c, k in enumerate(j): # Strip leading and trailing spaces from each element
                             j[c] = j[c].strip()                    
                         # add quotation marks if needed
                         if not j[0].startswith('"') and not j[0].startswith("'") and not j[0].startswith('[') and not j[0].startswith('{'):
-                            input_df_element = input_df_element.replace(j[0], '"' + j[0] + '"')
+                            input_df_element = input_df_element.replace(j[0] + ':', '"' + j[0] + '":')
                         if not j[1].startswith('"') and not j[1].startswith("'") and not j[1].startswith('[') and not j[1].startswith('{'):
                             # Check if the first element is numeric
+                           
                             if not j[1][0].isdigit():
-                                input_df_element = input_df_element.replace(j[1], '"' + j[1] + '"')
+                                input_df_element = input_df_element.replace(':' + j[1], ':"' + j[1] + '"')
                         if j[1].startswith('[') or j[1].startswith('{'):
                             j[1] = parse_flex_to_python_object(j[1])
                         

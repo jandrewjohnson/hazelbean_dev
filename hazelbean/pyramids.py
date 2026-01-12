@@ -942,7 +942,7 @@ def is_path_global_pyramid(input_path, verbose=False):
         levels.append(shape[1] / ovr.XSize)
         
     correct_levels = hb.pyramid_compatible_overview_levels[pyramid_compatible_resolution_to_arcseconds[res]]
-    if levels != correct_levels:
+    if [int(i) for i in levels] != [int(i) for i in correct_levels]:
         if verbose:
             hb.log(f'Not pyramid because overview levels were not correct: {levels} {correct_levels }' + str(input_path))
         to_return = False
