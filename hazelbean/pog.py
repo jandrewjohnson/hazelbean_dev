@@ -332,7 +332,7 @@ def make_path_pog(input_raster_path, output_raster_path=None, output_data_type=N
             calc_raster_stats=False,
             add_overviews=False,
             pixel_size_override=None,
-            target_aligned_pixels=True,
+            target_aligned_pixels=True, # DOESNT DO ANYTHING BUT DONT WANT TO FUBAR STUFF
             bb_override=None,
             verbose=False, 
         )
@@ -416,13 +416,16 @@ def make_path_pog(input_raster_path, output_raster_path=None, output_data_type=N
     # Actually create the COG
     force_verbose = True
     if verbose or force_verbose:
-        hb.log(f"Creating COG at {output_raster_path}. Abs path: {os.path.abspath(output_raster_path)}, Norm path: {os.path.normpath(output_raster_path)}")
+        hb.log(f"Creating COG at {output_raster_path}. Abs path: {os.path.abspath(output_raster_path)}, Norm path: {os.path.normpath(output_raster_path)}")   
+    
     dst_ds = cog_driver.CreateCopy(
         output_raster_path,
         src_ds,
         strict=0,  # set to 1 to fail on any “creation option not recognized”
-        options=creation_options
+        options=creation_options,
+        callback=hb.make_gdal_callback(f'cog_driver creating copy at {output_raster_path}')
     )        
+    
     dst_ds = None
     
     if not is_path_pog(output_raster_path, verbose=verbose) and verbose:
