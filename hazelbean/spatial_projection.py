@@ -11,7 +11,7 @@ from functools import reduce
 from osgeo import gdal
 # gdal.SetConfigOption("IGNORE_COG_LAYOUT_BREAK", "YES") 
 # gdal.PushErrorHandler('CPLQuietErrorHandler')
-L = hb.get_logger('spatial_projection')
+L = hb.config.get_logger('spatial_projection')
 
 def get_wkt_from_epsg_code(epsg_code):
     srs = osr.SpatialReference()
@@ -358,7 +358,7 @@ def get_unaligned_raster_paths(input_paths_list, match_raster_path=None):
 def get_bounding_box(input_path, return_in_basemap_order=False, return_in_old_order=False):
     """
 
-    WARNING, This changed notation from UL LR to xmin ymin xmax ymax and may not have back\ward compatibility.
+    WARNING, This changed notation from UL LR to xmin ymin xmax ymax and may not have backward compatibility.
      from the bounding box reported by pygeoprocessing insofar as it is UL, LR (but PGP is LL, UR)
     Get bounding box where coordinates are in projected units.
 
@@ -496,7 +496,7 @@ def resample_to_match(input_path,
                       calc_raster_stats=False,
                       add_overviews=False,
                       pixel_size_override=None,
-                      target_aligned_pixels=True,
+                      target_aligned_pixels=True, # Doesnt do anything.
                       bb_override=None,
                       verbose=False,
                       ):
@@ -578,7 +578,7 @@ def resample_to_match(input_path,
                       dst_ndv=dst_ndv,
                       calc_raster_stats=calc_raster_stats,
                       add_overviews=add_overviews,
-                      target_aligned_pixels=target_aligned_pixels,
+                      target_aligned_pixels=target_aligned_pixels, # Doesnt do anything
     )
 
 

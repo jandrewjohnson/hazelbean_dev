@@ -20,6 +20,10 @@ import pygeoprocessing
 
 
 from osgeo import gdal
+
+from hazelbean import config as hb_config
+
+
 # gdal.SetConfigOption("IGNORE_COG_LAYOUT_BREAK", "YES") 
 # gdal.PushErrorHandler('CPLQuietErrorHandler')
 
@@ -33,7 +37,7 @@ from osgeo import gdal
 # from pygeoprocessing.geoprocessing import *
 # from pygeoprocessing.geoprocessing_core import *
 
-L = hb.get_logger('geoprocessing_extension')
+L = hb_config.get_logger('geoprocessing_extension')
 L.setLevel(logging.INFO)
 
 def align_and_resize_raster_stack_ensuring_fit(
@@ -432,7 +436,7 @@ def warp_raster_hb(
         calc_raster_stats=False,
         add_overviews=False,
         specific_overviews_to_add=None,
-        target_aligned_pixels=True
+        target_aligned_pixels=True # Doesn't do anything
 ):
     """Resize/resample raster to desired pixel size, bbox and projection.
 
@@ -603,7 +607,7 @@ def warp_raster_hb(
         outputType=output_data_type,
         srcNodata=src_ndv,
         dstNodata=dst_ndv,
-        targetAlignedPixels=target_aligned_pixels,
+        # targetAlignedPixels=target_aligned_pixels, # DEACTIVATED BECAUSE WAS THROWING ERROR. NOTE THAT I DID NOT DEACTIVATE IT IN PARENT FUNCTIONS TO ENSURE BACKWARDS COMPATIBILITY.
     )
     # TODOO decided not to implement parallel calculation of unique values list when making pyramids, but might be a nice optional addon.
     if calc_raster_stats:

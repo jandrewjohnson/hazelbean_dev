@@ -2598,12 +2598,45 @@ def df_move_col_after_col(df, col_to_move, col_to_put_it_after):
     return df[cols]
 
 def parse_flex_to_python_object(input_df_element, verbose=False):
+    """
+    Parse flexible input from dataframe elements into appropriate Python objects.
+    This function handles conversion of various string representations and primitive types
+    into their corresponding Python objects. It supports:
+    - None/null values (None, 'None', '', NaN)
+    - Primitive types (int, float, str)
+    - JSON objects and arrays (dictionaries and lists)
+    - Comma-separated values (converted to lists)
+    - Colon-separated key-value pairs (converted to dictionaries)
+    - Nested structures with proper quotation mark handling
+    Parameters
+    ----------
+    input_df_element : str, int, float, or None
+        The element to parse. Can be a string representation of a Python object,
+        a primitive type, or None/NaN.
+    verbose : bool, optional
+        If True, print debug information about the parsing process. Default is False.
+    Returns
+    -------
+    int, float, str, dict, list, or None
+        The parsed Python object. Returns:
+        - None if input evaluates to null/empty
+        - int/float if input is numeric
+        - dict if input contains colons (key:value pairs) or is JSON object syntax
+        - list if input contains commas or is JSON array syntax
+        - str for remaining string inputs
+    Notes
+    -----
+    - Handles special cases like 'year, counterfactual' and 'aggregation:' prefixes
+    - Automatically adds quotation marks to JSON keys/values as needed
+    - Respects nesting in complex structures
+    - Preprocesses whitespace around colons and commas
+    - Handles ':final_year' syntax
+    Raises
+    ------
+    Silently catches JSON parsing errors and returns the original string if parsing fails.
+    """
     
-    if input_df_element == 'year, counterfactual':
-        pass
-    if input_df_element == 'aggregation:v11_s26_r50, year:2050':
-        pass
-    # Check if it evaluates to none
+    # Quick check if it evaluates to none
     if hb.isnan(input_df_element):
         return None
     elif input_df_element is None:
@@ -2613,7 +2646,9 @@ def parse_flex_to_python_object(input_df_element, verbose=False):
     elif input_df_element == '':
         return None
     
-
+    # Do some trivial preprocessing to strip interior leading and trailing spaces by removing them wherever there is a ':' or ','
+    if isinstance(input_df_element, str):
+        input_df_element = input_df_element.replace(' ,', ',').replace(', ', ',').replace(' :', ':').replace(': ', ':')
     
     if 'int' in str(type(input_df_element)):
         return input_df_element
@@ -2621,6 +2656,7 @@ def parse_flex_to_python_object(input_df_element, verbose=False):
     if 'float' in str(type(input_df_element)):
         return input_df_element
     
+    # TRICKY AND CONFUSING STEP. Here we do some trivial (but actually complicated) parsing, but here it is only to test if it is jsonable and to give useful errors with parse_json_with_detailed_error
     if 'str' in str(type(input_df_element)) or 'object' in str(type(input_df_element)):
         
         # Strip leading and trailing spaces
@@ -2645,8 +2681,6 @@ def parse_flex_to_python_object(input_df_element, verbose=False):
                             # Check if the first element is numeric
                             if not j[1][0].isdigit():
                                 input_df_element = input_df_element.replace(j[1], '"' + j[1] + '"')
-                                
-                        
             
             try:            
                 s = hb.json_helper.parse_json_with_detailed_error(input_df_element)
@@ -2654,245 +2688,75 @@ def parse_flex_to_python_object(input_df_element, verbose=False):
                 return s
             except:
                 is_json = False
-                raise NameError('Failed to parse json: ' + str(input_df_element) + ' as json. If something starts with a { or [ and ends with a } or ] it should be json, but if you have syntax error, like a missing comma or qutation mark, it will fail.')  
+                # In most cases you do NOT want to raise an error here, because it is just TESTING if jsonable, but it will coerce it below.
+                # raise NameError('Failed to parse json: ' + str(input_df_element) + ' as json. If something starts with a { or [ and ends with a } or ] it should be json, but if you have syntax error, like a missing comma or qutation mark, it will fail.')  
             
-            
-        could_be_json = False
+        # if json.loads() fails, apply a ton of fixes, then try again.
+        # coerce LIST here
         if not is_json and ',' in input_df_element and ':' not in input_df_element:
-            input_df_element = '[' + input_df_element + ']'
+            if not input_df_element.startswith('['):
+                input_df_element = '[' + input_df_element + ']'
             split_element = split_respecting_nesting(input_df_element[1:-1], ',')
             for c, i in enumerate(split_element):
                 split_element[c] = i.strip()
                 if split_element[c].startswith('[') or split_element[c].startswith('{'):
                     split_element[c] = parse_flex_to_python_object(split_element[c])
             input_df_element = split_element    
-            
+        
+        # coerce DICT here
         if not is_json and ':' in input_df_element:
             input_df_element = '{' + input_df_element + '}'
-
             if input_df_element.startswith('{'):
                 split_element = split_respecting_nesting(input_df_element[1:-1], ',')
-                # split_element = input_df_element[1:-1].split(',')
                 for i in split_element:
                     j = i.split(':')  
-
                     if len(j) > 1:                  
                         for c, k in enumerate(j): # Strip leading and trailing spaces from each element
-                            j[c] = j[c].strip()                    
-                        # add quotation marks if needed
+                            j[c] = j[c].strip()     
                         if not j[0].startswith('"') and not j[0].startswith("'") and not j[0].startswith('[') and not j[0].startswith('{'):
-                            input_df_element = input_df_element.replace(j[0], '"' + j[0] + '"')
+                            input_df_element = input_df_element.replace(j[0] + ':', '"' + j[0] + '":')
                         if not j[1].startswith('"') and not j[1].startswith("'") and not j[1].startswith('[') and not j[1].startswith('{'):
-                            # Check if the first element is numeric
                             if not j[1][0].isdigit():
-                                input_df_element = input_df_element.replace(j[1], '"' + j[1] + '"')
+                                input_df_element = input_df_element.replace(':' + j[1], ':"' + j[1] + '"')
                         if j[1].startswith('[') or j[1].startswith('{'):
                             j[1] = parse_flex_to_python_object(j[1])
-                        
+        
+        # If after coercion json.reads works, use it. but if it fails, just return the (now-mangled) string          
         try:            
             s = hb.json_helper.parse_json_with_detailed_error(input_df_element)
-            could_be_json = True
             return s
         except:
-            could_be_json = False                
-            
+            pass 
 
         # Then it's not jsonable
         return input_df_element
                 
-        
-                
-                
 
-    
-    
-    
-    # print('input_df_string', input_df_string)
-    
-    # terminal_types = ['int(', 'float(', 'str(', 'bool(', '"', "'", '{', '[']
-    
-    # # Cast to string becasue pandas will interpret ints as ints lol!
-    # input_df_string = str(input_df_string)
-    
-    # # Check if input_df_string starts with a terminal type
-    # for terminal_type in terminal_types:
-    #     if input_df_string.startswith(terminal_type):
-    #         if terminal_type == 'int(':
-    #             return int(json.loads(input_df_string[4:-2]))
-    #         elif terminal_type == 'float(':
-    #             return float(json.loads(input_df_string[6:-2]))
-    #         elif terminal_type == 'str(':
-    #             return str(json.loads(input_df_string[4:-2]))
-    #         elif terminal_type == 'bool(':
-    #             return bool(json.loads(input_df_string[5:-2]))
-    #         elif terminal_type == '"':
-    #             return str(json.loads(input_df_string[1:-1]))
-    #         elif terminal_type == "'":
-    #             return str(json.loads(input_df_string[1:-1]))
-    #         elif terminal_type == "{":
-    #             return json.loads(input_df_string)
-    #         elif terminal_type == "[":
-    #             return json.loads(input_df_string)
-    #         else:
-    #             'not a terminal type'
-    # # Then it's a basic type
-    # try:
-    #     float(input_df_string)
-    #     floatable = True
-    # except:
-    #     floatable = False
-    
-    # try:
-    #     int(input_df_string)
-    #     intable = True  
-    # except:
-    #     intable = False
-        
-    # if '.' in input_df_string and floatable:
-    #     return float(input_df_string)
-    # elif intable:
-    #     return int(input_df_string)
-    # else:
-    #     return str(input_df_string)    
-
-    # # Check if it's an iterator
-    # explicit_iterator_types = ['[', '{']    
-    # for explicit_iterator_type in explicit_iterator_types:
-    #     if input_df_string.startswith(explicit_iterator_type):
-    #         if explicit_iterator_type == '[':
-    #             input_df_string = input_df_string.replace(', ', ',').replace(' ', ',')
-    #             return [parse_flex_to_python_object(i) for i in input_df_string[1:-2].split(',')]
-    #         elif explicit_iterator_type == '{':
-    #             input_df_string = input_df_string.replace(', ', ',').replace(' ', ',')
-    #             return {i.split(':')[0]: parse_flex_to_python_object(i.split(':')[1]) for i in input_df_string[1:-2].split(',')}
-            
-            
-    # # Check if it's an implied iterator
-    # has_implicit_iterator = False
-    # implicit_iterator_types = [', ', ' ', ',']
-    # for implicit_iterator_type in implicit_iterator_types:
-    #     if implicit_iterator_type in input_df_string:
-    #         has_implicit_iterator = True
-            
-    # if has_implicit_iterator:
-    #     # Replace all of them with a uniform one
-    #     input_df_string = input_df_string.replace(implicit_iterator_types[0], ',').replace(implicit_iterator_types[1], ',')
-    #     split_input = input_df_string.split(implicit_iterator_types[-1])
-    #     for item in split_input:
-    #         if ':' in item:
-    #             return {item.split(':')[0]: parse_flex_to_python_object(item.split(':')[1]) }
-    #         else:
-    #             return [parse_flex_to_python_object(i) for i in item]
-            
-    # # Then it's a basic type
-    # try:
-    #     float(input_df_string)
-    #     floatable = True
-    # except:
-    #     floatable = False
-    
-    # try:
-    #     int(input_df_string)
-    #     intable = True  
-    # except:
-    #     intable = False
-        
-    # if '.' in input_df_string and floatable:
-    #     return float(input_df_string)
-    # elif intable:
-    #     return int(input_df_string)
-    # else:
-    #     return str(input_df_string)
-    
-    
-    
-    
-    
-    # Check if it's json
-    
-    # # Check if it is an iterable
-    # if ' ' in input_df_string or ',' in input_df_string:
-    #     split = input_df_string.split(' ').split(', ').split(',')
-    #     for i in split:
-    #         if ':' in i:
-    #             output_type = 'dict'
-    #             to_return = {}
-    #         elif i.startswith('{'):
-    #             output_type = 'dict'
-    #             to_return = {}
-    #         elif i.startswith('['):
-    #             output_type = 'list'
-    #             to_return = []
-    #         elif i.startswith('int('):
-    #             output_type = 'int'
-    #         elif i.startswith('float('):
-    #             output_type = 'float'
-    #         elif i.startswith('str('):
-    #             output_type = 'str'
-    #         else:
-    #             output_type = 'list'
-    #             to_return = []
-        
-    #     for i in split:
-    #         if output_type == 'dict':
-    #             if ':' in i:
-    #                 split2 = i.split(':')
-    #                 key = split2[0]
-    #                 value = split2[1]
-    #                 value = parse_flex_to_python_object(value)
-    #                 to_return[key] = value
-    #         elif output_type == 'int':
-    #             to_return = int(i[4:-1])
-    #         elif output_type == 'float':
-    #             to_return = float(i[6:-1])
-    #         elif output_type == 'str':
-    #             to_return = str(i[4:-1])
-    #         else:
-    #             to_return.append(parse_flex_to_python_object(i))
-    # else:
-        
-    #     if ':' in input_df_string:
-    #         output_type = 'dict'
-    #         to_return = {}
-    #         split = input_df_string.split(':')
-    #         to_return[split[0]] = split[1]
-    #     elif input_df_string.startswith('{'):
-    #         output_type = 'dict'
-    #         to_return = {}
-    #         removed_brackets = input_df_string[1:-1]
-    #         split = input_df_string.split(':')
-    #         to_return[split[0]] = split[1]            
-            
-    #     elif input_df_string.startswith('['):
-    #         output_type = 'list'
-    #         to_return = []
-    #         to_return.append(input_df_string(i))
-    #     elif i.startswith('int('):
-    #         output_type = 'int'
-    #     elif i.startswith('float('):
-    #         output_type = 'float'
-    #     elif i.startswith('str('):
-    #         output_type = 'str'
-    #     else:
-    #         output_type = 'list'
-    #         to_return = []        
-    
-        
-
-    #     if input_df_string.startswith('int('):
-    #         to_return = int(input_df_string[4:-1])
-    #     elif input_df_string.startswith('float('):
-    #         to_return = float(input_df_string[6:-1])
-    #     elif input_df_string.startswith('str('):
-    #         to_return = str(input_df_string[4:-1])
-    #     else:
-    #         to_return = input_df_string
-
-    # if verbose:
-    #     hb.log('parse_flex_to_python_object:\n' + input_df_string + '\nparsed to\n' + str(to_return))
-    # return to_return
-    
 def split_respecting_nesting(s, delimiter):
+    """
+    Split a string by a delimiter while respecting nested brackets and braces.
+    This function splits a string into parts using the specified delimiter, but only
+    when the delimiter is found at the top level (i.e., not within any brackets or braces).
+    Nested structures like lists, dictionaries, or mathematical expressions are kept intact.
+    Args:
+        s (str): The string to be split.
+        delimiter (str): The character(s) used to split the string. Typically a comma (',').
+    Returns:
+        list[str]: A list of string parts split by the delimiter at the top level only.
+                   Each part is stripped of leading and trailing whitespace.
+    Example:
+        >>> split_respecting_nesting("a, [b, c], {d, e}", ",")
+        ['a', '[b, c]', '{d, e}']
+        >>> split_respecting_nesting("func(x, y), func(z, w)", ",")
+        ['func(x, y)', 'func(z, w)']
+    Note:
+        - Assumes well-formed input with balanced brackets and braces.
+        - If the input has unbalanced brackets/braces, the function may produce
+          unexpected results.
+        - Empty strings resulting from consecutive delimiters can be optionally
+          filtered out by uncommenting the filter line in the function body.
+    """
+    
     parts = []
     bracket_level = 0
     brace_level = 0
@@ -2915,8 +2779,4 @@ def split_respecting_nesting(s, delimiter):
     # Add the last part (from the last comma to the end)
     parts.append(s[start_index:].strip()) 
     
-    # Filter out potentially empty strings if the input starts/ends with commas
-    # or has consecutive top-level commas (though not in the example)
-    # parts = [p for p in parts if p] # Optional: remove empty strings if needed
-
     return parts
