@@ -32,9 +32,19 @@ mamba env create -f environment.yml
 # 3. Activate the environment
 mamba activate hazelbean_env
 
-# 4. Verify installation
-python -c "import hazelbean as hb; print('✅ Hazelbean ready!')"
+# 4. Install hazelbean package (compiles Cython extensions)
+pip install -e . --no-deps
+
+# 5. Verify installation (comprehensive check)
+python scripts/verify_installation.py
 ```
+
+**What happens in Step 4:**
+- Compiles platform-specific Cython extensions (required for performance-critical operations)
+- Installs hazelbean in editable mode for development
+- The `--no-deps` flag prevents pip from reinstalling conda packages
+
+**If Step 4 fails on Windows:** See [Cython Compilation Issues](#cython-compilation-issues-windows) below.
 
 ### Option B: Package Installation Only
 
@@ -219,6 +229,41 @@ python -c "import hazelbean; print('OK')"
 ```
 
 **Missing Sample Data** - Examples are designed to work with or without sample data - Synthetic data will be generated if real data is missing - This is normal and expected for first-time users
+
+### Cython Compilation Issues (Windows)
+
+**Symptoms:**
+```
+ImportError: cannot import name 'cython_functions' from 'hazelbean.calculation_core'
+```
+or
+```
+error: Microsoft Visual C++ 14.0 or greater is required
+```
+
+**Diagnosis:**
+```bash
+python scripts/verify_installation.py
+```
+
+This script will identify the exact issue and provide tailored solutions.
+
+**Quick Fix (Recommended):**
+```bash
+conda activate hazelbean_env
+conda install -c conda-forge m2w64-toolchain libpython
+pip install -e . --no-deps --force-reinstall
+```
+
+**Alternative - Visual Studio Build Tools:**
+1. Download from https://visualstudio.microsoft.com/downloads/
+2. Select "Build Tools for Visual Studio 2022"
+3. Check "Desktop development with C++"
+4. After install: `pip install -e . --no-deps --force-reinstall`
+
+**For comprehensive Windows troubleshooting, see:** [Windows Setup Guide](windows-setup.md)
+
+**Mac/Linux Users:** Cython compilation typically works without additional setup since compilers are usually pre-installed.
 
 ### Getting Help
 

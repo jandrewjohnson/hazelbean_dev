@@ -1,152 +1,237 @@
 # Hazelbean Documentation Site
 
-This directory contains the MkDocs-based documentation site for Hazelbean, including:
-- Educational tutorials with live code examples
-- Test documentation 
-- Performance reports and metrics
-- API reference documentation
+This directory contains **TWO documentation systems** for Hazelbean:
 
-## Quick Start
+## 🎯 PRIMARY: Quarto Documentation (RECOMMENDED)
+
+**Location:** `docs-site/quarto-docs/`
+
+Modern documentation system with automated report generation:
+- 📊 **Reports**: Test results, coverage, performance baselines, benchmarks
+- 📚 **Educational**: Tutorials with live code examples
+- 🧪 **Test Documentation**: Auto-generated from test files
+- 🔧 **Troubleshooting**: Common issues and solutions
+
+### Quick Start (Quarto)
 
 ```bash
-# Activate environment
-conda activate hazelbean_env
+# Option 1: Generate reports and serve site
+./tools/generate_complete_site.sh --serve
 
-# Serve documentation locally
-cd docs-site
-mkdocs serve
+# Option 2: Just serve the site
+./tools/quarto_serve.sh
 
-# Build static site
-mkdocs build
+# Option 3: Manual workflow
+cd docs-site/quarto-docs
+quarto preview
 ```
 
-The site will be available at http://127.0.0.1:8000
+### Full Generation Workflow
 
-## Current Configuration
+```bash
+# Generate all reports with fresh data and serve
+cd /path/to/hazelbean_dev
+conda activate hazelbean_env
+./tools/generate_complete_site.sh --serve
+```
 
-### MkDocs Handler Version
+This will:
+1. ✅ Run full test suite with JSON reporting
+2. ✅ Generate test results report
+3. ✅ Generate coverage report  
+4. ✅ Generate performance baselines
+5. ✅ Generate benchmark results
+6. ✅ Verify all reports created
+7. ✅ Start Quarto preview server
 
-**Currently using:** `mkdocstrings-python-legacy=0.2.7`
+---
 
-This project uses the **legacy mkdocstrings handler** (not the modern griffe-based handler) because:
-- The modern handler (griffe 1.14.0) requires ALL imports to be explicitly resolved
-- Standard library imports (`os`, `sys`, etc.) in example files cause build failures with modern handler
-- Legacy handler is more lenient about import resolution
+## 🗄️ LEGACY: MkDocs Site (Deprecated)
 
-### Future Upgrade Path
+**Location:** `docs-site/` (root files)
 
-To upgrade to the modern `mkdocstrings-python` handler in the future:
+⚠️ **This system is deprecated and will be removed in a future release.**
 
-1. Add all standard library modules to `preload_modules` in `mkdocs.yml`:
-   ```yaml
-   preload_modules: [pytest, hazelbean, os, sys, pathlib, logging, json, datetime]
-   ```
+The MkDocs-based documentation is **no longer actively maintained**. It remains for:
+- Backward compatibility during transition period
+- Reference for migration
 
-2. Remove legacy handler and install modern:
-   ```bash
-   conda remove mkdocstrings-python-legacy
-   conda install mkdocstrings-python -c conda-forge
-   ```
+### Legacy Quick Start (Not Recommended)
 
-3. Test and add any missing modules to preload list
+```bash
+conda activate hazelbean_env
+cd docs-site
+mkdocs serve
+```
 
-**See:** `docs/plans/mkdocs-griffe-import-resolution-fix.md` for complete details.
+Site available at http://127.0.0.1:8000
 
-## Structure
+---
+
+## 📁 Directory Structure
 
 ```
 docs-site/
-├── docs/
-│   ├── index.md                    # Homepage
-│   ├── educational/
-│   │   ├── index.md
-│   │   └── examples.md             # Tutorial examples with live code
-│   ├── tests/
-│   │   ├── index.md
-│   │   ├── integration.md
-│   │   ├── unit.md
-│   │   ├── performance.md
-│   │   └── system.md
-│   └── reports/
-│       ├── index.md
-│       ├── test-results.md
-│       ├── coverage-report.md
-│       ├── performance-baselines.md
-│       └── benchmark-results.md
-├── mkdocs.yml                      # Site configuration
-├── site/                           # Generated site (gitignored)
-└── README.md                       # This file
+├── quarto-docs/              # ⭐ PRIMARY - Quarto documentation
+│   ├── _quarto.yml           # Quarto configuration
+│   ├── _site/                # Generated site (gitignored)
+│   ├── reports/              # Auto-generated reports
+│   │   ├── test-results.qmd
+│   │   ├── coverage-report.qmd
+│   │   ├── performance-baselines.qmd
+│   │   └── benchmark-results.qmd
+│   ├── tests/                # Test documentation
+│   ├── educational/          # Tutorials and examples
+│   └── index.qmd             # Homepage
+│
+├── docs/                     # 🗄️ LEGACY - MkDocs content
+├── mkdocs.yml                # 🗄️ LEGACY - MkDocs config
+└── README.md                 # This file
 ```
 
-## Auto-Documentation
+## 🚀 Report Generation
 
-The site uses `mkdocstrings` to auto-generate documentation from Python code:
+Reports are auto-generated from test runs:
 
-### Examples (Working ✅)
-- `educational/examples.md` - Automatically extracts and displays code from `examples/step_*.py` files
-- Shows complete Python code with syntax highlighting
-- Includes docstrings and function signatures
-
-### Test Documentation (Partial)
-- Some test auto-doc directives are commented out (see integration.md)
-- Manual descriptions are still present and comprehensive
-- Full auto-docs will be restored when upgrading to modern handler
-
-## Troubleshooting
-
-### "Could not resolve alias" errors
-
-If you see errors like:
-```
-ERROR - Could not resolve alias examples.step_1_project_setup.os pointing at os
-```
-
-This means the modern handler got installed. Revert to legacy:
 ```bash
+# Generate individual reports
+python tools/generate_test_results_report.py
+python tools/generate_coverage_report.py
+python tools/generate_baseline_report.py
+python tools/generate_benchmark_summary.py
+
+# Or generate everything at once
+./tools/generate_complete_site.sh
+```
+
+### Report Sources
+
+| Report | Source Data | Generator |
+|--------|------------|-----------|
+| Test Results | `hazelbean_tests/test-results.json` | `generate_test_results_report.py` |
+| Coverage | `hazelbean_tests/coverage.json` | `generate_coverage_report.py` |
+| Performance | `baselines/current_performance_baseline.json` | `generate_baseline_report.py` |
+| Benchmarks | `metrics/benchmarks/*.json` | `generate_benchmark_summary.py` |
+
+## 🔄 Migration Status
+
+**Phase:** Transition to Quarto (Nov 2024)
+
+### What's Working ✅
+- ✅ Quarto site renders completely
+- ✅ All report generators working
+- ✅ Automated test → report pipeline
+- ✅ Navigation and structure
+- ✅ Educational content migrated
+- ✅ Cross-platform scripts (Bash + Windows)
+
+### Migration Timeline
+- **Current:** Both systems available (MkDocs marked as legacy)
+- **Next Release:** Quarto becomes default
+- **Future Release:** Remove MkDocs entirely
+
+## 📝 Configuration Files
+
+### Quarto (_quarto.yml)
+Primary configuration for modern site:
+- Theme: Cosmo
+- Navigation structure
+- Sidebar organization
+- Code highlighting and features
+
+### MkDocs (mkdocs.yml) - LEGACY
+Legacy configuration (deprecated):
+- Uses `mkdocstrings-python-legacy=0.2.7`
+- See file for upgrade path to modern handler
+- **Not recommended for new work**
+
+## 🛠️ Available Scripts
+
+### Primary Scripts (Quarto)
+```bash
+./tools/generate_complete_site.sh [--serve]  # Generate all reports + optionally serve
+./tools/quarto_serve.sh [--render]           # Serve site + optionally render first
+```
+
+### Windows Support
+```cmd
+tools\generate_complete_site.cmd            # Windows version
+tools\quarto_serve.cmd                      # Windows version
+```
+
+### Legacy Scripts (Deprecated)
+- Old mkdocs-based scripts in `tools/` directory
+- Not recommended for new work
+
+## 🐛 Troubleshooting
+
+### Quarto Issues
+
+**Quarto not found:**
+```bash
+conda activate hazelbean_env
+conda install quarto -c conda-forge
+```
+
+**Reports not updating:**
+```bash
+# Regenerate with fresh test data
+./tools/generate_complete_site.sh
+```
+
+**Links broken in rendered site:**
+- Check `_quarto.yml` navigation structure
+- Verify file paths relative to `quarto-docs/` directory
+
+### Legacy MkDocs Issues
+
+**"Could not resolve alias" errors:**
+```bash
+# Revert to legacy handler
 conda activate hazelbean_env
 conda remove mkdocstrings-python
 conda install mkdocstrings-python-legacy=0.2.7 -c conda-forge
 ```
 
-### Build fails on test documentation
-
-Some test documentation directives are intentionally commented out. Check:
-- `docs/tests/integration.md` - Lines with `<!-- TODO: Re-enable` comments
-- These will be restored when upgrading to modern handler
-
-### Server won't start
-
-Check if port 8000 is already in use:
+**Port 8000 in use:**
 ```bash
 lsof -i :8000
-# Kill any existing process
 kill <PID>
 ```
 
-## Dependencies
+## 📦 Dependencies
 
-Managed via `environment.yml` in project root:
-- `mkdocs=1.6.1`
-- `mkdocs-material>=9.0.0`
-- `mkdocstrings=0.30.1`
-- `mkdocstrings-python-legacy=0.2.7` ⭐ **Pinned to legacy**
+Managed via `environment.yml`:
 
-## Related Documentation
+### Quarto System (Active)
+- `quarto` - Documentation generation
+- `pytest-json-report` - Test result JSON export
+- `pytest-cov` - Coverage reporting
 
-- **Root cause analysis:** `../docs/plans/mkdocs-griffe-import-resolution-fix.md`
-- **Fresh start summary:** `../docs/plans/mkdocs-documentation-site-fresh-start.md`
-- **Getting started guide:** `../docs/getting-started.md`
+### MkDocs System (Legacy)
+- `mkdocs=1.6.1` - Site generator
+- `mkdocs-material>=9.0.0` - Theme
+- `mkdocstrings=0.30.1` - Auto-doc
+- `mkdocstrings-python-legacy=0.2.7` - Legacy handler
 
-## GitHub Pages Deployment
+## 📚 Related Documentation
 
-The documentation is automatically deployed to GitHub Pages via GitHub Actions workflow.
+- **Migration Plan:** `../docs/plans/quarto-consolidation-implementation.md`
+- **Transition Guide:** `../docs/plans/mkdocs-to-quarto-transition-guide.md`
+- **Phase 0 Results:** `../docs/plans/phase0-verification-results.md`
+- **Getting Started:** `../docs/getting-started.md`
+
+## 🌐 GitHub Pages Deployment
 
 **Live site:** https://jandrewjohnson.github.io/hazelbean_dev/
 
-Deployment happens automatically on push to `main` branch.
+Deployment via GitHub Actions (currently points to MkDocs):
+- **TODO:** Update workflow to deploy Quarto site instead
+- Automatic deployment on push to `main`
 
 ---
 
-**Last Updated:** October 3, 2025  
-**Handler Version:** mkdocstrings-python-legacy 0.2.7  
-**Status:** ✅ Working - examples show complete Python code
+**Last Updated:** November 15, 2024  
+**Primary System:** Quarto  
+**Status:** ✅ Quarto fully operational, MkDocs deprecated  
+**Next Steps:** Update GitHub Actions to deploy Quarto site
