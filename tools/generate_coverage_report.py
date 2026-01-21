@@ -101,15 +101,15 @@ def get_coverage_data():
         return None
 
 def get_status_emoji(coverage_pct):
-    """Get status emoji and text based on coverage percentage."""
+    """Get status text based on coverage percentage."""
     if coverage_pct >= 90:
-        return "✅ Excellent"
+        return "Excellent"
     elif coverage_pct >= 80:
-        return "✅ Good"  
+        return "Good"  
     elif coverage_pct >= 60:
-        return "⚠️ Fair"
+        return "Fair"
     else:
-        return "❌ Needs Attention"
+        return "Needs Attention"
 
 def generate_coverage_markdown(coverage_data):
     """Generate Quarto markdown report from coverage data."""
@@ -119,7 +119,7 @@ def generate_coverage_markdown(coverage_data):
 title: "Code Coverage Report"
 ---
 
-**Status:** ❌ No coverage data available
+**Status:** No coverage data available
 
 Please run tests with coverage enabled:
 ```bash
@@ -132,10 +132,10 @@ python -m pytest unit/ --cov=hazelbean --cov-report=term-missing
 """.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
     
     # Calculate trend (placeholder - could be enhanced with historical data)
-    trend_indicator = "➡️ Stable"  # Default placeholder
+    trend_indicator = "Stable"  # Default placeholder
     
     # Quality gate status
-    quality_gate = "✅ Above 60% threshold" if coverage_data['overall_coverage'] >= 60 else "❌ Below 60% threshold"
+    quality_gate = "Above 60% threshold" if coverage_data['overall_coverage'] >= 60 else "Below 60% threshold"
     
     markdown = f"""---
 title: "Code Coverage Report"
@@ -180,7 +180,7 @@ title: "Code Coverage Report"
         for module in low_coverage:
             markdown += f"- **{module['module']}**: {module['coverage_pct']:.1f}% ({module['lines_missing']} lines missing coverage)\n"
     else:
-        markdown += "- All modules above 60% coverage threshold ✅\n"
+        markdown += "- All modules above 60% coverage threshold\n"
     
     markdown += f"""
 ---

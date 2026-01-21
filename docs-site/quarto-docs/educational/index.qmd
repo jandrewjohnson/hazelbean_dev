@@ -21,18 +21,18 @@ aliases:
 - **Perform spatial analysis** with multi-raster operations and zonal statistics
 - **Export professional results** with comprehensive documentation
 
-### 🔄 Core Workflow Pattern
+### Core Workflow Pattern
 
 Hazelbean follows a consistent, organized workflow pattern that makes geospatial analysis predictable and reproducible:
 
 ```{mermaid}
 flowchart TD
-    A[🚀 Initialize ProjectFlow] --> B[📁 Create Directory Structure]
-    B --> C[🔍 Discover & Load Data]
-    C --> D[⚙️ Process & Transform]
-    D --> E[🧮 Analyze & Compute]
-    E --> F[📊 Export Results]
-    F --> G[📝 Document & Share]
+    A[Initialize ProjectFlow] --> B[Create Directory Structure]
+    B --> C[Discover and Load Data]
+    C --> D[Process and Transform]
+    D --> E[Analyze and Compute]
+    E --> F[Export Results]
+    F --> G[Document and Share]
     
     A1[p = hb.ProjectFlow('project_name')] --> A
     B1[inputs/, intermediate/, outputs/] --> B
@@ -49,39 +49,39 @@ flowchart TD
     class A1,B1,C1,D1,E1,F1,G1 codeBox
 ```
 
-### 🏗️ Detailed ProjectFlow Execution Model
+### Detailed ProjectFlow Execution Model
 
 Understanding how ProjectFlow coordinates complex geospatial workflows:
 
 ```{mermaid}
 flowchart TD
     Start([ProjectFlow Initialize]) --> SetupCheck{Environment OK?}
-    SetupCheck -->|No| Error[❌ Setup Error]
-    SetupCheck -->|Yes| CreateDirs[📁 Create Directory Structure]
+    SetupCheck -->|No| Error[Setup Error]
+    SetupCheck -->|Yes| CreateDirs[Create Directory Structure]
     
-    CreateDirs --> RegisterPaths[🔗 Register Path Directories]
-    RegisterPaths --> TaskRegistration[📝 Task Registration Phase]
+    CreateDirs --> RegisterPaths[Register Path Directories]
+    RegisterPaths --> TaskRegistration[Task Registration Phase]
     
     TaskRegistration --> TaskTree{Build Task Tree}
-    TaskTree --> TaskDeps[⚙️ Resolve Dependencies]
-    TaskDeps --> TaskExecution[🚀 Execute Task Tree]
+    TaskTree --> TaskDeps[Resolve Dependencies]
+    TaskDeps --> TaskExecution[Execute Task Tree]
     
     TaskExecution --> ParallelCheck{Parallel Tasks?}
-    ParallelCheck -->|Yes| ParallelExec[⚡ Parallel Task Execution]
-    ParallelCheck -->|No| SerialExec[🔄 Sequential Task Execution]
+    ParallelCheck -->|Yes| ParallelExec[Parallel Task Execution]
+    ParallelCheck -->|No| SerialExec[Sequential Task Execution]
     
     ParallelExec --> TaskComplete
     SerialExec --> TaskComplete{Task Complete?}
     
-    TaskComplete -->|No| ErrorHandle[🛠️ Error Handling]
+    TaskComplete -->|No| ErrorHandle[Error Handling]
     TaskComplete -->|Yes| NextTask{More Tasks?}
     
     ErrorHandle --> NextTask
     NextTask -->|Yes| TaskExecution
-    NextTask -->|No| Finalize[✅ Finalize & Cleanup]
+    NextTask -->|No| Finalize[Finalize and Cleanup]
     
-    Finalize --> Results[📊 Generate Results]
-    Results --> Complete([🎉 Workflow Complete])
+    Finalize --> Results[Generate Results]
+    Results --> Complete([Workflow Complete])
     
     %% Styling
     classDef process fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
@@ -97,16 +97,16 @@ flowchart TD
 
 This workflow ensures that every analysis is:
 
-- **🎯 Organized**: Clear directory structure and file management
-- **🔄 Reproducible**: Consistent patterns and automated documentation  
-- **🔍 Discoverable**: Intelligent file location and path resolution
-- **📈 Scalable**: Efficient processing suitable for large datasets
+- **Organized**: Clear directory structure and file management
+- **Reproducible**: Consistent patterns and automated documentation  
+- **Discoverable**: Intelligent file location and path resolution
+- **Scalable**: Efficient processing suitable for large datasets
 
 ## Learning Journey Overview
 
 This educational system is designed for **progressive learning** - each step builds naturally on the previous ones. Complete the journey in order for the best experience.
 
-### 🎯 Learning Objectives
+### Learning Objectives
 
 By the end of this tutorial series, you will be able to:
 
@@ -119,9 +119,9 @@ By the end of this tutorial series, you will be able to:
 
 ---
 
-## 📚 Educational Resources
+## Educational Resources
 
-### 🚀 [Step-by-Step Tutorial Examples](examples.qmd)
+### [Step-by-Step Tutorial Examples](examples.qmd)
 
 **Perfect for:** First-time users, guided learning, hands-on practice  
 **Time Commitment:** ~65 minutes total  
@@ -141,23 +141,23 @@ Our comprehensive tutorial takes you through five progressive examples:
 Each example includes complete, runnable code with extensive comments, error handling for missing data, and immediate visual feedback. The progression is carefully designed to introduce concepts incrementally.
 :::
 
-### 🔬 [Test Documentation](../tests/index.qmd)
+### [Test Documentation](../tests/index.qmd)
 
 **Perfect for:** Understanding implementation details, advanced patterns, maintainers  
 **Prerequisites:** Completion of tutorial examples  
 
 Comprehensive test documentation organized by category, showing real-world usage patterns and edge cases.
 
-### 📊 [Reports & Metrics](../reports/index.qmd)
+### [Reports and Metrics](../reports/index.qmd)
 
 **Perfect for:** Performance analysis, system status, quality metrics  
 **Use Case:** Understanding system health and performance characteristics
 
 ---
 
-## 🗺️ Learning Paths for Different Users
+## Learning Paths for Different Users
 
-### 🌱 New to Hazelbean (Start Here!)
+### New to Hazelbean (Start Here!)
 
 **Goal:** Get up and running quickly with guided examples
 
@@ -168,7 +168,7 @@ Comprehensive test documentation organized by category, showing real-world usage
 
 **Estimated Time:** 1-2 hours including practice
 
-### 🎓 Learning Geospatial Concepts
+### Learning Geospatial Concepts
 
 **Goal:** Understand both Hazelbean and geospatial processing concepts
 
@@ -179,7 +179,7 @@ Comprehensive test documentation organized by category, showing real-world usage
 
 **Estimated Time:** 3-5 hours including background learning
 
-### 🔬 Research & Analysis Focus
+### Research and Analysis Focus
 
 **Goal:** Efficiently apply Hazelbean to research workflows
 
@@ -190,7 +190,7 @@ Comprehensive test documentation organized by category, showing real-world usage
 
 **Estimated Time:** 2-3 hours including adaptation
 
-### 🔧 Contributing to Hazelbean
+### Contributing to Hazelbean
 
 **Goal:** Understand the codebase for contribution and extension
 
@@ -203,7 +203,7 @@ Comprehensive test documentation organized by category, showing real-world usage
 
 ---
 
-## 🛠️ Prerequisites & Setup
+## Prerequisites and Setup
 
 ### System Requirements
 
@@ -305,8 +305,8 @@ import numpy as np
 # Create a simple test
 p = hb.ProjectFlow('setup_test')
 test_array = np.random.rand(10, 10)
-print(f"✅ Setup successful! Project directory: {p.project_dir}")
-print(f"✅ Array processing working: {test_array.shape}")
+print(f"Setup successful! Project directory: {p.project_dir}")
+print(f"Array processing working: {test_array.shape}")
 
 # Expected output paths on Unix systems:
 # Project dir: /Users/username/setup_test (macOS)
@@ -322,8 +322,8 @@ import numpy as np
 # Create a simple test
 p = hb.ProjectFlow('setup_test')
 test_array = np.random.rand(10, 10)
-print(f"✅ Setup successful! Project directory: {p.project_dir}")
-print(f"✅ Array processing working: {test_array.shape}")
+print(f"Setup successful! Project directory: {p.project_dir}")
+print(f"Array processing working: {test_array.shape}")
 
 # Expected output path on Windows:
 # Project dir: C:\Users\username\setup_test
@@ -333,7 +333,7 @@ print(f"✅ Array processing working: {test_array.shape}")
 
 If this runs without errors, you're ready to begin!
 
-### 📁 Platform-Specific Project Organization
+### Platform-Specific Project Organization
 
 Understanding how Hazelbean organizes projects on your platform:
 
@@ -342,14 +342,14 @@ Understanding how Hazelbean organizes projects on your platform:
 ## macOS
 
 ```
-📁 /Users/username/my_analysis/          # Project root
-├── 📂 inputs/                          # Input data
+/Users/username/my_analysis/          # Project root
+├── inputs/                          # Input data
 │   ├── rasters/
 │   └── vectors/
-├── 📂 intermediate/                    # Processing files
+├── intermediate/                    # Processing files
 │   ├── aligned/
 │   └── processed/
-└── 📂 outputs/                        # Final results  
+└── outputs/                        # Final results  
     ├── 20240117_analysis/
     └── reports/
 ```
@@ -359,14 +359,14 @@ Understanding how Hazelbean organizes projects on your platform:
 ## Windows
 
 ```
-📁 C:\Users\username\my_analysis\        # Project root
-├── 📂 inputs\                          # Input data
+C:\Users\username\my_analysis\        # Project root
+├── inputs\                          # Input data
 │   ├── rasters\
 │   └── vectors\
-├── 📂 intermediate\                    # Processing files
+├── intermediate\                    # Processing files
 │   ├── aligned\
 │   └── processed\
-└── 📂 outputs\                        # Final results
+└── outputs\                        # Final results
     ├── 20240117_analysis\
     └── reports\
 ```
@@ -376,14 +376,14 @@ Understanding how Hazelbean organizes projects on your platform:
 ## Linux
 
 ```
-📁 /home/username/my_analysis/          # Project root
-├── 📂 inputs/                          # Input data
+/home/username/my_analysis/          # Project root
+├── inputs/                          # Input data
 │   ├── rasters/
 │   └── vectors/
-├── 📂 intermediate/                    # Processing files  
+├── intermediate/                    # Processing files  
 │   ├── aligned/
 │   └── processed/
-└── 📂 outputs/                        # Final results
+└── outputs/                        # Final results
     ├── 20240117_analysis/
     └── reports/
 ```
@@ -394,45 +394,45 @@ Understanding how Hazelbean organizes projects on your platform:
 
 ---
 
-## 🎯 Quick Start Options
+## Quick Start Options
 
-### 🚀 I want to dive right in!
+### I want to dive right in!
 **→ [Start with Step 1 of the Tutorial](examples.qmd#step-1-project-setup)**
 
-### 📖 I want to understand the big picture first
+### I want to understand the big picture first
 **→ Continue reading this page, then start the tutorial**
 
-### 🔍 I want to see what's possible
+### I want to see what's possible
 **→ [Jump to Step 5 (Results Export)](examples.qmd#step-5-export-results) to see the end goal**
 
-### 💡 I have specific questions
+### I have specific questions
 **→ [Browse the Test Documentation](../tests/index.qmd) for detailed implementation patterns**
 
 ---
 
-## 💡 Learning Tips for Success
+## Learning Tips for Success
 
 ::: {.callout-tip title="Maximize Your Learning"}
 
-**🔄 Learn by Doing**
+**Learn by Doing**
 
 - Run every code example yourself
 - Modify parameters to see what happens  
 - Try using your own data files
 
-**📝 Take Notes**
+**Take Notes**
 
 - Document patterns that apply to your work
 - Note functions and workflows you'll reuse
 - Keep track of useful parameter combinations
 
-**🔧 Experiment Safely**
+**Experiment Safely**
 
 - Each example includes error handling
 - ProjectFlow creates organized directories for easy cleanup
 - Start small and gradually increase complexity
 
-**🤔 Think Beyond the Examples**
+**Think Beyond the Examples**
 
 - How would you apply these patterns to your domain?
 - What data would you use in each step?
@@ -441,17 +441,17 @@ Understanding how Hazelbean organizes projects on your platform:
 
 ::: {.callout-warning title="Common Gotchas"}
 
-**🗂️ File Paths**
+**File Paths**
 
 - Hazelbean uses intelligent path resolution, but understanding the search order helps
 - Use ProjectFlow methods rather than hardcoded paths
 
-**📊 Data Types**
+**Data Types**
 
 - Pay attention to raster data types and scaling factors
 - Always check coordinate reference systems when combining datasets
 
-**💾 Memory Management**
+**Memory Management**
 
 - Large raster datasets can consume significant memory
 - The examples show memory-efficient patterns
@@ -459,12 +459,12 @@ Understanding how Hazelbean organizes projects on your platform:
 
 ---
 
-## 🎉 Ready to Begin?
+## Ready to Begin?
 
 The most effective way to learn Hazelbean is through hands-on practice. Our tutorial series is designed to get you productive quickly while building a solid foundation for advanced work.
 
 ::: {style="text-align: center; margin: 30px 0;"}
-[🚀 Start Learning with Step 1 →](examples.qmd#step-1-project-setup){.btn .btn-primary style="background: linear-gradient(45deg, #1976d2, #42a5f5); color: white; padding: 15px 30px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 18px; display: inline-block; box-shadow: 0 4px 8px rgba(0,0,0,0.2);"}
+[Start Learning with Step 1 →](examples.qmd#step-1-project-setup){.btn .btn-primary style="background: linear-gradient(45deg, #1976d2, #42a5f5); color: white; padding: 15px 30px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 18px; display: inline-block; box-shadow: 0 4px 8px rgba(0,0,0,0.2);"}
 :::
 
 ---

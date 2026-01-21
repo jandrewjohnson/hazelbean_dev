@@ -28,7 +28,7 @@ cd ../..
 
 ## Understanding the Two Documentation Types
 
-### Reports Section (Automatic ✅)
+### Reports Section (Automatic)
 **Location:** http://localhost:XXXX/reports/test-results.html
 
 **Shows:**
@@ -40,7 +40,7 @@ cd ../..
 
 **Your new test:** Appears immediately in statistics!
 
-### Tests Section (Manual Trigger ⚠️)
+### Tests Section (Manual Trigger)
 **Location:** http://localhost:XXXX/tests/unit.html
 
 **Shows:**
@@ -98,7 +98,7 @@ def test_my_new_feature():
 ```bash
 ./tools/generate_complete_site.sh --serve
 ```
-✅ Test appears in **Reports → Test Results**
+Test appears in **Reports -> Test Results**
 
 #### For Full Documentation (Complete):
 ```bash
@@ -113,7 +113,7 @@ python generate_test_docs.py
 cd ../..
 ./tools/quarto_serve.sh
 ```
-✅ Test appears in **both Reports AND Tests sections**
+Test appears in **both Reports AND Tests sections**
 
 ---
 
@@ -142,21 +142,21 @@ After generation, the server will show you the URL (usually http://localhost:XXX
 
 **Check 1:** File naming
 ```bash
-# ✅ Correct
+# Correct
 hazelbean_tests/unit/test_my_feature.py
 
-# ❌ Wrong
+# Wrong
 hazelbean_tests/unit/my_feature_test.py
 tests/unit/test_my_feature.py
 ```
 
 **Check 2:** Function naming
 ```python
-# ✅ Will appear
+# Will appear
 def test_my_function():
     pass
 
-# ❌ Won't appear
+# Won't appear
 def my_function():
     pass
 ```
@@ -237,14 +237,14 @@ cd ../..
 ## Key Points
 
 **Reports (Automatic):**
-- ✅ Updates every time you run `generate_complete_site.sh`
-- ✅ Shows test counts and statistics
-- ✅ Perfect for quick checks during development
+- Updates every time you run `generate_complete_site.sh`
+- Shows test counts and statistics
+- Perfect for quick checks during development
 
 **Tests Documentation (Manual):**
-- ⚠️ Requires running `generate_test_docs.py`
-- ✅ Shows source code and detailed docstrings
-- ✅ Update before commits or releases
+- Requires running `generate_test_docs.py`
+- Shows source code and detailed docstrings
+- Update before commits or releases
 
 **Why two levels?**
 - Statistics change frequently (every test run)

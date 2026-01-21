@@ -70,13 +70,13 @@ def parse_test_results(data: Dict) -> Dict:
     }
 
 def get_status_indicator(passed: int, failed: int, error: int) -> str:
-    """Get status emoji/indicator based on results."""
+    """Get status indicator based on results."""
     if failed > 0 or error > 0:
-        return "❌"
+        return "[FAIL]"
     elif passed > 0:
-        return "✅"
+        return "[PASS]"
     else:
-        return "⚠️"
+        return "[WARN]"
 
 def generate_test_results_markdown(results: Dict) -> str:
     """Generate Quarto markdown from test results."""
@@ -88,7 +88,7 @@ def generate_test_results_markdown(results: Dict) -> str:
 title: "Test Results"
 ---
 
-**Status:** ❌ No test results available
+**Status:** No test results available
 
 Please run tests with JSON reporting enabled:
 
@@ -107,13 +107,13 @@ python ../tools/generate_test_results_report.py test-results.json
     
     # Calculate overall status
     if summary['failed'] > 0 or summary['error'] > 0:
-        overall_status = "❌ Some Tests Failed"
+        overall_status = "Some Tests Failed"
         status_color = "danger"
     elif summary['total'] == summary['passed']:
-        overall_status = "✅ All Tests Passed"
+        overall_status = "All Tests Passed"
         status_color = "success"
     else:
-        overall_status = "⚠️ Some Tests Skipped"
+        overall_status = "Some Tests Skipped"
         status_color = "warning"
     
     # Calculate pass rate
@@ -138,10 +138,10 @@ title: "Test Results"
 
 | Metric | Count | Percentage |
 |--------|-------|------------|
-| ✅ **Passed** | {summary['passed']} | {(summary['passed']/summary['total']*100) if summary['total'] > 0 else 0:.1f}% |
-| ❌ **Failed** | {summary['failed']} | {(summary['failed']/summary['total']*100) if summary['total'] > 0 else 0:.1f}% |
-| ⚠️ **Skipped** | {summary['skipped']} | {(summary['skipped']/summary['total']*100) if summary['total'] > 0 else 0:.1f}% |
-| 🔥 **Error** | {summary['error']} | {(summary['error']/summary['total']*100) if summary['total'] > 0 else 0:.1f}% |
+| **Passed** | {summary['passed']} | {(summary['passed']/summary['total']*100) if summary['total'] > 0 else 0:.1f}% |
+| **Failed** | {summary['failed']} | {(summary['failed']/summary['total']*100) if summary['total'] > 0 else 0:.1f}% |
+| **Skipped** | {summary['skipped']} | {(summary['skipped']/summary['total']*100) if summary['total'] > 0 else 0:.1f}% |
+| **Error** | {summary['error']} | {(summary['error']/summary['total']*100) if summary['total'] > 0 else 0:.1f}% |
 | **Total** | {summary['total']} | 100% |
 
 ## Results by Test File
