@@ -81,9 +81,9 @@ quarto render
 ```
 
 **Advantages:**
-- ✅ Don't need to remember the --output-dir flag
-- ✅ Consistent output location
-- ✅ Works with all Quarto commands
+- Don't need to remember the --output-dir flag
+- Consistent output location
+- Works with all Quarto commands
 
 **Note:** If you commit this change, document it in your repo's README so contributors know docs generate to parent folder.
 
@@ -238,15 +238,15 @@ quarto render --output-dir ../../../docs-site/hazelbean
 
 ### What's Included
 
-- ✅ **277 test functions** documented with full source code
-- ✅ **Collapsible code sections** using Quarto callout blocks
-- ✅ **Syntax highlighting** for Python code
-- ✅ **Line numbers** in all code blocks
-- ✅ **Copy code button** for easy copying
-- ✅ **Search functionality** across all pages
-- ✅ **Table of contents** on each page
-- ✅ **Sidebar navigation** with test categories
-- ✅ **Breadcrumb navigation** for easy traversal
+- **277 test functions** documented with full source code
+- **Collapsible code sections** using Quarto callout blocks
+- **Syntax highlighting** for Python code
+- **Line numbers** in all code blocks
+- **Copy code button** for easy copying
+- **Search functionality** across all pages
+- **Table of contents** on each page
+- **Sidebar navigation** with test categories
+- **Breadcrumb navigation** for easy traversal
 
 ### Test Categories
 
@@ -336,11 +336,11 @@ The site has both:
 ### Tests not showing up?
 
 **Check:**
-1. File name starts with `test_` ✅
-2. File is in correct directory (`unit/`, `integration/`, etc.) ✅
-3. Functions start with `test_` ✅
-4. File is valid Python (no syntax errors) ✅
-5. Script ran successfully ✅
+1. File name starts with `test_`
+2. File is in correct directory (`unit/`, `integration/`, etc.)
+3. Functions start with `test_`
+4. File is valid Python (no syntax errors)
+5. Script ran successfully
 
 **Debug:**
 ```bash
@@ -398,9 +398,9 @@ In a monorepo setup, the parent repository typically handles deployment:
 ### Regular Updates
 
 Run these commands when:
-- ✅ New test files are added
-- ✅ Test functions are modified
-- ✅ Docstrings are updated
+- New test files are added
+- Test functions are modified
+- Docstrings are updated
 
 ```bash
 python generate_test_docs.py
@@ -413,15 +413,15 @@ quarto render --output-dir ../../../docs-site/hazelbean
 ### Version Control
 
 **Commit to git:**
-- ✅ `generate_test_docs.py` (the automation script)
-- ✅ `_quarto.yml` (site configuration)
-- ✅ `index.qmd` and `tests/index.qmd` (manually created pages)
-- ✅ Documentation files (MD files)
+- `generate_test_docs.py` (the automation script)
+- `_quarto.yml` (site configuration)
+- `index.qmd` and `tests/index.qmd` (manually created pages)
+- Documentation files (MD files)
 
 **Do NOT commit:**
-- ❌ `tests/*.qmd` (except `tests/index.qmd`) - auto-generated
-- ❌ `_site/` - build output
-- ❌ `_freeze/` - Quarto cache
+- `tests/*.qmd` (except `tests/index.qmd`) - auto-generated
+- `_site/` - build output
+- `_freeze/` - Quarto cache
 
 ---
 

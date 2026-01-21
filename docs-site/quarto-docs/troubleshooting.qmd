@@ -340,7 +340,7 @@ Run these to quickly diagnose your setup:
 ```bash
 # Environment check
 conda activate hazelbean_env
-python -c "import hazelbean as hb; print('✅ Hazelbean imported successfully')"
+python -c "import hazelbean as hb; print('Hazelbean imported successfully')"
 
 # Quarto check
 quarto --version

@@ -7,7 +7,7 @@ aliases:
 
 Automated reporting of test execution results, performance metrics, and system validation.
 
-## 📊 Live Test Dashboard
+## Live Test Dashboard
 
 For the most current test results, see our **[Latest Test Results](test-results.qmd)** with real-time metrics and detailed analysis.
 
@@ -26,16 +26,16 @@ For the most current test metrics, see **[Latest Test Results](test-results.qmd)
 - **Execution Speed** - Processing time analysis
 - **Scalability Metrics** - Large dataset processing performance
 
-## 📋 Available Reports
+## Available Reports
 
-### 🔍 **[Test Results](test-results.qmd)**
+### **[Test Results](test-results.qmd)**
 
 - Detailed test execution results with timing analysis
 - Failed test analysis and error reporting  
 - Performance metrics for all test categories
 - Generated automatically from pytest JSON output
 
-### 📈 **[Performance Baselines](performance-baselines.qmd)**
+### **[Performance Baselines](performance-baselines.qmd)**
 
 **Available** - Real-time performance baseline tracking
 
@@ -43,7 +43,7 @@ For the most current test metrics, see **[Latest Test Results](test-results.qmd)
 - Historical snapshot comparisons and regression detection
 - Trend analysis with performance metrics
 
-### 📊 **[Coverage Reports](coverage-report.qmd)**
+### **[Coverage Reports](coverage-report.qmd)**
 
 **Available** - Module-by-module coverage analysis
 
@@ -51,7 +51,7 @@ For the most current test metrics, see **[Latest Test Results](test-results.qmd)
 - Missing line identification and improvement suggestions
 - Detailed breakdowns per module
 
-### ⚡ **[Benchmark Results](benchmark-results.qmd)**
+### **[Benchmark Results](benchmark-results.qmd)**
 
 **Available** - Latest benchmark execution results
 
@@ -59,7 +59,7 @@ For the most current test metrics, see **[Latest Test Results](test-results.qmd)
 - Detailed timing statistics and system information
 - Performance analysis across test runs
 
-## 🔄 Report Generation
+## Report Generation
 
 ### Automated Updates
 
@@ -95,7 +95,7 @@ quarto render
 
 ---
 
-## 📖 How to Use These Reports
+## How to Use These Reports
 
 ### For Developers
 
