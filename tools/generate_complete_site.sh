@@ -1,10 +1,15 @@
 #!/bin/bash
 #
-# Complete Site Generation - Single Command Solution
-# Generates the entire documentation site with the most up-to-date data
+# Complete Site Generation - Single Command Solution (Quarto)
+# Generates the entire Quarto documentation site with the most up-to-date data
 #
 # Usage: ./tools/generate_complete_site.sh [--serve]
-#   --serve: Start the mkdocs development server after generation
+#   --serve: Start the Quarto preview server after generation
+#
+# This script:
+# 1. Runs pytest with JSON reporting (for Quarto generators)
+# 2. Generates all .qmd reports in docs-site/quarto-docs/reports/
+# 3. Optionally serves with Quarto preview
 #
 
 # Colors for pretty output
@@ -59,22 +64,25 @@ fi
 print_step "Running complete test suite with fresh coverage data..."
 cd hazelbean_tests || exit 1
 
-# Run tests with coverage to get the absolute latest data
-pytest unit/ integration/ system/ \
+# Run tests with coverage and JSON reporting for Quarto
+python -m pytest unit/ integration/ system/ \
     --cov=hazelbean \
+    --cov-report=json:coverage.json \
     --cov-report=term-missing \
-    --md-report \
-    --md-report-flavor gfm \
-    --md-report-output ../docs-site/docs/reports/test-results.md \
+    --json-report \
+    --json-report-file=test-results.json \
     --tb=short \
     --quiet || print_warning "Some tests failed, but continuing with report generation..."
 
-print_success "Test execution completed, coverage data collected"
+print_success "Test execution completed, JSON reports generated for Quarto"
 
 # Step 3: Generate all reports with fresh data
 cd "$PROJECT_ROOT"
 
-print_step "Generating coverage report from fresh data..."
+print_step "Generating test results report from JSON data..."
+python tools/generate_test_results_report.py hazelbean_tests/test-results.json
+
+print_step "Generating coverage report from JSON data..."
 python tools/generate_coverage_report.py
 
 print_step "Generating performance baselines dashboard..."  
@@ -83,20 +91,17 @@ python tools/generate_baseline_report.py
 print_step "Generating benchmark results summary..."
 python tools/generate_benchmark_summary.py
 
-print_step "Updating reports index and eliminating 'Coming Soon' text..."
-python tools/update_reports_index.py
-
-print_success "All reports generated with fresh data"
+print_success "All Quarto reports generated with fresh data"
 
 # Step 4: Verify all report files exist
 print_step "Verifying all report files..."
-REPORTS_DIR="$PROJECT_ROOT/docs-site/docs/reports"
+REPORTS_DIR="$PROJECT_ROOT/docs-site/quarto-docs/reports"
 REQUIRED_FILES=(
-    "test-results.md"
-    "coverage-report.md" 
-    "performance-baselines.md"
-    "benchmark-results.md"
-    "index.md"
+    "test-results.qmd"
+    "coverage-report.qmd" 
+    "performance-baselines.qmd"
+    "benchmark-results.qmd"
+    "index.qmd"
 )
 
 ALL_FILES_EXIST=true
@@ -116,20 +121,13 @@ else
     exit 1
 fi
 
-# Step 5: Verify no "Coming Soon" text remains
-print_step "Verifying 'Coming Soon' text elimination..."
-if grep -q "Coming Soon" "$REPORTS_DIR/index.md"; then
-    print_error "'Coming Soon' text still found in index.md!"
-    exit 1
-else
-    print_success "'Coming Soon' text successfully eliminated"
-fi
+# Step 5: Verify no "Coming Soon" text remains (removed - not applicable to current setup)
 
 # Step 6: Display generation summary
 print_step "Site generation summary:"
 echo ""
 echo "📊 Generated Reports:"
-ls -la "$REPORTS_DIR/" | grep -E '\.md$' | while read -r line; do
+ls -la "$REPORTS_DIR/" | grep -E '\.qmd$' | while read -r line; do
     filename=$(echo "$line" | awk '{print $9}')
     filesize=$(echo "$line" | awk '{print $5}')
     timestamp=$(echo "$line" | awk '{print $6, $7, $8}')
@@ -137,12 +135,15 @@ ls -la "$REPORTS_DIR/" | grep -E '\.md$' | while read -r line; do
 done
 
 # Get test metrics for summary
-if [[ -f "$REPORTS_DIR/test-results.md" ]]; then
+RESULTS_FILE="$PROJECT_ROOT/hazelbean_tests/test-results.json"
+if [[ -f "$RESULTS_FILE" ]]; then
     echo ""
     echo "📋 Test Summary:"
-    # Extract metrics from the generated test results
-    if grep -q "TOTAL" "$REPORTS_DIR/test-results.md"; then
-        TOTAL_LINE=$(grep "TOTAL" "$REPORTS_DIR/test-results.md" | head -1)
+    # Extract metrics from JSON using Python
+    METRICS=$(python -c "import json; data=json.load(open('$RESULTS_FILE')); s=data.get('summary',{}); print(f\"Passed: {s.get('passed',0)}, Failed: {s.get('failed',0)}, Skipped: {s.get('skipped',0)}, Total: {s.get('total',0)}\")" 2>/dev/null)
+    if [[ -n "$METRICS" ]]; then
+        echo "  $METRICS"
+    else
         echo "  Latest test results included in reports"
     fi
 fi
@@ -151,26 +152,25 @@ print_success "Complete site generation finished!"
 
 # Step 7: Optionally start the docs server
 if [[ "$SERVE_SITE" == "true" ]]; then
-    print_step "Starting mkdocs development server..."
-    cd "$PROJECT_ROOT/docs-site" || exit 1
+    print_step "Starting Quarto preview server..."
+    cd "$PROJECT_ROOT/docs-site/quarto-docs" || exit 1
     
     echo ""
-    echo "🌐 Site will be available at: http://127.0.0.1:8005/hazelbean_dev/reports/"
-    echo "📋 Direct report links:"
-    echo "  • Test Results: http://127.0.0.1:8005/hazelbean_dev/reports/test-results/"
-    echo "  • Coverage Report: http://127.0.0.1:8005/hazelbean_dev/reports/coverage-report/"
-    echo "  • Performance Baselines: http://127.0.0.1:8005/hazelbean_dev/reports/performance-baselines/"
-    echo "  • Benchmark Results: http://127.0.0.1:8005/hazelbean_dev/reports/benchmark-results/"
+    echo "🌐 Quarto site will be available at: http://localhost:XXXX (Quarto assigns port)"
+    echo "📋 Direct report links will be shown by Quarto"
     echo ""
     print_step "Press Ctrl+C to stop the server"
     echo ""
     
-    mkdocs serve --dev-addr 127.0.0.1:8005
+    quarto preview
 else
     echo ""
     echo "🌐 To view the generated site, run:"
-    echo "  cd $PROJECT_ROOT/docs-site && mkdocs serve --dev-addr 127.0.0.1:8005"
+    echo "  cd $PROJECT_ROOT/docs-site/quarto-docs && quarto preview"
     echo ""
     echo "📋 Or use this complete command to generate and serve:"
     echo "  $PROJECT_ROOT/tools/generate_complete_site.sh --serve"
+    echo ""
+    echo "💡 You can also use the dedicated serve script:"
+    echo "  $PROJECT_ROOT/tools/quarto_serve.sh"
 fi

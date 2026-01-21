@@ -1,0 +1,34 @@
+{
+  "python.testing.pytestEnabled": true,
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestArgs": [
+    "hazelbean_tests",
+    "-v",
+    "--tb=short"
+  ],
+  "python.testing.cwd": "${workspaceFolder}",
+  "python.testing.autoTestDiscoverOnSaveEnabled": true,
+  
+  // Conda environment configuration
+  "python.defaultInterpreterPath": "/opt/homebrew/Caskroom/mambaforge/base/envs/hazelbean_env/bin/python",
+  "python.condaPath": "/opt/homebrew/bin/conda",
+  
+  // Terminal activation
+  "python.terminal.activateEnvironment": true,
+  "python.terminal.activateEnvInCurrentTerminal": true,
+  
+  // Editor settings
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/*.pyc": true,
+    "**/.pytest_cache": true,
+    "**/.benchmarks": true,
+    "htmlcov": true
+  },
+  
+  // Pytest-specific settings
+  "python.testing.pytestPath": "/opt/homebrew/Caskroom/mambaforge/base/envs/hazelbean_env/bin/pytest"
+}
+
+
+
