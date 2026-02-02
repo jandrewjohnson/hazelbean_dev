@@ -8,7 +8,7 @@ Hazelbean is a Python library for geospatial analysis and processing, built on t
 
 ## Quick Links
 
-### [📚 Test Documentation](tests/index.qmd)
+### [Test Documentation](tests/index.qmd)
 
 Comprehensive test suite documentation with **277 test functions** across 4 categories:
 
@@ -21,18 +21,18 @@ Comprehensive test suite documentation with **277 test functions** across 4 cate
 
 ## Features
 
-### 🗺️ Geospatial Processing
+### Geospatial Processing
 - **Raster Operations** - Read, write, and process raster datasets
 - **Vector Operations** - Work with shapefiles and GeoPackages
 - **Cloud Optimized GeoTIFFs** - COG creation and validation
 - **Performance Optimized GeoTIFFs** - POG processing for speed
 
-### 🔄 ProjectFlow
+### ProjectFlow
 - **Task Management** - Organize complex geospatial workflows
 - **Parallel Processing** - Multi-threaded raster operations
 - **Caching & Validation** - Smart task execution and results caching
 
-### 📊 Data Structures
+### Data Structures
 - **ArrayFrame** - Enhanced NumPy arrays for geospatial data
 - **Spatial Projections** - Coordinate system transformations
 - **File I/O** - Flexible path resolution and data loading

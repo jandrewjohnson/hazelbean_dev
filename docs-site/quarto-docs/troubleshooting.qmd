@@ -36,10 +36,40 @@ This guide covers common issues you might encounter while working with Hazelbean
    ```bash
    # Ensure you're in the correct directory
    cd docs-site/quarto-docs
-   
+
    # Check file permissions
    ls -la _quarto.yml
    ```
+
+### Infinite Loop During Preview
+
+**Symptom:** `quarto preview` keeps rebuilding endlessly, never stabilizing
+
+**Cause:** A `pre-render` hook in `_quarto.yml` generates `.qmd` files, which triggers Quarto's file watcher, which re-runs the pre-render hook, creating an infinite loop.
+
+**Solution:**
+
+1. **Check for pre-render hooks that generate files:**
+   ```bash
+   grep -n "pre-render" docs-site/quarto-docs/_quarto.yml
+   ```
+
+2. **Run report generation manually instead:**
+   ```bash
+   # From project root
+   python tools/generate_all_reports.py
+
+   # Then preview
+   cd docs-site/quarto-docs
+   quarto preview
+   ```
+
+3. **Or use the convenience script:**
+   ```bash
+   ./tools/preview_docs.sh
+   ```
+
+**Note:** The pre-render hook works fine with `quarto render` (one-time build), but causes issues with `quarto preview` (live file watching).
 
 ### Rendering Failures
 
@@ -329,9 +359,9 @@ If you're still experiencing issues:
      - Output of `conda list`
 
 4. **Documentation:**
-   - [Getting Started Guide](../docs/getting-started.md)
-   - [Windows Setup Guide](../docs/windows-setup.md)
-   - [GitHub Workflows](../.github/workflows/)
+   - [Getting Started Guide](../../docs/getting-started.md)
+   - [Windows Setup Guide](../../docs/windows-setup.md)
+   - [GitHub Workflows](../../.github/workflows/)
 
 ## Quick Diagnosis Commands
 
@@ -340,7 +370,7 @@ Run these to quickly diagnose your setup:
 ```bash
 # Environment check
 conda activate hazelbean_env
-python -c "import hazelbean as hb; print('✅ Hazelbean imported successfully')"
+python -c "import hazelbean as hb; print('Hazelbean imported successfully')"
 
 # Quarto check
 quarto --version
@@ -358,6 +388,6 @@ ls -la docs-site/quarto-docs/_quarto.yml
 
 ---
 
-*Last Updated: 2025-11-15*
+*Last Updated: 2026-02-01*
 *For the most current troubleshooting information, visit the [GitHub repository](https://github.com/jandrewjohnson/hazelbean_dev).*
 

@@ -21,19 +21,19 @@ NC='\033[0m' # No Color
 
 # Function to print colored output
 print_step() {
-    echo -e "${BLUE}🚀 $1${NC}"
+    echo -e "${BLUE}[STEP] $1${NC}"
 }
 
 print_success() {
-    echo -e "${GREEN}✅ $1${NC}"
+    echo -e "${GREEN}[OK] $1${NC}"
 }
 
 print_warning() {
-    echo -e "${YELLOW}⚠️  $1${NC}"
+    echo -e "${YELLOW}[WARN] $1${NC}"
 }
 
 print_error() {
-    echo -e "${RED}❌ $1${NC}"
+    echo -e "${RED}[ERROR] $1${NC}"
 }
 
 # Check if we should serve the site
@@ -107,9 +107,9 @@ REQUIRED_FILES=(
 ALL_FILES_EXIST=true
 for file in "${REQUIRED_FILES[@]}"; do
     if [[ -f "$REPORTS_DIR/$file" ]]; then
-        print_success "✓ $file generated"
+        print_success "$file generated"
     else
-        print_error "✗ $file missing!"
+        print_error "$file missing!"
         ALL_FILES_EXIST=false
     fi
 done
@@ -126,19 +126,19 @@ fi
 # Step 6: Display generation summary
 print_step "Site generation summary:"
 echo ""
-echo "📊 Generated Reports:"
+echo "Generated Reports:"
 ls -la "$REPORTS_DIR/" | grep -E '\.qmd$' | while read -r line; do
     filename=$(echo "$line" | awk '{print $9}')
     filesize=$(echo "$line" | awk '{print $5}')
     timestamp=$(echo "$line" | awk '{print $6, $7, $8}')
-    echo "  ✓ $filename (${filesize}B) - $timestamp"
+    echo "  - $filename (${filesize}B) - $timestamp"
 done
 
 # Get test metrics for summary
 RESULTS_FILE="$PROJECT_ROOT/hazelbean_tests/test-results.json"
 if [[ -f "$RESULTS_FILE" ]]; then
     echo ""
-    echo "📋 Test Summary:"
+    echo "Test Summary:"
     # Extract metrics from JSON using Python
     METRICS=$(python -c "import json; data=json.load(open('$RESULTS_FILE')); s=data.get('summary',{}); print(f\"Passed: {s.get('passed',0)}, Failed: {s.get('failed',0)}, Skipped: {s.get('skipped',0)}, Total: {s.get('total',0)}\")" 2>/dev/null)
     if [[ -n "$METRICS" ]]; then
@@ -154,23 +154,23 @@ print_success "Complete site generation finished!"
 if [[ "$SERVE_SITE" == "true" ]]; then
     print_step "Starting Quarto preview server..."
     cd "$PROJECT_ROOT/docs-site/quarto-docs" || exit 1
-    
+
     echo ""
-    echo "🌐 Quarto site will be available at: http://localhost:XXXX (Quarto assigns port)"
-    echo "📋 Direct report links will be shown by Quarto"
+    echo "Quarto site will be available at: http://localhost:XXXX (Quarto assigns port)"
+    echo "Direct report links will be shown by Quarto"
     echo ""
     print_step "Press Ctrl+C to stop the server"
     echo ""
-    
+
     quarto preview
 else
     echo ""
-    echo "🌐 To view the generated site, run:"
+    echo "To view the generated site, run:"
     echo "  cd $PROJECT_ROOT/docs-site/quarto-docs && quarto preview"
     echo ""
-    echo "📋 Or use this complete command to generate and serve:"
+    echo "Or use this complete command to generate and serve:"
     echo "  $PROJECT_ROOT/tools/generate_complete_site.sh --serve"
     echo ""
-    echo "💡 You can also use the dedicated serve script:"
+    echo "You can also use the dedicated serve script:"
     echo "  $PROJECT_ROOT/tools/quarto_serve.sh"
 fi

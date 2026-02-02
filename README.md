@@ -4,17 +4,17 @@ Hazelbean is a collection of geospatial processing tools based on gdal, numpy, s
 
 ## Requirements
 
--   **Python 3.10 or later** (Python 3.9 support was dropped as of version 14.0.0 due to NumPy 2.0 compatibility issues)
+-   **Python 3.10 or later** (Python 3.9 support was dropped as of version 1.4.0 due to NumPy 2.0 compatibility issues)
 
 Hazelbean started as a personal research package of scripts for Justin Johnson and is was not originally intended for broad release. However, hazelbean is transitioning towards having full-support, primarily because it underlies several important software releases, including some from the Natural Capital Project. Thus, even in this transitory state, it is available via "pip install hazelbean". Note that hazelbean only provides a Python 3+, 64 bit, Windows version, however with the exception of precompiled cython files, it should be cross-platform and cross-version. The precompiled files are only loaded as needed.
 
-## 📚 Documentation
+## Documentation
 
 Our integrated documentation system provides comprehensive guides and examples:
 
--   **📝 [Getting Started](docs/getting-started.md)** - Complete setup guide with current project structure
--   **📚 [Testing Guide](hazelbean_tests/README.md)** - Test infrastructure overview
--   **🎓 [Examples](examples/)** - Hands-on tutorials and demonstrations
+-   ** [Getting Started](docs/getting-started.md)** - Complete setup guide with current project structure
+-   ** [Testing Guide](hazelbean_tests/README.md)** - Test infrastructure overview
+-   ** [Examples](examples/)** - Hands-on tutorials and demonstrations
 
 ### Local Documentation Site
 
@@ -22,13 +22,13 @@ You can serve the full documentation site locally with searchable content, test 
 
 ``` bash
 conda activate hazelbean_env
-cd docs-site
-mkdocs serve  # Visit http://127.0.0.1:8000
+cd docs-site/quarto-docs
+quarto preview  # Visit http://localhost:4848
 ```
 
 The local site includes: - Progressive learning path with tutorials - 50+ test examples showing real-world usage patterns - Current test results and performance metrics - Searchable content across all documentation
 
-## ⚡ Quick Start (5 minutes)
+## Quick Start
 
 ### Option 1: Complete Environment (Recommended)
 
@@ -50,8 +50,8 @@ python scripts/verify_installation.py
 # 5. Try educational examples
 cd examples && python step_1_project_setup.py
 
-# 6. Explore documentation locally  
-cd docs-site && mkdocs serve  # Visit http://127.0.0.1:8000
+# 6. Explore documentation locally
+cd docs-site/quarto-docs && quarto preview  # Visit http://localhost:4848
 ```
 
 **Important Notes:**
@@ -158,7 +158,7 @@ def add_all_tasks_to_task_tree(p):
     p.generated_kernels_task = p.add_task(example_task_function)
 ```
 
-## 🚀 Creating a New Release
+## Creating a New Release
 
 Hazelbean uses a fully automated release pipeline that publishes to both PyPI and conda-forge. The entire process is triggered by creating a GitHub Release.
 
@@ -177,20 +177,18 @@ Hazelbean uses a fully automated release pipeline that publishes to both PyPI an
    - Click "Publish release"
 
 3. **Automation takes over:**
-   - ✅ GitHub Actions builds wheels for all platforms (~20 minutes)
-   - ✅ Automatically uploads to PyPI
-   - ✅ Updates CHANGELOG.md
-   - ✅ conda-forge bot detects the release (~24 hours)
-   - ✅ Review and merge the conda-forge PR
-   - ✅ conda-forge builds and publishes packages (~2 hours)
+   -  GitHub Actions builds wheels for all platforms (~20 minutes)
+   -  Automatically uploads to PyPI
+   -  Updates CHANGELOG.md
+   -  conda-forge bot detects the release (~24 hours)
+   -  Review and merge the conda-forge PR
+   -  conda-forge builds and publishes packages (~2 hours)
 
-### 📚 Complete Release Documentation
+###  Complete Release Documentation
 
 For detailed information about the release process:
 
-- **[Release Quick Reference](docs/release-quick-reference.md)** - 5-minute guide for each release
+- **[Release Quick Reference](docs/release-quick-reference.md)** - Quick guide for each release
 - **[Release Process Explained](docs/release-process-explained.md)** - Complete technical documentation
-- **[Release Pipeline Diagram](docs/release-pipeline-diagram.txt)** - Visual flow chart
-- **[Release Checklist Template](docs/release-checklist-template.md)** - Comprehensive checklist for each release
 
 **No manual PyPI uploads needed!** The old manual process with twine is deprecated - everything is automated through GitHub Actions.

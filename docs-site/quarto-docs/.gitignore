@@ -12,3 +12,5 @@ reports/performance-baselines.qmd
 reports/coverage-report.qmd
 reports/benchmark-results.qmd
 # Keep reports/index.qmd in git (static overview page)
+
+**/*.quarto_ipynb
