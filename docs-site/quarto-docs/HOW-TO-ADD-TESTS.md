@@ -29,7 +29,7 @@ cd ../..
 ## Understanding the Two Documentation Types
 
 ### Reports Section (Automatic)
-**Location:** http://localhost:XXXX/reports/test-results.html
+**Location:** http://localhost:4200/reports/test-results.html
 
 **Shows:**
 - Test counts and pass/fail rates
@@ -41,7 +41,7 @@ cd ../..
 **Your new test:** Appears immediately in statistics!
 
 ### Tests Section (Manual Trigger)
-**Location:** http://localhost:XXXX/tests/unit.html
+**Location:** http://localhost:4200/tests/unit.html
 
 **Shows:**
 - Test descriptions and docstrings
@@ -119,7 +119,7 @@ Test appears in **both Reports AND Tests sections**
 
 ## Viewing Your Changes
 
-After generation, the server will show you the URL (usually http://localhost:XXXX)
+After generation, the server will show you the URL (usually http://localhost:4200)
 
 **Navigate to:**
 - **Reports → Test Results** - See statistics
@@ -261,4 +261,4 @@ cd ../..
 
 ---
 
-**Last Updated:** November 15, 2024
+**Last Updated:** February 1, 2026

@@ -76,7 +76,7 @@ To update all reports manually:
 
 ```bash
 # From project root
-cd /Users/lucasralph/LJR_Projects/UMN/hazelbean_dev
+cd /path/to/hazelbean_dev
 
 # Generate all reports
 python tools/generate_all_reports.py

@@ -7,11 +7,33 @@ This directory contains the Hazelbean documentation site built with Quarto, feat
 ### Standalone Usage (Local Development)
 
 ```bash
-# Render the site
-quarto render
+# Option 1: Use the convenience script (recommended)
+./tools/preview_docs.sh
 
-# Serve locally
-quarto preview
+# Option 2: Manual steps
+# First, generate reports (run from project root)
+python tools/generate_all_reports.py
+
+# Then render or preview (from quarto-docs directory)
+cd docs-site/quarto-docs
+quarto render      # Build static site
+quarto preview     # Live preview with hot reload
+```
+
+**Why manual report generation?**
+
+Report generation is done separately (not via pre-render hook) to prevent an infinite loop during `quarto preview`. The pre-render hook would regenerate `.qmd` files, triggering Quarto's file watcher, which would re-run the hook, creating an endless cycle.
+
+**What report generation does:**
+- Test results (from `hazelbean_tests/test-results.json`)
+- Coverage (from `.coverage`)
+- Benchmarks (from `metrics/benchmarks/*.json`)
+- Baselines (from `metrics/baselines/*.json`)
+
+**If you also need to update test source code documentation:**
+```bash
+python generate_test_docs.py  # Extracts test function source code
+quarto render
 ```
 
 ### Using in a Monorepo
@@ -333,6 +355,25 @@ The site has both:
 
 ## Troubleshooting
 
+### Infinite loop during `quarto preview`?
+
+If `quarto preview` keeps rebuilding endlessly, check if someone added a `pre-render` hook to `_quarto.yml` that generates `.qmd` files. This creates a loop:
+
+1. Pre-render generates `.qmd` files
+2. Quarto's file watcher detects the changes
+3. Quarto triggers a re-render
+4. Go to step 1
+
+**Fix:** Remove any pre-render hooks that generate `.qmd` files. Run report generation manually before preview:
+
+```bash
+python tools/generate_all_reports.py
+cd docs-site/quarto-docs
+quarto preview
+```
+
+Or use the convenience script: `./tools/preview_docs.sh`
+
 ### Tests not showing up?
 
 **Check:**
@@ -450,6 +491,6 @@ quarto render --output-dir ../../../docs-site/hazelbean
 
 ---
 
-**Last Updated:** November 15, 2024  
+**Last Updated:** February 1, 2026  
 **Version:** 1.1  
 **Total Tests Documented:** 277

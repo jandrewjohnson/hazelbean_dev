@@ -34,11 +34,11 @@ flowchart TD
     E --> F[Export Results]
     F --> G[Document and Share]
     
-    A1[p = hb.ProjectFlow('project_name')] --> A
-    B1[inputs/, intermediate/, outputs/] --> B
-    C1[p.get_path() intelligent search] --> C
-    D1[Array operations & transformations] --> D
-    E1[Multi-raster analysis & statistics] --> E
+    A1["p = hb.ProjectFlow('project_name')"] --> A
+    B1["inputs/, intermediate/, outputs/"] --> B
+    C1["p.get_path() intelligent search"] --> C
+    D1["Array operations & transformations"] --> D
+    E1["Multi-raster analysis & statistics"] --> E
     F1[Organized file structure] --> F
     G1[Automated documentation] --> G
     
@@ -55,43 +55,50 @@ Understanding how ProjectFlow coordinates complex geospatial workflows:
 
 ```{mermaid}
 flowchart TD
-    Start([ProjectFlow Initialize]) --> SetupCheck{Environment OK?}
-    SetupCheck -->|No| Error[Setup Error]
-    SetupCheck -->|Yes| CreateDirs[Create Directory Structure]
-    
-    CreateDirs --> RegisterPaths[Register Path Directories]
-    RegisterPaths --> TaskRegistration[Task Registration Phase]
-    
-    TaskRegistration --> TaskTree{Build Task Tree}
-    TaskTree --> TaskDeps[Resolve Dependencies]
-    TaskDeps --> TaskExecution[Execute Task Tree]
-    
-    TaskExecution --> ParallelCheck{Parallel Tasks?}
-    ParallelCheck -->|Yes| ParallelExec[Parallel Task Execution]
-    ParallelCheck -->|No| SerialExec[Sequential Task Execution]
-    
-    ParallelExec --> TaskComplete
-    SerialExec --> TaskComplete{Task Complete?}
-    
-    TaskComplete -->|No| ErrorHandle[Error Handling]
-    TaskComplete -->|Yes| NextTask{More Tasks?}
-    
-    ErrorHandle --> NextTask
-    NextTask -->|Yes| TaskExecution
-    NextTask -->|No| Finalize[Finalize and Cleanup]
-    
-    Finalize --> Results[Generate Results]
-    Results --> Complete([Workflow Complete])
-    
+    Start([p = hb.ProjectFlow]) --> CreateDir{"Create project_dir?"}
+    CreateDir -->|Fails| Error[NotADirectoryError]
+    CreateDir -->|Success| SetupDirs["Set input_dir, intermediate_dir, output_dir"]
+
+    SetupDirs --> InitTree["Initialize task_tree root"]
+    InitTree --> UserTasks[User adds tasks via add_task]
+
+    UserTasks --> Execute["p.execute()"]
+    Execute --> RegisterDirs["Register search directories"]
+    RegisterDirs --> ShowTasks["show_tasks() displays tree"]
+    ShowTasks --> RunTask["run_task(task_tree)"]
+
+    RunTask --> GetTask["Get next task from tree"]
+    GetTask --> SetTaskDir["Set task_dir based on parent type"]
+    SetTaskDir --> CheckSkip{"skip_existing and dir exists?"}
+
+    CheckSkip -->|Yes| SkipRun["Set run_this = False"]
+    CheckSkip -->|No| CreateTaskDir["Create task directory"]
+
+    SkipRun --> RunFunc
+    CreateTaskDir --> RunFunc["Run task.function(p)"]
+
+    RunFunc --> IsIterator{"Task is iterator?"}
+    IsIterator -->|Yes| CheckParallel{"run_in_parallel?"}
+    IsIterator -->|No| HasChildren{"Has children?"}
+
+    CheckParallel -->|Yes| ParallelExec["multiprocessing.Pool.starmap()"]
+    CheckParallel -->|No| SeqExec["Sequential child execution"]
+
+    ParallelExec --> HasChildren
+    SeqExec --> HasChildren
+
+    HasChildren -->|Yes| RunTask
+    HasChildren -->|No| Complete([Script complete])
+
     %% Styling
     classDef process fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
     classDef decision fill:#fff3e0,stroke:#f57c00,stroke-width:2px
     classDef error fill:#ffebee,stroke:#d32f2f,stroke-width:2px
     classDef success fill:#e8f5e8,stroke:#388e3c,stroke-width:2px
-    
-    class CreateDirs,RegisterPaths,TaskRegistration,TaskExecution,ParallelExec,SerialExec,Finalize,Results process
-    class SetupCheck,TaskTree,ParallelCheck,TaskComplete,NextTask decision
-    class Error,ErrorHandle error
+
+    class SetupDirs,InitTree,UserTasks,Execute,RegisterDirs,ShowTasks,RunTask,GetTask,SetTaskDir,CreateTaskDir,RunFunc,ParallelExec,SeqExec,SkipRun process
+    class CreateDir,CheckSkip,IsIterator,CheckParallel,HasChildren decision
+    class Error error
     class Complete success
 ```
 
@@ -349,8 +356,8 @@ Understanding how Hazelbean organizes projects on your platform:
 ├── intermediate/                    # Processing files
 │   ├── aligned/
 │   └── processed/
-└── outputs/                        # Final results  
-    ├── 20240117_analysis/
+└── outputs/                        # Final results
+    ├── YYYYMMDD_analysis/
     └── reports/
 ```
 
@@ -367,7 +374,7 @@ C:\Users\username\my_analysis\        # Project root
 │   ├── aligned\
 │   └── processed\
 └── outputs\                        # Final results
-    ├── 20240117_analysis\
+    ├── YYYYMMDD_analysis\
     └── reports\
 ```
 
@@ -384,7 +391,7 @@ C:\Users\username\my_analysis\        # Project root
 │   ├── aligned/
 │   └── processed/
 └── outputs/                        # Final results
-    ├── 20240117_analysis/
+    ├── YYYYMMDD_analysis/
     └── reports/
 ```
 
