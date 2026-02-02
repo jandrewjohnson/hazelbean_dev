@@ -48,7 +48,7 @@ def load_baseline_snapshots(snapshots_dir: Path) -> List[Dict]:
 def calculate_trend(current: Dict, snapshots: List[Dict]) -> str:
     """Calculate performance trend indicator."""
     if not snapshots or not current.get('baseline_statistics'):
-        return "➡️ No trend data"
+        return "No trend data"
     
     current_mean = current['baseline_statistics']['mean_execution_time']
     
@@ -61,15 +61,15 @@ def calculate_trend(current: Dict, snapshots: List[Dict]) -> str:
             change_pct = ((current_mean - previous_mean) / previous_mean * 100) if previous_mean > 0 else 0
             
             if change_pct < -5:  # 5% or more improvement (faster)
-                return f"⬇️ {abs(change_pct):.1f}% improvement (faster)"
+                return f"{abs(change_pct):.1f}% improvement (faster)"
             elif change_pct > 10:  # 10% or more regression (slower)
-                return f"⬆️ {change_pct:.1f}% regression (slower)"
+                return f"{change_pct:.1f}% regression (slower)"
             elif change_pct > 5:  # 5-10% slower
-                return f"⚠️ {change_pct:.1f}% slower"
+                return f"{change_pct:.1f}% slower"
             else:
-                return f"➡️ Stable (±{abs(change_pct):.1f}%)"
+                return f"Stable (+/-{abs(change_pct):.1f}%)"
     
-    return "➡️ No comparison data"
+    return "No comparison data"
 
 def format_time_ms(time_seconds: float) -> str:
     """Format time in seconds to milliseconds with appropriate precision."""
@@ -97,7 +97,7 @@ def generate_baseline_markdown(current_data: Optional[Dict], snapshots: List[Dic
 title: "Performance Baselines Dashboard"
 ---
 
-**Status:** ❌ No baseline data available
+**Status:** No baseline data available
 
 To establish performance baselines, run:
 ```bash
@@ -160,13 +160,13 @@ title: "Performance Baselines Dashboard"
     # Assess baseline quality
     cv = (std_dev / mean_time * 100) if mean_time > 0 else float('inf')
     if cv < 10:
-        quality_status = "✅ Excellent (low variability)"
+        quality_status = "Excellent (low variability)"
     elif cv < 25:
-        quality_status = "✅ Good (moderate variability)"
+        quality_status = "Good (moderate variability)"
     elif cv < 50:
-        quality_status = "⚠️ Fair (high variability)"
+        quality_status = "Fair (high variability)"
     else:
-        quality_status = "❌ Poor (very high variability)"
+        quality_status = "Poor (very high variability)"
     
     markdown += f"""
 **Coefficient of Variation:** {cv:.1f}%  
@@ -201,7 +201,7 @@ title: "Performance Baselines Dashboard"
 """
         
         # Add current baseline as first row
-        markdown += f"| {established_str} | {format_time_ms(mean_time)} | {format_time_ms(std_dev)} | ✅ Current | Current baseline |\n"
+        markdown += f"| {established_str} | {format_time_ms(mean_time)} | {format_time_ms(std_dev)} | Current | Current baseline |\n"
         
         # Add previous snapshots
         for i, snapshot in enumerate(snapshots):
@@ -228,13 +228,13 @@ title: "Performance Baselines Dashboard"
             if snap_mean > 0:
                 change_pct = ((mean_time - snap_mean) / snap_mean * 100)
                 if change_pct < -5:
-                    change_indicator = f"⬇️ {abs(change_pct):.1f}%"
+                    change_indicator = f"-{abs(change_pct):.1f}%"
                 elif change_pct > 5:
-                    change_indicator = f"⬆️ {change_pct:.1f}%"
+                    change_indicator = f"+{change_pct:.1f}%"
                 else:
-                    change_indicator = f"➡️ {change_pct:+.1f}%"
+                    change_indicator = f"{change_pct:+.1f}%"
             else:
-                change_indicator = "❓"
+                change_indicator = "?"
             
             markdown += f"| {snap_date_str} | {format_time_ms(snap_mean)} | {format_time_ms(snap_std)} | {change_indicator} | Previous run |\n"
     

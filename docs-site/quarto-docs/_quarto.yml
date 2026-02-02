@@ -1,6 +1,8 @@
 project:
   type: website
   output-dir: _site
+  # Note: Report generation removed from pre-render to prevent infinite loop
+  # Run `python tools/generate_all_reports.py` manually before preview/render
 
 website:
   title: "Hazelbean Documentation"

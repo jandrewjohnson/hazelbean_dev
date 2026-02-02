@@ -7,11 +7,33 @@ This directory contains the Hazelbean documentation site built with Quarto, feat
 ### Standalone Usage (Local Development)
 
 ```bash
-# Render the site
-quarto render
+# Option 1: Use the convenience script (recommended)
+./tools/preview_docs.sh
 
-# Serve locally
-quarto preview
+# Option 2: Manual steps
+# First, generate reports (run from project root)
+python tools/generate_all_reports.py
+
+# Then render or preview (from quarto-docs directory)
+cd docs-site/quarto-docs
+quarto render      # Build static site
+quarto preview     # Live preview with hot reload
+```
+
+**Why manual report generation?**
+
+Report generation is done separately (not via pre-render hook) to prevent an infinite loop during `quarto preview`. The pre-render hook would regenerate `.qmd` files, triggering Quarto's file watcher, which would re-run the hook, creating an endless cycle.
+
+**What report generation does:**
+- Test results (from `hazelbean_tests/test-results.json`)
+- Coverage (from `.coverage`)
+- Benchmarks (from `metrics/benchmarks/*.json`)
+- Baselines (from `metrics/baselines/*.json`)
+
+**If you also need to update test source code documentation:**
+```bash
+python generate_test_docs.py  # Extracts test function source code
+quarto render
 ```
 
 ### Using in a Monorepo
@@ -81,9 +103,9 @@ quarto render
 ```
 
 **Advantages:**
-- ✅ Don't need to remember the --output-dir flag
-- ✅ Consistent output location
-- ✅ Works with all Quarto commands
+- Don't need to remember the --output-dir flag
+- Consistent output location
+- Works with all Quarto commands
 
 **Note:** If you commit this change, document it in your repo's README so contributors know docs generate to parent folder.
 
@@ -238,15 +260,15 @@ quarto render --output-dir ../../../docs-site/hazelbean
 
 ### What's Included
 
-- ✅ **277 test functions** documented with full source code
-- ✅ **Collapsible code sections** using Quarto callout blocks
-- ✅ **Syntax highlighting** for Python code
-- ✅ **Line numbers** in all code blocks
-- ✅ **Copy code button** for easy copying
-- ✅ **Search functionality** across all pages
-- ✅ **Table of contents** on each page
-- ✅ **Sidebar navigation** with test categories
-- ✅ **Breadcrumb navigation** for easy traversal
+- **277 test functions** documented with full source code
+- **Collapsible code sections** using Quarto callout blocks
+- **Syntax highlighting** for Python code
+- **Line numbers** in all code blocks
+- **Copy code button** for easy copying
+- **Search functionality** across all pages
+- **Table of contents** on each page
+- **Sidebar navigation** with test categories
+- **Breadcrumb navigation** for easy traversal
 
 ### Test Categories
 
@@ -333,14 +355,33 @@ The site has both:
 
 ## Troubleshooting
 
+### Infinite loop during `quarto preview`?
+
+If `quarto preview` keeps rebuilding endlessly, check if someone added a `pre-render` hook to `_quarto.yml` that generates `.qmd` files. This creates a loop:
+
+1. Pre-render generates `.qmd` files
+2. Quarto's file watcher detects the changes
+3. Quarto triggers a re-render
+4. Go to step 1
+
+**Fix:** Remove any pre-render hooks that generate `.qmd` files. Run report generation manually before preview:
+
+```bash
+python tools/generate_all_reports.py
+cd docs-site/quarto-docs
+quarto preview
+```
+
+Or use the convenience script: `./tools/preview_docs.sh`
+
 ### Tests not showing up?
 
 **Check:**
-1. File name starts with `test_` ✅
-2. File is in correct directory (`unit/`, `integration/`, etc.) ✅
-3. Functions start with `test_` ✅
-4. File is valid Python (no syntax errors) ✅
-5. Script ran successfully ✅
+1. File name starts with `test_`
+2. File is in correct directory (`unit/`, `integration/`, etc.)
+3. Functions start with `test_`
+4. File is valid Python (no syntax errors)
+5. Script ran successfully
 
 **Debug:**
 ```bash
@@ -398,9 +439,9 @@ In a monorepo setup, the parent repository typically handles deployment:
 ### Regular Updates
 
 Run these commands when:
-- ✅ New test files are added
-- ✅ Test functions are modified
-- ✅ Docstrings are updated
+- New test files are added
+- Test functions are modified
+- Docstrings are updated
 
 ```bash
 python generate_test_docs.py
@@ -413,15 +454,15 @@ quarto render --output-dir ../../../docs-site/hazelbean
 ### Version Control
 
 **Commit to git:**
-- ✅ `generate_test_docs.py` (the automation script)
-- ✅ `_quarto.yml` (site configuration)
-- ✅ `index.qmd` and `tests/index.qmd` (manually created pages)
-- ✅ Documentation files (MD files)
+- `generate_test_docs.py` (the automation script)
+- `_quarto.yml` (site configuration)
+- `index.qmd` and `tests/index.qmd` (manually created pages)
+- Documentation files (MD files)
 
 **Do NOT commit:**
-- ❌ `tests/*.qmd` (except `tests/index.qmd`) - auto-generated
-- ❌ `_site/` - build output
-- ❌ `_freeze/` - Quarto cache
+- `tests/*.qmd` (except `tests/index.qmd`) - auto-generated
+- `_site/` - build output
+- `_freeze/` - Quarto cache
 
 ---
 
@@ -450,6 +491,6 @@ quarto render --output-dir ../../../docs-site/hazelbean
 
 ---
 
-**Last Updated:** November 15, 2024  
+**Last Updated:** February 1, 2026  
 **Version:** 1.1  
 **Total Tests Documented:** 277
