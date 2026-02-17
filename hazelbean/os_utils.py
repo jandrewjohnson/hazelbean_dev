@@ -582,6 +582,7 @@ def create_dirs(list_of_folders):
 def remove_dirs(list_of_folders, safety_check=''):
     if isinstance(list_of_folders, str):
         list_of_folders = [list_of_folders]
+        hb.log('You told remove_dirs to remove things but you didnt set safety_check=delete: ' + str(list_of_folders))
     if safety_check == 'delete':
         if list_of_folders is str:
             list_of_folders = list(list_of_folders)
