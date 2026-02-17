@@ -21,13 +21,19 @@ socket.setdefaulttimeout(timeout_seconds)
 from hazelbean import config as hb_config
 L = hb_config.get_logger('cloud_utils')
 
-def is_internet_available(timeout=1):
-    try: 
-        socket.create_connection(("8.8.8.8", 53), timeout=timeout)
-        return True
-    except:
-        return False
-        
+def is_internet_available(timeout=1, hosts=None):
+    """Check internet availability by testing connectivity to public endpoints."""
+    if hosts is None:
+        hosts = [("8.8.8.8", 53), ("1.1.1.1", 443)]
+
+    for host, port in hosts:
+        try:
+            socket.create_connection((host, port), timeout=timeout)
+            return True
+        except:
+            continue
+    return False
+
 
 def gsutil_download_url(url, target_path, skip_if_target_exists=False):
     gsutil_path = url.replace('https://storage.cloud.google.com/', 'gs://')
@@ -143,8 +149,8 @@ def download_google_cloud_blob(bucket_name, source_blob_name, credentials_path, 
     """There is a duplicate version of this that i want to get rid of in the seals repo. Downloads a blob from the bucket."""
     require_database = True
     if hb.path_exists(credentials_path) and require_database:
-        
-        
+
+
         client = storage.Client.from_service_account_json(credentials_path)
     else:
         if credentials_path is not None:
@@ -153,10 +159,10 @@ def download_google_cloud_blob(bucket_name, source_blob_name, credentials_path, 
             if verbose:
                 hb.log('No credentials path provided. Defaulting to publicly available data.')
             bucket_name = 'gtap_invest_seals_2023_04_21'
-            
+
         # If credentials path does not exist or is none, just get a client without credentials. This will only work if the bucket is public.
         client = storage.Client.create_anonymous_client()
-        
+
 
     try:
         bucket = client.bucket(bucket_name)
@@ -227,7 +233,7 @@ def list_files_in_google_drive_folder(input_folder_id, credentials_path):
     # NYI! This approach uses google drive, but htat means I need to verify gtapinvest as an app with google. not worth it. switching back to gsutil for now.
     # If modifying these SCOPES, delete the file token.pickle.
     SCOPES = ['https://www.googleapis.com/auth/drive']
-    
+
     creds = None
     # The file token.pickle stores the user's access and refresh tokens.
     if os.path.exists('token.pickle'):
@@ -257,46 +263,46 @@ def list_files_in_google_drive_folder(input_folder_id, credentials_path):
         print('Files:')
         for item in items:
             print(u'{0} ({1})'.format(item['name'], item['id']))
-            
-            
+
+
 def promote_ref_path_to_base_data(input_path, pivot_path, base_data_dir):
     # Moves an input path to the base_data_dir based on the pivot_path
     # Doesn't currently upload to cloud but that could be done.
     # NOTE A ref_path is never a full path as it excludes the prefix base_Data_dir, cur_dir, or wahtever dir it was found in. This function you
     # explicitly define the pivot path
-    
+
     # Get ref_path first
     ref_path = hb.get_path_to_right_of_dir(input_path, pivot_path)
-    
+
     # Check if the file exists
     if not hb.path_exists(input_path):
         raise NameError('The file ' + str(input_path) + ' does not exist.')
-    
+
     # Check if the base_data_dir exists
     if not hb.path_exists(base_data_dir):
         raise NameError('The directory ' + str(base_data_dir) + ' does not exist.')
-    
+
     # Check if the file is in the base_data_dir
     joined_path = os.path.join(base_data_dir, ref_path)
     if hb.path_exists(joined_path):
         raise NameError('The file ' + str(joined_path) + ' is already in the base_data_dir.')
-    
+
     # Move the file to the base_data_dir
     os.rename(input_path, joined_path)
 def download_gdrive_refpath(ref_path, base_data_dir=None, data_credentials_path=None, input_bucket_name=None, create_shortcut=False, intermediate_path_override=None, verbose=False):
-    
+
     source_blob_name =  ref_path.replace('\\', '/')
     default_bucket = 'gtap_invest_seals_2023_04_21'
     if input_bucket_name is None:
         input_bucket_name = default_bucket
-    
+
     if base_data_dir is None:
         base_data_dir = '.'
-        
+
     destination_file_path = os.path.join(base_data_dir, ref_path)
-    
+
     if hb.path_exists(destination_file_path):
-    
+
         if is_internet_available(1):
             if data_credentials_path is not None:
                 try: # If the file is in the cload, download it.
@@ -319,8 +325,8 @@ def download_gdrive_refpath(ref_path, base_data_dir=None, data_credentials_path=
     else:
         hb.log('The file ' + str(destination_file_path) + ' already exists. Skipping download.')
         return destination_file_path
-    
-    
+
+
 def download_file(url, target_path, chunk_size=1024 * 1024, retries=3):
     """
     Downloads a file from a URL to a specified target path with retries.
@@ -357,7 +363,7 @@ def download_file(url, target_path, chunk_size=1024 * 1024, retries=3):
 
             print("\nDownload complete.")
             return target_path  # Return the saved file path
-        
+
         except requests.RequestException as e:
             attempt += 1
             print(f"\nDownload failed (attempt {attempt}/{retries}): {e}")

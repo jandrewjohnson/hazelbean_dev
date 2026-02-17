@@ -4,17 +4,17 @@ Hazelbean is a collection of geospatial processing tools based on gdal, numpy, s
 
 ## Requirements
 
--   **Python 3.10 or later** (Python 3.9 support was dropped as of version 14.0.0 due to NumPy 2.0 compatibility issues)
+-   **Python 3.10 or later** (Python 3.9 support was dropped as of version 1.4.0 due to NumPy 2.0 compatibility issues)
 
 Hazelbean started as a personal research package of scripts for Justin Johnson and is was not originally intended for broad release. However, hazelbean is transitioning towards having full-support, primarily because it underlies several important software releases, including some from the Natural Capital Project. Thus, even in this transitory state, it is available via "pip install hazelbean". Note that hazelbean only provides a Python 3+, 64 bit, Windows version, however with the exception of precompiled cython files, it should be cross-platform and cross-version. The precompiled files are only loaded as needed.
 
-## 📚 Documentation
+## Documentation
 
 Our integrated documentation system provides comprehensive guides and examples:
 
--   **📝 [Getting Started](docs/getting-started.md)** - Complete setup guide with current project structure
--   **📚 [Testing Guide](hazelbean_tests/README.md)** - Test infrastructure overview
--   **🎓 [Examples](examples/)** - Hands-on tutorials and demonstrations
+-   ** [Getting Started](docs/getting-started.md)** - Complete setup guide with current project structure
+-   ** [Testing Guide](hazelbean_tests/README.md)** - Test infrastructure overview
+-   ** [Examples](examples/)** - Hands-on tutorials and demonstrations
 
 ### Local Documentation Site
 
@@ -22,13 +22,13 @@ You can serve the full documentation site locally with searchable content, test 
 
 ``` bash
 conda activate hazelbean_env
-cd docs-site
-mkdocs serve  # Visit http://127.0.0.1:8000
+cd docs-site/quarto-docs
+quarto preview  # Visit http://localhost:4848
 ```
 
 The local site includes: - Progressive learning path with tutorials - 50+ test examples showing real-world usage patterns - Current test results and performance metrics - Searchable content across all documentation
 
-## ⚡ Quick Start (5 minutes)
+## Quick Start
 
 ### Option 1: Complete Environment (Recommended)
 
@@ -44,17 +44,22 @@ mamba activate hazelbean_env
 # 3. Install hazelbean package (builds Cython extensions)
 pip install -e . --no-deps
 
-# 4. Test installation
-python -c "import hazelbean as hb; print('✅ Hazelbean ready!')"
+# 4. Verify installation (checks Cython extensions)
+python scripts/verify_installation.py
 
 # 5. Try educational examples
 cd examples && python step_1_project_setup.py
 
-# 6. Explore documentation locally  
-cd docs-site && mkdocs serve  # Visit http://127.0.0.1:8000
+# 6. Explore documentation locally
+cd docs-site/quarto-docs && quarto preview  # Visit http://localhost:4848
 ```
 
-**Note:** The `pip install -e . --no-deps` command installs hazelbean in editable mode and compiles the Cython extensions. The `--no-deps` flag prevents pip from reinstalling conda packages, which is the correct approach for conda+pip hybrid environments.
+**Important Notes:**
+- **Step 3** compiles Cython extensions for your platform (Windows/Mac/Linux)
+- **Step 4** verifies everything is working correctly and provides troubleshooting guidance if needed
+- The `--no-deps` flag prevents pip from reinstalling conda packages (correct for conda+pip hybrid environments)
+
+**Windows Users:** If Step 3 fails with compiler errors, see the [Windows Setup Guide](docs/windows-setup.md) for detailed instructions on installing build tools.
 
 ### Option 2: Package Only
 
@@ -74,6 +79,25 @@ pip install hazelbean
 -   For convenience, during installation, select "Add Mambaforge to my PATH environment Variable"
 
 ### Troubleshooting
+
+**Cython Compilation Errors (Windows):** If you see `ImportError: cannot import name 'cython_functions'` or compiler errors during installation:
+
+1. **Quick Fix (Recommended):** Install conda compiler tools:
+   ``` bash
+   conda activate hazelbean_env
+   conda install -c conda-forge m2w64-toolchain libpython
+   pip install -e . --no-deps --force-reinstall
+   ```
+
+2. **Alternative:** Install Microsoft Visual Studio Build Tools:
+   - Download from https://visualstudio.microsoft.com/downloads/
+   - Select "Build Tools for Visual Studio 2022"
+   - Check "Desktop development with C++"
+   - After install: `pip install -e . --no-deps --force-reinstall`
+
+3. **Verify:** Run `python scripts/verify_installation.py` to check if Cython extensions are working
+
+See [Windows Setup Guide](docs/windows-setup.md) for detailed troubleshooting.
 
 **Numpy Compatibility Issues:** If numpy throws "wrong size or changes size binary" errors, upgrade numpy after installation:
 
@@ -134,20 +158,37 @@ def add_all_tasks_to_task_tree(p):
     p.generated_kernels_task = p.add_task(example_task_function)
 ```
 
-## Creating a new release
+## Creating a New Release
 
-Github Actions will now generate a new set of binaries for each release, upload them to PyPI and then trigger a condaforge build. All you need to do is make and tag the release.
+Hazelbean uses a fully automated release pipeline that publishes to both PyPI and conda-forge. The entire process is triggered by creating a GitHub Release.
 
-## Manually builds to PyPI via Twine
+### Quick Steps
 
-To upload built packages to PyPI, you will need an API key from your PyPI account, and you will need a local install of the `twine` utility. To install `twine`, you can use either `pip` or `mamba`. For example:
+1. **Create and push a git tag:**
+   ```bash
+   VERSION="1.7.7"  # Your version number
+   git tag -a "v${VERSION}" -m "Release version ${VERSION}"
+   git push origin "v${VERSION}"
+   ```
 
-``` bash
-pip install twine
-```
+2. **Create a GitHub Release** at https://github.com/jandrewjohnson/hazelbean_dev/releases
+   - Select your tag
+   - Add release notes
+   - Click "Publish release"
 
-Once you have built the package for your target platform(s), you can upload the file to PyPI with twine via the `twine` command. For example, if you have all of your target distributions in the `dist/` directory, you can upload them all with:
+3. **Automation takes over:**
+   -  GitHub Actions builds wheels for all platforms (~20 minutes)
+   -  Automatically uploads to PyPI
+   -  Updates CHANGELOG.md
+   -  conda-forge bot detects the release (~24 hours)
+   -  Review and merge the conda-forge PR
+   -  conda-forge builds and publishes packages (~2 hours)
 
-``` bash
-twine upload --username=__token__ --password="$PYPI_API_TOKEN" dist/*
-```
+###  Complete Release Documentation
+
+For detailed information about the release process:
+
+- **[Release Quick Reference](docs/release-quick-reference.md)** - Quick guide for each release
+- **[Release Process Explained](docs/release-process-explained.md)** - Complete technical documentation
+
+**No manual PyPI uploads needed!** The old manual process with twine is deprecated - everything is automated through GitHub Actions.
