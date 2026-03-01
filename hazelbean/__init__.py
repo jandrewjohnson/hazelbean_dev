@@ -1,6 +1,15 @@
 from __future__ import division, absolute_import, print_function
 import sys, time, os
 
+
+conda_prefix = os.path.dirname(sys.executable)
+# On Linux/Mac, python is in env/bin/, so go up one more level
+if os.path.basename(conda_prefix) in ("bin", "Scripts"):
+    conda_prefix = os.path.dirname(conda_prefix)
+gdal_bin = os.path.join(conda_prefix, "Library", "bin")
+if os.path.exists(gdal_bin) and gdal_bin not in os.environ["PATH"]:
+    os.environ["PATH"] = gdal_bin + os.pathsep + os.environ["PATH"]
+
 import hazelbean.config # Needs to be imported before core so that hb.config.LAST_TIME_CHECK is set for hb.timer()
 from hazelbean.config import *
 
