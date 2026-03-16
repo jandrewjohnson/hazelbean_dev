@@ -28,11 +28,31 @@ def replace_cat_ears_with_object_attributes(input_string, object_instance):
         return input_string
     
     for attr in dir(object_instance):
+        if "gtap_econ_run_luc_vector_dir" in attr:
+            pass
         if not attr.startswith('__'):
             value = getattr(object_instance, attr)
             input_string = input_string.replace('<^' + attr + '^>', str(value))
     
     return input_string
+
+
+def replace_cat_ears_with_object_attributes_new(input_string, object_instance):
+    """
+WTF How should i generalize this
+    """
+    if not isinstance(input_string, str):
+        return input_string
+    
+    for attr in dir(object_instance):
+        if "gtap_econ_run_luc_vector_dir" in attr:
+            pass
+        if not attr.startswith('__'):
+            value = getattr(object_instance, attr)
+            input_string = input_string.replace('<^' + attr + '^>', str(value))
+    
+    return input_string
+
 
 def replace_cat_ears_with_dict(input_string, variables_dict):
     # """

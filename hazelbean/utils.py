@@ -695,6 +695,10 @@ def df_pivot_vertical_up(df, row_indices, column_indices, values, aggregation_di
                 if isinstance(value, list):
                     condition &= (df[key].isin(value))
                 else:
+                    try:
+                        value = int(value)
+                    except:
+                        'we good'
                     condition &= (df[key] == value)
             else:
                 # condition &= (df[key] == value)
