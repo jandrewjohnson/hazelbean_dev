@@ -401,6 +401,14 @@ class ProjectFlow(object):
         if not getattr(self, 'input_bucket_name', None):
             self.input_bucket_name = None # If you want to use a different bucket than the default, provide the name here. Otherwise uses default public data 'gtap_invest_seals_2023_04_21'.
 
+        # Also check for any input_templates in the repository
+        template_dir = os.path.join(self.script_dir, 'input_template')
+        if hb.path_exists(template_dir, verbose=True):
+            
+            # AWKWARD CODE HERE: This is duplicated by file-specific stuff in the initialization functions
+            hb.path_copy(template_dir, self.input_dir)
+            print(f'Found {template_dir} in the input_template dir of this project. Copied to {self.input_dir}')
+                   
     def set_base_data_dir(self, input_base_data_dir=None, match_string='seals/default_inputs'):
                 
         # Search over multiple possible places to find a base data dir that contains correct data then use it.

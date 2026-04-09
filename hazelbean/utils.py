@@ -2709,7 +2709,8 @@ def parse_flex_to_python_object(input_df_element, verbose=False):
         
         # coerce DICT here
         if not is_json and ':' in input_df_element:
-            input_df_element = '{' + input_df_element + '}'
+            if not input_df_element.startswith('{'):
+                input_df_element = '{' + input_df_element + '}'
             if input_df_element.startswith('{'):
                 split_element = split_respecting_nesting(input_df_element[1:-1], ',')
                 for i in split_element:
