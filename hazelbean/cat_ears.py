@@ -16,13 +16,15 @@ def has_cat_ears(input_string):
         return False
     return '<^' in input_string or '^>' in input_string
 
-def replace_cat_ears_with_object_attributes(input_string, object_instance):
+def replace_cat_ears_with_object_attributes(input_string, object_instance, **kwargs):
     """
     Replace cat ears in the input string with the corresponding attributes of the object instance.
     This function is useful for dynamically replacing placeholders in strings with actual object attribute values, especially in templating scenarios.
     :param input_string: The string containing cat ears to be replaced.
     :param object_instance: The object instance whose attributes will replace the cat ears.
     :return: The input string with cat ears replaced by object attributes.
+    
+    OPTIONALLY also replace with kwargs
     """
     if not isinstance(input_string, str):
         return input_string
@@ -34,8 +36,28 @@ def replace_cat_ears_with_object_attributes(input_string, object_instance):
             value = getattr(object_instance, attr)
             input_string = input_string.replace('<^' + attr + '^>', str(value))
     
+    for key, value in kwargs.items():
+        input_string = input_string.replace('<^' + key + '^>', str(value))
+    
     return input_string
 
+def replace_cat_ears_in_file_with_object_attributes(input_file_path, output_file_path, object_instance):
+    """
+    Replace cat ears in the input file with the corresponding attributes of the object instance and save the result to the output file path.
+    This function is useful for dynamically replacing placeholders in files with actual object attribute values, especially in templating scenarios.
+    :param input_file_path: The path to the input file containing cat ears to be replaced.
+    :param output_file_path: The path where the output file with replaced cat ears will be saved.
+    :param object_instance: The object instance whose attributes will replace the cat ears.
+    """
+    with open(input_file_path, 'r') as file:
+        input_string = file.read()
+    
+    output_string = replace_cat_ears_with_object_attributes(input_string, object_instance)
+    
+    with open(output_file_path, 'w') as file:
+        file.write(output_string)
+        
+        
 
 def replace_cat_ears_with_object_attributes_new(input_string, object_instance):
     """
