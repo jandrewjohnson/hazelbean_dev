@@ -1,10 +1,8 @@
 {
-  "python.testing.pytestEnabled": true,
-  "python.testing.unittestEnabled": false,
+  "python.testing.pytestEnabled": false,
+  "python.testing.unittestEnabled": true,
   "python.testing.pytestArgs": [
-    "hazelbean_tests",
-    "-v",
-    "--tb=short"
+    "hazelbean_tests"
   ],
   "python.testing.cwd": "${workspaceFolder}",
   "python.testing.autoTestDiscoverOnSaveEnabled": true,
@@ -27,7 +25,16 @@
   },
   
   // Pytest-specific settings
-  "python.testing.pytestPath": "/opt/homebrew/Caskroom/mambaforge/base/envs/hazelbean_env/bin/pytest"
+  "python.testing.pytestPath": "/opt/homebrew/Caskroom/mambaforge/base/envs/hazelbean_env/bin/pytest",
+  "python-envs.defaultEnvManager": "ms-python.python:conda",
+  "python-envs.defaultPackageManager": "ms-python.python:conda",
+  "python.testing.unittestArgs": [
+    "-v",
+    "-s",
+    "./hazelbean_tests",
+    "-p",
+    "test_*.py"
+  ]
 }
 
 

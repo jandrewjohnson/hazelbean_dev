@@ -2500,8 +2500,8 @@ def list_find_duplicates(lst):
     return duplicates
 
 def arrays_equal_ignoring_order(array1, array2, ignore_values=None):
-    unique1, counts1 = np.unique(array1.astype(str), return_counts=True)
-    unique2, counts2 = np.unique(array2.astype(str), return_counts=True)
+    unique1, counts1 = np.unique(np.array(array1, dtype=str), return_counts=True)
+    unique2, counts2 = np.unique(np.array(array2, dtype=str), return_counts=True)
     
     if ignore_values is not None:
         for ignore_value in ignore_values:

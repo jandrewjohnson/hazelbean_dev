@@ -34,3 +34,11 @@ build-backend = "setuptools.build_meta"
 version_scheme = "post-release"
 local_scheme = "node-and-date"
 
+[tool.pytest.ini_options]
+testpaths = ["hazelbean_tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+
+
