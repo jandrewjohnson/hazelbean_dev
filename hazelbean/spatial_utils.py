@@ -6452,7 +6452,16 @@ def find_gdalinfo():
     else:  # Linux/macOS
         possible_paths = [
             conda_env_root / 'bin' / 'gdalinfo',
+            conda_parent_env_root / 'bin' / 'gdalinfo',
         ]
+        # Homebrew paths on macOS
+        if sys.platform == 'darwin':
+            possible_paths.extend([
+                Path('/opt/homebrew/bin/gdalinfo'),  # Apple Silicon
+                Path('/usr/local/bin/gdalinfo'),     # Intel Mac
+                Path('/opt/homebrew/opt/gdal/bin/gdalinfo'),
+                Path('/usr/local/opt/gdal/bin/gdalinfo'),
+            ])
     
     # Check each possible path
     for path in possible_paths:

@@ -1,5 +1,20 @@
 # Hazelbean Changelog
 
+## v1.8.0 (2026-01-16)
+
+#### New Features
+
+* enhance parse_flex_to_python_object with comprehensive parsing capabilities and add split_respecting_nesting function
+#### Fixes
+
+* improve JSON error handling and enhance input parsing logic
+* correct input directory name and add method to set base data directory with search functionality
+#### Docs
+
+* update changelog for v1.7.9
+
+Full set of changes: [`v1.7.9...v1.8.0`](https://github.com/jandrewjohnson/hazelbean_dev/compare/v1.7.9...v1.8.0)
+
 ## v1.7.9 (2025-12-09)
 
 #### New Features
