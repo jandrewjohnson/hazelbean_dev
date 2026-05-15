@@ -1088,6 +1088,11 @@ class ProjectFlow(object):
 
             # Currently in this version of the code, if the parent is not run, none of the children run.
             if len(task.children) > 0 and self.run_this:
+                
+                if hasattr(self, 'skip_children'):
+                    if self.skip_children:
+                        L.info('Skipping children of task ' + str(task.name) + ' because skip_children is set to True.')
+                        continue
                 # Whether run or not, search for children
                 # if len(task.children) > 0: ORIGINAL
 

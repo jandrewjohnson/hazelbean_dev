@@ -546,11 +546,11 @@ def resample_to_match(input_path,
 
         target_bb[2] += target_pixel_size[0]
         target_bb[3] += target_pixel_size[1]
-    if compress is True or compress == 'ZSTD':
+    if compress is True or compress == 'DEFLATE':
         gtiff_creation_options = (
             'TILED=YES',
             'BIGTIFF=YES',
-            'COMPRESS=ZSTD',
+            'COMPRESS=DEFLATE',
             'BLOCKXSIZE=512',
             'BLOCKYSIZE=512',
         )

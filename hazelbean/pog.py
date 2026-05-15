@@ -213,7 +213,21 @@ def make_paths_pogs_in_parallel(
     return results
  
   
-def make_path_pog(input_raster_path, output_raster_path=None, output_data_type=None, ndv=None, overview_resampling_method=None, compression="ZSTD", blocksize=512, force_rewrite=False, value_reclassification_dict=None, ndv_above=None, ndv_below=None, verbose=False):
+def make_path_pog(input_raster_path, 
+                  output_raster_path=None, 
+                  output_data_type=None, 
+                  ndv=None, 
+                  overview_resampling_method=None, 
+                  compression="DEFLATE", 
+                  blocksize=512, 
+                  force_rewrite=False, 
+                  value_reclassification_dict=None, 
+                  ndv_above=None, 
+                  ndv_below=None, 
+                  remove_intermediate_files=True,
+                  remove_displaced_files=False,
+                  verbose=False):
+    
     """ Create a Pog (pyramidal cog) from input_raster_path. Writes in-place if output_raster_path is not set. Chooses correct values for 
     everything else if not set."""
 
