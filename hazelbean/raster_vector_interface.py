@@ -290,6 +290,13 @@ def zonal_statistics_flex(input_raster,
     if zone_ids_raster_path is None:
         zone_ids_raster_path = 'zone_ids_' + hb.random_string() + '.tif'
 
+
+    
+    if id_column_label is None:
+        gdf = gpd.read_file(zones_vector_path)
+        id_column_label = gdf.columns[0]
+
+
     # if zone_ids_raster_path is given, use it to speed up processing (creating it first if it doesnt exist)
     if not hb.path_exists(zone_ids_raster_path) and rewrite_zone_ids_raster is not False:
         # Calculate the id raster and save it

@@ -40,7 +40,12 @@ class CatEarsTester(unittest.TestCase):
 
     def test_list_dirs_in_dir_recursively(self):
         # warnings.warn('This will show up. Print will note')
-        first_drive = hb.list_mounted_drive_paths()[0]
+        mounted_drives = hb.list_mounted_drive_paths()
+        if mounted_drives:
+            first_drive = mounted_drives[0]
+        else:
+            # POSIX (Mac/Linux): no drive letters -- use home directory.
+            first_drive = os.path.expanduser('~')
         drive_contents = os.listdir(first_drive)
         
         # Skip test if drive doesn't have sufficient folders

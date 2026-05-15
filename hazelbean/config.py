@@ -1,6 +1,6 @@
 # coding=utf-8
 
-import os, sys, time
+import os, sys, time, tempfile
 import logging
 import traceback
 from collections import OrderedDict
@@ -8,81 +8,116 @@ import hazelbean as hb
 # from hazelbean.globals import *
 import inspect
 
-#First check for config file specific to this computer
+# ---------- Platform detection ----------
+IS_WINDOWS = os.name == 'nt'
+IS_MACOS   = sys.platform == 'darwin'
+IS_LINUX   = sys.platform.startswith('linux')
+
+USER_HOME = os.path.expanduser('~')
+
+
+# ---------- Drive / base detection ----------
 def list_mounted_drive_paths():
-    # Iterate through all possible drives to identify which exist.
-    drives_to_analyze = list('abcdefghijklmnopqrstuvwxyz')
-    drive_paths = []
-    for drive in drives_to_analyze:
-        drive_path = drive + ':/'
-        if os.path.exists(drive_path):
-            drive_paths.append(drive_path)
+    """Windows only: returns mounted drive roots like ['c:/', 'd:/']. Empty on POSIX."""
+    if not IS_WINDOWS:
+        return []
+    return [d + ':/' for d in 'abcdefghijklmnopqrstuvwxyz' if os.path.exists(d + ':/')]
 
-    return drive_paths
 
-user_path = os.path.expanduser('~')
-default_hazelbean_config_uri = os.path.join(user_path, 'Documents\\hazelbean\\config.txt')
-local_hazelbean_config_uri = os.path.join(user_path, 'Documents\\hazelbean\\config.txt')
+def _default_primary_base():
+    """Root for research paths -- drive letter on Windows, home dir on POSIX."""
+    if IS_WINDOWS:
+        drives = list_mounted_drive_paths()
+        return drives[0] if drives else 'c:/'
+    return USER_HOME
+
+
+def _default_external_base():
+    if IS_WINDOWS:
+        drives = list_mounted_drive_paths()
+        return drives[1] if len(drives) > 1 else 'd:/'
+    return USER_HOME
+
+
+# ---------- Config file location (per-OS convention) ----------
+def _default_config_dir():
+    if IS_WINDOWS:
+        appdata = os.environ.get('APPDATA', os.path.join(USER_HOME, 'AppData', 'Roaming'))
+        return os.path.join(appdata, 'hazelbean')
+    if IS_MACOS:
+        return os.path.join(USER_HOME, 'Library', 'Application Support', 'hazelbean')
+    # Linux / other POSIX: respect XDG
+    xdg = os.environ.get('XDG_CONFIG_HOME', os.path.join(USER_HOME, '.config'))
+    return os.path.join(xdg, 'hazelbean')
+
+
+HAZELBEAN_CONFIG_DIR = _default_config_dir()
+default_hazelbean_config_uri = os.path.join(HAZELBEAN_CONFIG_DIR, 'config.txt')
+local_hazelbean_config_uri   = default_hazelbean_config_uri  # back-compat alias
+
+# Kept for back-compat with callers that probe drive listings.
 mounted_drives = list_mounted_drive_paths()
-# PRIMARY_DRIVE = mounted_drives[0]
-# EXTERNAL_BULK_DATA_DRIVE = mounted_drives[0]
+
+
+# ---------- Defaults (overridden below if a config file exists) ----------
+PRIMARY_DRIVE                       = _default_primary_base()
+EXTERNAL_BULK_DATA_DRIVE            = _default_external_base()
+HAZELBEAN_WORKING_DIRECTORY         = os.path.dirname(os.path.abspath(__file__))
+CONFIGURED_FOR_CYTHON_COMPILATION   = 1.0
+
+# Drive-letter form is meaningful only on Windows; empty string on POSIX.
+PRIMARY_DRIVE_LETTER            = PRIMARY_DRIVE[0] if IS_WINDOWS else ''
+EXTERNAL_BULK_DATA_DRIVE_LETTER = EXTERNAL_BULK_DATA_DRIVE[0] if IS_WINDOWS else ''
+
+
+# ---------- Read config file if present ----------
 if os.path.exists(default_hazelbean_config_uri):
     with open(default_hazelbean_config_uri) as f:
         for line in f:
-            if '=' in line:
-                line_split = line.split('=')
-                if line_split[0] == 'primary_drive_letter':
-                    PRIMARY_DRIVE_LETTER = line_split[1][0]
-                    PRIMARY_DRIVE = PRIMARY_DRIVE_LETTER + ':/'
-                if line_split[0] == 'external_bulk_data_drive':
-                    EXTERNAL_BULK_DATA_DRIVE_LETTER = line_split[1][0]
-                    EXTERNAL_BULK_DATA_DRIVE = EXTERNAL_BULK_DATA_DRIVE_LETTER + ':/'
-                if line_split[0] == 'hazelbean_working_directory':
-                    HAZELBEAN_WORKING_DIRECTORY = line_split[1].split('\n')[0]
-                if line_split[0] == 'configured_for_cython_compilation':
-                    CONFIGURED_FOR_CYTHON_COMPILATION = float(line_split[1])
-else:
-    mounted_drives = list_mounted_drive_paths()
-    if len(mounted_drives) > 0:
-        PRIMARY_DRIVE_LETTER = mounted_drives[0][0]
-        if len(mounted_drives) > 1:
-            EXTERNAL_BULK_DATA_DRIVE_LETTER = mounted_drives[1][0]
-        else:
-            EXTERNAL_BULK_DATA_DRIVE_LETTER = 'd'
-    else:
-        PRIMARY_DRIVE_LETTER = 'c'
-        EXTERNAL_BULK_DATA_DRIVE_LETTER = 'd'
-
-    PRIMARY_DRIVE = PRIMARY_DRIVE_LETTER + ':/'
-
-    EXTERNAL_BULK_DATA_DRIVE = EXTERNAL_BULK_DATA_DRIVE_LETTER + ':/'
-    HAZELBEAN_WORKING_DIRECTORY = PRIMARY_DRIVE + 'Files/Research/hazelbean/hazelbean_dev/hazelbean'
-    CONFIGURED_FOR_CYTHON_COMPILATION = 1.0
-    w = 'primary_drive_letter=' + PRIMARY_DRIVE_LETTER + '\n' + \
-        'external_bulk_data_drive=' + EXTERNAL_BULK_DATA_DRIVE_LETTER + '\n' + \
-        'hazelbean_working_directory=' + HAZELBEAN_WORKING_DIRECTORY + '\n' + \
-        'configured_for_cython_compilation=' + str(CONFIGURED_FOR_CYTHON_COMPILATION)
-    try:
-        os.makedirs(os.path.split(default_hazelbean_config_uri)[0])
-
-    except:
-        pass
-
-    with open(default_hazelbean_config_uri, 'w', encoding='latin1') as f:
-        f.write(w)
+            if '=' not in line:
+                continue
+            key, _, val = line.strip().partition('=')
+            if key == 'primary_drive_letter' and IS_WINDOWS:
+                PRIMARY_DRIVE_LETTER = val[0]
+                PRIMARY_DRIVE = PRIMARY_DRIVE_LETTER + ':/'
+            elif key == 'primary_base':
+                PRIMARY_DRIVE = val
+            elif key == 'external_bulk_data_drive' and IS_WINDOWS:
+                EXTERNAL_BULK_DATA_DRIVE_LETTER = val[0]
+                EXTERNAL_BULK_DATA_DRIVE = EXTERNAL_BULK_DATA_DRIVE_LETTER + ':/'
+            elif key == 'external_bulk_data_base':
+                EXTERNAL_BULK_DATA_DRIVE = val
+            elif key == 'hazelbean_working_directory':
+                HAZELBEAN_WORKING_DIRECTORY = val
+            elif key == 'configured_for_cython_compilation':
+                CONFIGURED_FOR_CYTHON_COMPILATION = float(val)
 
 
-# HAZELBEAN SETUP GLOBALS
-TEMPORARY_DIR = os.path.join(PRIMARY_DRIVE, 'hazelbean_temp')
-BASE_DATA_DIR = os.path.join(PRIMARY_DRIVE, 'files', 'research', 'base_data')
-SEALS_BASE_DATA_DIR = os.path.join(PRIMARY_DRIVE, 'files', 'research', 'cge', 'seals', 'base_data')
-GTAP_INVEST_BASE_DATA_DIR = os.path.join(PRIMARY_DRIVE, 'files', 'research', 'cge', 'gtap_invest', 'base_data')
-BULK_DATA_DIR = os.path.join(PRIMARY_DRIVE, 'bulk_data')
-EXTERNAL_BULK_DATA_DIR = os.path.join(EXTERNAL_BULK_DATA_DRIVE, 'bulk_data')
-# HAZELBEAN_WORKING_DIRECTORY = 'c:\\OneDrive\\Projects\\hazelbean\\hazelbean'  # TODOO Make this based on config file?
-# HAZELBEAN_WORKING_DIRECTORY = os.path.join(PRIMARY_DRIVE, 'OneDrive\\Projects\\hazelbean\\hazelbean')  # TODOO Make this based on config file?
-TEST_DATA_DIR = os.path.join(HAZELBEAN_WORKING_DIRECTORY, '../tests/data')
-PROJECTS_DIR = os.path.join(PRIMARY_DRIVE, 'OneDrive\\Projects')
+def write_default_config():
+    """Opt-in: write a starter config file at the per-OS conventional location."""
+    os.makedirs(HAZELBEAN_CONFIG_DIR, exist_ok=True)
+    lines = [
+        'primary_base=' + PRIMARY_DRIVE,
+        'external_bulk_data_base=' + EXTERNAL_BULK_DATA_DRIVE,
+        'hazelbean_working_directory=' + HAZELBEAN_WORKING_DIRECTORY,
+        'configured_for_cython_compilation=' + str(CONFIGURED_FOR_CYTHON_COMPILATION),
+    ]
+    with open(default_hazelbean_config_uri, 'w', encoding='utf-8') as f:
+        f.write('\n'.join(lines) + '\n')
+
+
+# ---------- HAZELBEAN SETUP GLOBALS ----------
+# tempfile.gettempdir() respects $TMPDIR on POSIX, %TEMP% on Windows.
+TEMPORARY_DIR = os.path.join(tempfile.gettempdir(), 'hazelbean_temp')
+
+_research_root = os.path.join(PRIMARY_DRIVE, 'Files', 'Research')
+BASE_DATA_DIR              = os.path.join(_research_root, 'base_data')
+SEALS_BASE_DATA_DIR        = os.path.join(_research_root, 'cge', 'seals', 'base_data')
+GTAP_INVEST_BASE_DATA_DIR  = os.path.join(_research_root, 'cge', 'gtap_invest', 'base_data')
+BULK_DATA_DIR              = os.path.join(PRIMARY_DRIVE, 'bulk_data')
+EXTERNAL_BULK_DATA_DIR     = os.path.join(EXTERNAL_BULK_DATA_DRIVE, 'bulk_data')
+TEST_DATA_DIR              = os.path.join(HAZELBEAN_WORKING_DIRECTORY, '..', 'tests', 'data')
+PROJECTS_DIR               = os.path.join(PRIMARY_DRIVE, 'OneDrive', 'Projects')
 
 
 class CustomLogger(logging.LoggerAdapter):
@@ -242,11 +277,11 @@ def critical(self, msg, *args, **kwargs):
     msg, kwargs = self.process_critical_logger(msg, kwargs)
     L.critical(msg, *args, **kwargs)
 
-if not os.path.exists(TEMPORARY_DIR):
-    try:
-        os.makedirs(TEMPORARY_DIR)
-    except:
-        raise Exception('Could not create temp file at ' + TEMPORARY_DIR + '. Perhaps you do not have permission? Try setting hazelbean/config.TEMPORARY_DIR to something in your user folder.')
+# if not os.path.exists(TEMPORARY_DIR):
+#     try:
+#         os.makedirs(TEMPORARY_DIR)
+#     except:
+#         raise Exception('Could not create temp file at ' + TEMPORARY_DIR + '. Perhaps you do not have permission? Try setting hazelbean/config.TEMPORARY_DIR to something in your user folder.')
 
 uris_to_delete_at_exit = []
 plots_to_display_at_exit = []
