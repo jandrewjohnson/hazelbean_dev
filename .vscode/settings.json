@@ -34,6 +34,13 @@
     "./hazelbean_tests",
     "-p",
     "test_*.py"
+  ],
+  "python-envs.pythonProjects": [
+    {
+      "path": ".",
+      "envManager": "ms-python.python:conda",
+      "packageManager": "ms-python.python:conda"
+    }
   ]
 }
 
