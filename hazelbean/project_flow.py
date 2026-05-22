@@ -407,7 +407,7 @@ class ProjectFlow(object):
             # Copy anything in template_dir that is not in input_dir
             
             # AWKWARD CODE HERE: This is duplicated by file-specific stuff in the initialization functions
-            # hb.path_copy(template_dir, self.input_dir)
+            hb.path_copy(template_dir, self.input_dir, overwrite=False)
             print(f'Found {template_dir} in the input_template dir of this project. Copied to {self.input_dir}')
                    
     def set_base_data_dir(self, input_base_data_dir=None, match_string='seals/default_inputs'):
