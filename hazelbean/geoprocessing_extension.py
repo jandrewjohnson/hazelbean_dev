@@ -513,7 +513,7 @@ def warp_raster_hb(
         src_ndv = base_raster_info['nodata']
 
     if dst_ndv is None:
-        dst_ndv = base_raster_info['datatype']
+        dst_ndv = base_raster_info['ndv']
         if dst_ndv is None:
             if output_data_type < 5:
                 dst_ndv = 255
