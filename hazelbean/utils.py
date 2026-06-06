@@ -1020,7 +1020,7 @@ def df_merge(left_input,
              same_name_nonidentical_column_behavior='keep_both', # One of 'keep_both', 'keep_left', 'keep_right', 'raise_error'
              raise_error_if_not_identical=False,
              verbose=False,
-             supress_warnings=False,
+             supress_warnings=True,
              ):
     
     """

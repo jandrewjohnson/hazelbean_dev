@@ -307,7 +307,9 @@ class ProjectFlow(object):
         # If true, generates a random dirname and creates it in the folder determined by the following options.
         self.make_run_dir = False
 
-
+        self.is_linux = sys.platform.startswith('linux')
+        self.is_mac = sys.platform == 'darwin'
+        self.is_windows = platform.system() == 'Windows'
 
         # If project_dir is not defined, use CWD.
         if project_dir:
