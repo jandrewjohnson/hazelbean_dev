@@ -1397,11 +1397,32 @@ def extract_features_in_shapefile_by_attribute(
     hb.log(f'Filtering {input_path} where {column_name} in {column_filters}')
     
     if force_into_int:
-        column_filters = int(column_filters)
+        try:
+            column_filters = int(column_filters)
+            is_intable = True
+        except:
+            is_intable = False  
         # column_filters = [int(v) for v in column_filters]
-    
     if force_into_string:
-        column_filters = str(column_filters)
+        try:
+            column_filters = str(column_filters)
+            is_stringable = True
+        except:
+            is_stringable = True
+
+        # column_filters = [str(v) for v in column_filters]
+
+    # Normalize to list in case someone passes a single value
+    if not isinstance(column_filters, (list, tuple, set)):
+        column_filters = [column_filters]
+
+    # Cast to string on both sides for robustness
+    filters_str = {str(v) for v in column_filters}
+    col_str = gdf[column_name].astype(str)
+    print('col_str', col_str)
+    
+    
+    # YEP ITS  = False
         # column_filters = [str(v) for v in column_filters]
 
     # Normalize to list in case someone passes a single value
@@ -1415,7 +1436,8 @@ def extract_features_in_shapefile_by_attribute(
     
     
     # YEP ITS AN INT, just make the colstring an int
-    col_str = gdf[column_name].astype('Int64').astype(str)
+    if is_intable:
+        col_str = gdf[column_name].astype('Int64').astype(str)
     
     print('col_str', col_str)
     

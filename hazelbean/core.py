@@ -134,7 +134,13 @@ def path_needs_rerender(render_src_path, render_dst_path, minimum_size_check=0, 
             if verbose:
                 hb.log('Path did not change: ' + str(render_src_path_mtime) + ' was NOT changed more recently than ' + str(render_dst_path_mtime) + '.')
             return False
-
+        
+def path_is_dir(path):
+    if hb.path_exists(path):
+        return os.path.isdir(path)
+    else:
+        return False
+    
 def path_assert_exists(path, minimum_size_check=0, verbose=False):
     path_exists(path, minimum_size_check=minimum_size_check, verbose=verbose, assert_true=True)
 
