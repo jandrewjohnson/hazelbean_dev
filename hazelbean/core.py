@@ -204,8 +204,9 @@ def path_exists(path, minimum_size_check=0, dir_must_have_content=False, verbose
                         return False     
                 else:
                     if verbose:
-                        hb.log('Path DOES NOT exist: ' + str(path) + ', Absolute path is: ' + str(os.path.abspath(path)) + ', Normalized path is: ' + str(os.path.normpath(path)))
-                    
+                        hb.log('Path DOES NOT exist: ' + str(path) + ',\n Absolute path is: ' + str(os.path.abspath(path)) + ',\n Normalized path is: ' + str(os.path.normpath(path)))
+                        hb.log(' Othre files in folder: ' + str(os.listdir(os.path.split(path)[0])))
+                        hb.log('  Minimum size check was: ' + str(minimum_size_check) + ', but the file size was: ' + str(os.path.getsize(path)))
                     return False                
                 
                 
