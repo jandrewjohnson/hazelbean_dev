@@ -115,7 +115,12 @@ import hazelbean.utils
 from hazelbean.utils import *
 if report_import_times:
     hb.timer('utils')
-  
+
+import hazelbean.initialize_definitions
+from hazelbean.initialize_definitions import *
+if report_import_times:
+    hb.timer('initialize_definitions')
+
 import hazelbean.arrayframe
 from hazelbean.arrayframe import *
 if report_import_times:

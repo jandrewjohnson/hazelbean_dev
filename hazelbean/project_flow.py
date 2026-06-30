@@ -292,40 +292,20 @@ class ProjectFlow(object):
         except:
             L.debug('Could not identify a calling script.')
 
-        # self.calling_globals = inspect.stack()[1][0].f_globals
         user_dir = os.path.expanduser('~')
         default_extra_dirs = ['Files']
         
-        ## PROJECT LEVEL ATTRIBUTES
         # Set the project-level logging level. Individual tasks can overwrite this.
         self.logging_level = logging.INFO
-
-        # # WARNING, although this seems logical, it can mess up multiprocessing if L has a handler. Move back outside.
-        # self.L = hb.get_logger('project_flow')
-
-        # TODOO Renable run_dir separation.
-        # If true, generates a random dirname and creates it in the folder determined by the following options.
-        self.make_run_dir = False
 
         self.is_linux = sys.platform.startswith('linux')
         self.is_mac = sys.platform == 'darwin'
         self.is_windows = platform.system() == 'Windows'
 
-        # If project_dir is not defined, use CWD.
-        if project_dir:
-            self.project_dir = project_dir
-        else:
-            self.project_dir = os.getcwd() # This may be temporary though because it may be overwritten by UI
-
-        if not os.path.isdir(self.project_dir):
-            try:
-                hb.create_directories(self.project_dir)
-            except:
-                raise NotADirectoryError('A Project Flow object is based on defining a project_dir as its base, but we were unable to create the dir at the given path: ' + self.project_dir + '. It is possible that you do not have write access to this directory or that you are working on a virtual machine with some weird setup.')
-
-        self.ui_agnostic_project_dir = self.project_dir # The project_dir can be overwritten by a UI but it can be useful to know where it would have been for eg decing project_base_data_dir
-
-        self.model_base_data_dir = os.path.abspath(os.path.join(self.ui_agnostic_project_dir, '../../base_data'))  # Data that must be redistributed with this project for it to work. Do not put actual base data here that might be used across many projects.
+        # Set project_dir and all derived directory paths. Called here so a freshly
+        # constructed ProjectFlow is fully initialized; it can be called again later
+        # to re-point the project to a different directory.
+        self.set_project_dir(project_dir)
 
         if hb.path_exists(hb.config.BASE_DATA_DIR):
             self.base_data_dir = hb.config.BASE_DATA_DIR
@@ -337,9 +317,6 @@ class ProjectFlow(object):
             self.external_bulk_data_dir = hb.config.EXTERNAL_BULK_DATA_DIR
         else:
             self.external_bulk_data_dir = None
-
-        self.project_name = hb.file_root(self.project_dir)
-        self.project_base_data_dir = os.path.join(self.project_dir, 'base_data')
 
 
         # args is used by UI elements.
@@ -365,14 +342,14 @@ class ProjectFlow(object):
         self.task_names_defined = [] # Store a list of tasks defined somewhere in the target script. For convenience, e.g., when setting runtime conditionals based on function names existence.
 
         # TODO FIX get rid of inputs dir, but it's used a lot, including in putting scenarios.csv files in the right place.... er. The Python ecosystem overwhelmingly prefers singular names for a type of directory* and plural only when the directory itself contains many heterogeneous items.
-        self.inputs_dir = getattr(self, 'inputs_dir', os.path.join(self.project_dir, 'inputs'))
-        self.input_dir = getattr(self, 'input_dir', os.path.join(self.project_dir, 'input'))
-        self.intermediate_dir = getattr(self, 'intermediate_dir', os.path.join(self.project_dir, 'intermediate'))
-        self.output_dir = getattr(self, 'output_dir', os.path.join(self.project_dir, 'output'))
+        # self.inputs_dir = getattr(self, 'inputs_dir', os.path.join(self.project_dir, 'inputs'))
+        # self.input_dir = getattr(self, 'input_dir', os.path.join(self.project_dir, 'input'))
+        # self.intermediate_dir = getattr(self, 'intermediate_dir', os.path.join(self.project_dir, 'intermediate'))
+        # self.output_dir = getattr(self, 'output_dir', os.path.join(self.project_dir, 'output'))
         self.documentation = None 
         self.note = None 
         #
-        self.registered_dirs = ['.', self.input_dir]
+        # self.registered_dirs = ['.', self.input_dir]
         
         self.L = hb.get_logger('project_flow')
         # self.registered_dirs = ['.', self.input_dir, self.project_base_data_dir, self.model_base_data_dir, self.base_data_dir]
@@ -383,35 +360,46 @@ class ProjectFlow(object):
     def __repr__(self):
         return 'Hazelbean ProjectFlow object. ' # +  hb.pp(self.__dict__, return_as_string=True)
 
-    def set_project_dir(self, input_dir):
-        self.project_dir = input_dir
+    def set_project_dir(self, project_dir=None):
+        # Resolve the project_dir: an explicit arg wins; otherwise keep an already-set
+        # project_dir (e.g. from a prior call); otherwise fall back to the CWD.
+        if project_dir:
+            self.project_dir = project_dir
+        elif not getattr(self, 'project_dir', None):
+            self.project_dir = os.getcwd() # This may be temporary though because it may be overwritten by UI
+
         self.project_name = hb.file_root(self.project_dir)
+        self.ui_agnostic_project_dir = self.project_dir # The project_dir can be overwritten by a UI but it can be useful to know where it would have been for eg decing project_base_data_dir
+        self.project_base_data_dir = os.path.join(self.project_dir, 'base_data')
+        self.model_base_data_dir = os.path.abspath(os.path.join(self.ui_agnostic_project_dir, '../../base_data'))  # Data that must be redistributed with this project for it to work. Do not put actual base data here that might be used across many projects.
 
         try:
             hb.create_directories(self.project_dir)
         except:
-            raise NotADirectoryError('A Project Flow object is based on defining a project_dir as its base, but we were unable to create the dir at the given path: ' + self.project_dir)
+            raise NotADirectoryError('A Project Flow object is based on defining a project_dir as its base, but we were unable to create the dir at the given path: ' + self.project_dir + '. It is possible that you do not have write access to this directory or that you are working on a virtual machine with some weird setup.')
 
         # BIG ASS-MISTAKE here, repeating inputs
         self.input_dir = os.path.join(self.project_dir, 'input')
         self.inputs_dir = os.path.join(self.project_dir, 'inputs')
         self.intermediate_dir = os.path.join(self.project_dir, 'intermediate')
         self.output_dir = os.path.join(self.project_dir, 'outputs')
-        
+
         if not getattr(self, 'data_credentials_path', None):
             self.data_credentials_path = None # If you want to use a different bucket than the default, provide the credentials here. Otherwise uses default public data 'gtap_invest_seals_2023_04_21'.
         if not getattr(self, 'input_bucket_name', None):
             self.input_bucket_name = None # If you want to use a different bucket than the default, provide the name here. Otherwise uses default public data 'gtap_invest_seals_2023_04_21'.
 
-        # Also check for any input_templates in the repository
-        template_dir = os.path.join(self.script_dir, 'input_template')
-        if hb.path_exists(template_dir, verbose=True):
+        self.copy_input_template()
+
+    def copy_input_template(self):
+        # Check for any input_templates in the repository and copy anything not
+        # already present into the project's input_dir.
+        template_dir = os.path.join(getattr(self, 'script_dir', ''), 'input_template')
+        if getattr(self, 'script_dir', None) and hb.path_exists(template_dir, verbose=True):
             # Copy anything in template_dir that is not in input_dir
-            
-            # AWKWARD CODE HERE: This is duplicated by file-specific stuff in the initialization functions
             hb.path_copy(template_dir, self.input_dir, overwrite=False)
-            print(f'Found {template_dir} in the input_template dir of this project. Copied to {self.input_dir}')
-                   
+            hb.log(f'Found {template_dir} in the input_template dir of this project. Copied to {self.input_dir}')
+
     def set_base_data_dir(self, input_base_data_dir=None, match_string='seals/default_inputs'):
                 
         # Search over multiple possible places to find a base data dir that contains correct data then use it.

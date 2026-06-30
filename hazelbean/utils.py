@@ -2318,10 +2318,6 @@ def get_reclassification_dict_from_df(input_df_or_path, src_id_col='src_id', dst
 
     return return_dict
 
-def assign_df_row_to_object_attributes(input_object, input_row):
-    for attribute_name, attribute_value in list(zip(input_row.index, input_row.values)):
-        setattr(input_object, attribute_name, attribute_value)
-
 def call_conda_info():
     command = 'conda info'
     output = subprocess.check_output(command)
