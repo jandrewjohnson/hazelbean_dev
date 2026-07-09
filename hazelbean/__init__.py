@@ -24,6 +24,15 @@ import pandas as pd
 pd.set_option('display.max_columns', 20)
 pd.set_option('display.width', 200)
 pd.set_option('display.max_rows', 10)
+
+# pandas 3.0 defaults to Arrow-backed strings (future.infer_string=True). The devstack is written
+# for pandas 2.x semantics — df[col].values as numpy object arrays, needed by GEMPACK/harpy HAR I/O
+# and other code that passes .values into numpy-expecting APIs. Restore 2.x behavior devstack-wide.
+# Guarded so it's a harmless no-op on pandas versions that lack this option.
+try:
+    pd.set_option('future.infer_string', False)
+except Exception:
+    pass
             
 import_medium_level = 1 # If this is not true, will import all of the HB library on first import, which can take up to 7 seconds.
 use_strict_importing = 0 
