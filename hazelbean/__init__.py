@@ -121,6 +121,11 @@ from hazelbean.initialize_definitions import *
 if report_import_times:
     hb.timer('initialize_definitions')
 
+import hazelbean.assign_to_object
+from hazelbean.assign_to_object import *
+if report_import_times:
+    hb.timer('assign_to_object')
+
 import hazelbean.arrayframe
 from hazelbean.arrayframe import *
 if report_import_times:

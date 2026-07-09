@@ -12,6 +12,7 @@ import importlib.util
 import sys
 import inspect
 import pandas as pd
+from pathlib import Path
 
 # try:
 #     import anytree    
@@ -285,7 +286,7 @@ class OutputTask(anytree.NodeMixin):
         self.skip_existing = 0  # Will thus overwrite by default.
 
 class ProjectFlow(object):
-    def __init__(self, project_dir=None):
+    def __init__(self, project_dir='script_parent'):
         try:
             self.calling_script = inspect.stack()[1][1]
             self.script_dir = os.path.split(self.calling_script)[0]
@@ -363,7 +364,9 @@ class ProjectFlow(object):
     def set_project_dir(self, project_dir=None):
         # Resolve the project_dir: an explicit arg wins; otherwise keep an already-set
         # project_dir (e.g. from a prior call); otherwise fall back to the CWD.
-        if project_dir:
+        if project_dir == 'script_parent':
+            self.project_dir = str(Path(self.script_dir).parent)
+        elif project_dir:
             self.project_dir = project_dir
         elif not getattr(self, 'project_dir', None):
             self.project_dir = os.getcwd() # This may be temporary though because it may be overwritten by UI

@@ -35,6 +35,7 @@ import hazelbean as hb
 
 
 def initialize_definitions_csv(p, stem, base_data_module, assign_fn, post_process=None):
+    # THINKING OF ABANDING THIS AI SLOP
     """Ensure p's <stem>_definitions csv exists, load it, and hydrate p from row 0.
 
     Resolution order when the csv is missing at p.<stem>_definitions_path:
@@ -51,6 +52,11 @@ def initialize_definitions_csv(p, stem, base_data_module, assign_fn, post_proces
             supplies this so its specific parsing stays local. Two common shapes:
                 - column-based:  gtappy_utils.assign_df_cols_to_object_attributes  (takes (p, df))
                 - row-based:     lambda p, df: seals_utils.assign_df_row_to_object_attributes(p, df.iloc[0])
+            Both of those are now thin shims over the unified parser in
+            hb.assign_to_object (one merged value grammar, shared by both orientations).
+            New callers can skip assign_fn entirely and use
+            hb.assign_df_to_object_attributes(p, df, stem=stem), which auto-detects
+            vertical vs row orientation (with a stem fallback).
             Only the first row is meaningful for initialization.
         post_process: optional callable(p) run after assignment, e.g.
             seals_utils.set_derived_attributes. Use this for any stem-specific extras
