@@ -112,3 +112,39 @@ def simplify_geometry(vector_input, output_path, tolerance, preserve_topology=Tr
     
     hb.log('Writing to ' + output_path, logger_level)
     vector_input.to_file(output_path, driver='GPKG')
+
+OVERPASS_ENDPOINTS = [
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://overpass.private.coffee/api/interpreter",
+    "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+]
+
+
+def read_overpass(query, endpoints=None, headers=None, retries=3, timeout=200, retry_wait=5, logger_level=10):
+    """Run an Overpass QL query and return its 'elements' list. Tries the public mirrors in
+    turn with a few retries, since they rate-limit and 504 under load. endpoints defaults to
+    OVERPASS_ENDPOINTS; headers defaults to a generic research User-Agent. requests is a
+    hazelbean dependency, imported here so importing hazelbean does not require it. The narrow
+    RequestException catch is the documented retry path for a flaky third-party endpoint."""
+    import time
+    import requests
+    endpoints = endpoints or OVERPASS_ENDPOINTS
+    if headers is None:
+        headers = {"User-Agent": "hazelbean-overpass/1.0 (research)"}
+    hb.log('read_overpass querying up to %d endpoint(s)' % len(endpoints), logger_level)
+    last = None
+    for _ in range(retries):
+        for ep in endpoints:
+            try:
+                r = requests.post(ep, data={"data": query}, headers=headers, timeout=timeout)
+            except requests.RequestException as exc:
+                last = exc
+                continue
+            if r.status_code == 200:
+                return r.json()["elements"]
+            last = r
+        time.sleep(retry_wait)
+    if isinstance(last, requests.Response):
+        last.raise_for_status()
+    raise last if last is not None else RuntimeError("Overpass: no response")

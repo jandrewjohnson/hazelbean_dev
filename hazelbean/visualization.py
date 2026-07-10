@@ -2042,3 +2042,110 @@ color_scheme_data = {
 }
 
 
+
+
+# ---- python-pptx slide primitives (plain-academic deck helpers) ----
+# General mechanics for building plain-academic slides. Project-specific content and style
+# (which slides, what text, which colors) stay in the calling project and are passed in.
+# python-pptx is a hazelbean dependency but imported lazily so importing hazelbean is cheap.
+def add_slide_header(slide, text, left_in=0.6, top_in=0.45, width_in=12.1, height_in=1.0,
+                     font_size=30, color=None, bold=True):
+    """Add a bold header textbox to a python-pptx slide. color defaults to a dark navy RGBColor."""
+    from pptx.util import Inches, Pt
+    from pptx.dml.color import RGBColor
+    tb = slide.shapes.add_textbox(Inches(left_in), Inches(top_in), Inches(width_in), Inches(height_in))
+    tb.text_frame.word_wrap = True
+    r = tb.text_frame.paragraphs[0].add_run()
+    r.text = text
+    r.font.size = Pt(font_size)
+    r.font.bold = bold
+    r.font.color.rgb = color if color is not None else RGBColor(0x1F, 0x3A, 0x5F)
+    return tb
+
+
+def add_slide_bullets(slide, items, left_in=0.7, top_in=1.85, width_in=12.1, height_in=5.2,
+                      size=20, color=None, sub_color=None):
+    """Add a bullet list to a slide. items are strings, or (text, level) tuples for indented
+    sub-bullets. color / sub_color default to near-black / grey RGBColor."""
+    from pptx.util import Inches, Pt
+    from pptx.dml.color import RGBColor
+    color = color if color is not None else RGBColor(0x22, 0x22, 0x22)
+    sub_color = sub_color if sub_color is not None else RGBColor(0x66, 0x66, 0x66)
+    tb = slide.shapes.add_textbox(Inches(left_in), Inches(top_in), Inches(width_in), Inches(height_in))
+    tf = tb.text_frame
+    tf.word_wrap = True
+    for i, item in enumerate(items):
+        level = 0
+        if isinstance(item, tuple):
+            item, level = item
+        para = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
+        para.level = level
+        run = para.add_run()
+        run.text = ("- " if level == 0 else "") + item
+        run.font.size = Pt(size - 3 * level)
+        run.font.color.rgb = color if level == 0 else sub_color
+        para.space_after = Pt(10)
+    return tb
+
+
+def add_slide_caption(slide, text, top, left_in=0.7, width_in=12.0, height_in=0.6, size=13, color=None):
+    """Add an italic caption textbox at vertical position `top` (an EMU length, e.g. Inches(...))."""
+    from pptx.util import Inches, Pt
+    from pptx.dml.color import RGBColor
+    tb = slide.shapes.add_textbox(Inches(left_in), top, Inches(width_in), Inches(height_in))
+    tb.text_frame.word_wrap = True
+    r = tb.text_frame.paragraphs[0].add_run()
+    r.text = text
+    r.font.size = Pt(size)
+    r.font.italic = True
+    r.font.color.rgb = color if color is not None else RGBColor(0x66, 0x66, 0x66)
+    return tb
+
+
+def add_slide_figure(slide, png_path, caption=None, top_in=1.6, target_h_in=5.0,
+                     slide_width_in=13.333, caption_gap_in=0.12, caption_size=13, caption_color=None):
+    """Add a centered picture scaled to target_h_in (inches), with an optional caption below it."""
+    from pptx.util import Inches
+    pic = slide.shapes.add_picture(png_path, Inches(0), Inches(top_in))
+    scale = Inches(target_h_in) / pic.height
+    pic.height = int(pic.height * scale)
+    pic.width = int(pic.width * scale)
+    pic.left = int((Inches(slide_width_in) - pic.width) / 2)
+    pic.top = Inches(top_in)
+    if caption is not None:
+        add_slide_caption(slide, caption, pic.top + pic.height + Inches(caption_gap_in),
+                          size=caption_size, color=caption_color)
+    return pic
+
+
+def add_slide_box(slide, x, y, w, h, label, fill=None, line=None, text_color=None,
+                  highlight=False, highlight_fill=None, highlight_line=None, highlight_text=None,
+                  font_size=13, line_width_pt=1.5):
+    """Add a rounded-rectangle box with a centered label (e.g. a model-chain diagram node).
+    x/y/w/h are EMU lengths. When highlight is True the highlight_* colors are used."""
+    from pptx.util import Pt
+    from pptx.dml.color import RGBColor
+    from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
+    from pptx.enum.shapes import MSO_SHAPE
+    fill = fill if fill is not None else RGBColor(0xE9, 0xEE, 0xF4)
+    line = line if line is not None else RGBColor(0xB4, 0xC2, 0xD4)
+    text_color = text_color if text_color is not None else RGBColor(0x22, 0x22, 0x22)
+    highlight_fill = highlight_fill if highlight_fill is not None else RGBColor(0xC0, 0x5A, 0x2B)
+    highlight_line = highlight_line if highlight_line is not None else highlight_fill
+    highlight_text = highlight_text if highlight_text is not None else RGBColor(0xFF, 0xFF, 0xFF)
+    shp = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, x, y, w, h)
+    shp.fill.solid()
+    shp.fill.fore_color.rgb = highlight_fill if highlight else fill
+    shp.line.color.rgb = highlight_line if highlight else line
+    shp.line.width = Pt(line_width_pt)
+    tf = shp.text_frame
+    tf.word_wrap = True
+    tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+    para = tf.paragraphs[0]
+    para.alignment = PP_ALIGN.CENTER
+    run = para.add_run()
+    run.text = label
+    run.font.size = Pt(font_size)
+    run.font.bold = highlight
+    run.font.color.rgb = highlight_text if highlight else text_color
+    return shp
