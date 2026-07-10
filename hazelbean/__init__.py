@@ -10,6 +10,12 @@ gdal_bin = os.path.join(conda_prefix, "Library", "bin")
 if os.path.exists(gdal_bin) and gdal_bin not in os.environ["PATH"]:
     os.environ["PATH"] = gdal_bin + os.pathsep + os.environ["PATH"]
 
+# Per-machine, never-committed settings (e.g. gtappy's solve-backend connection vars)
+# live in ~/.config/hazelbean/machine.env and are loaded here into any env-var gaps.
+# Real environment variables always win. See hazelbean/machine_env.py.
+from hazelbean.machine_env import load_user_machine_env
+load_user_machine_env()
+
 import hazelbean.config # Needs to be imported before core so that hb.config.LAST_TIME_CHECK is set for hb.timer()
 from hazelbean.config import *
 
