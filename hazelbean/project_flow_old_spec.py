@@ -396,40 +396,12 @@ class ProjectFlow(object):
 
     def copy_input_template(self):
         # Check for any input_templates in the repository and copy anything not
-        # already present into the project's input_dir. Strictly skip-existing:
-        # the input/ working copy holds per-machine values (e.g. parameters.csv
-        # connection settings) and user edits that a re-run must never clobber.
-        # (hb.path_copy's overwrite flag is ignored for directory sources, so we
-        # walk the tree ourselves.)
+        # already present into the project's input_dir.
         template_dir = os.path.join(getattr(self, 'script_dir', ''), 'input_template')
         if getattr(self, 'script_dir', None) and hb.path_exists(template_dir, verbose=True):
-            import shutil
-            for walk_root, _, walk_files in os.walk(template_dir):
-                rel = os.path.relpath(walk_root, template_dir)
-                dst_root = self.input_dir if rel == '.' else os.path.join(self.input_dir, rel)
-                os.makedirs(dst_root, exist_ok=True)
-                for filename in walk_files:
-                    dst = os.path.join(dst_root, filename)
-                    if not os.path.exists(dst):
-                        shutil.copy2(os.path.join(walk_root, filename), dst)
-            hb.log(f'Found {template_dir} in the input_template dir of this project. Copied missing items to {self.input_dir}')
-
-    def skip_tasks(self, task_names):
-        """Set run=0 on the named tasks (function names, without the '_task' suffix).
-
-        Used by run_project() variant runs (tests, fast runs, backend tests) to pare
-        the task tree without forking it: the tree is always built in full so its
-        structure (parents, dirs, iterators) is identical across variants, and only
-        the run flags differ. Call after the task tree is built, before execute().
-        No-op on None/empty. Warns on names that match no task so a typo doesn't
-        silently leave an expensive task enabled.
-        """
-        for name in task_names or []:
-            task = getattr(self, name + '_task', None)
-            if task is not None:
-                task.run = 0
-            else:
-                hb.log(f'skip_tasks: no task named {name!r} in this task tree — check spelling.')
+            # Copy anything in template_dir that is not in input_dir
+            hb.path_copy(template_dir, self.input_dir, overwrite=False)
+            hb.log(f'Found {template_dir} in the input_template dir of this project. Copied to {self.input_dir}')
 
     def set_base_data_dir(self, input_base_data_dir=None, match_string='seals/default_inputs'):
                 
@@ -644,21 +616,6 @@ class ProjectFlow(object):
 
 
         # It wasnt found anywhere, so do some final checks and then use the default
-        def _not_found_message():
-            searched = [i for i in possible_dirs if isinstance(i, str) and i != 'input_bucket_name']
-            lines = ['get_path could not resolve a ref_path.',
-                     '  ref_path as given: ' + str(path_as_inputted)]
-            if relative_path != path_as_inputted:
-                lines.append('  resolved relative path: ' + str(relative_path))
-            lines.append('  searched these roots in order (not found in any):')
-            lines += ['    - ' + str(i) for i in searched]
-            if 'input_bucket_name' in possible_dirs:
-                lines.append('    - cloud bucket: ' + str(self.input_bucket_name))
-            lines.append('  If you expected this file to exist, check the ref_path spelling against base_data.')
-            lines.append('  If a task generates this file, call get_path with raise_error_if_fail=False '
-                         '(returns the would-be path under the first searched root).')
-            return '\n'.join(lines)
-
         if os.path.isabs(relative_path):
             # Check that it has one of the possible_dirs already embedded in it
             found_possible_dir_in_input = False
@@ -687,25 +644,18 @@ class ProjectFlow(object):
                     hb.log('WARNING: You gave an absolute path to hb.get_path. It still might work if it found the possible_dirs in the path and removed them, but this is not good practice. Inputted path: ', relative_path, 'Possible dirs: ', possible_dirs, include_script_location=True)
                     return relative_path
                 else:
-                    raise NameError('get_path was given an absolute path it could not resolve (absolute paths are '
-                                    'not good practice here — prefer a ref_path relative to the searched roots).\n'
-                                    + _not_found_message())
-
+                    raise NameError('The path given to hb.get_path() does not appear to be relative, is not relative to one of the possible dirs, does not exist at the unmodified path, and or is not available for download on your selected cloud bucket): ' + str(relative_path) + ', ' + str(possible_dirs))
+                            
         if leave_ref_path_if_fail:
             return path_as_inputted
-
+                                            
         if raise_error_if_fail:
-            raise NameError(_not_found_message())
-
-        # Caller opted out of raising (raise_error_if_fail=False): assume the file is
-        # about to be generated and return the would-be path under the first root.
-        # Log the assumption so a typo'd ref_path leaves a diagnostic trail instead
-        # of silently producing a phantom path.
-        possible_dirs = [i for i in possible_dirs if i is not None and i != 'input_bucket_name']
+            raise NameError('The path given to hb.get_path() does not exist at the unmodified path, and or is not available for download on your selected cloud bucket): ' + str(relative_path) + ', ' + str(possible_dirs) + '\n\n')                    
+                            
+                            # If it was neither found nor None, THEN return the path constructed from the first element in possible_dirs
+        # Get the first non None element in possible_dirs
+        possible_dirs = [i for i in possible_dirs if i is not None]
         path = os.path.join(possible_dirs[0], relative_path)
-        hb.log('get_path: ' + str(path_as_inputted) + ' was not found in any searched root; '
-               'assuming it will be generated at ' + str(path)
-               + '. If you expected it to exist, check the ref_path spelling.')
         return path
 
     def write_args_to_project(self, args):
