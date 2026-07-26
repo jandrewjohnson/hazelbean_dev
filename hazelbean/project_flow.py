@@ -361,11 +361,47 @@ class ProjectFlow(object):
     def __repr__(self):
         return 'Hazelbean ProjectFlow object. ' # +  hb.pp(self.__dict__, return_as_string=True)
 
+    def _derive_default_project_dir(self):
+        """Resolve the bare-constructor default ('script_parent') git-aware.
+
+        Plain folder: the script's parent dir, as always. But if the calling script
+        lives inside a git repo, never put project outputs in the repo: walk up to the
+        repo root, step one level above it, and land at <that dir>/projects/<name>,
+        where <name> is the run file's stem minus any 'run_' prefix. For a repo in the
+        standard devstack layout (~/Files/<stack>/<repo>) this reproduces the house
+        convention (~/Files/<stack>/projects/<name>) without the run file spelling it
+        out. An explicit project_dir argument bypasses all of this.
+        """
+        script_parent = str(Path(self.script_dir).parent)
+        if not getattr(self, 'calling_script', None):
+            return script_parent
+
+        repo_root = None
+        d = Path(self.script_dir)
+        while True:
+            if (d / '.git').exists():  # dir in a normal clone, file in a worktree
+                repo_root = d
+                break
+            if d.parent == d:
+                break
+            d = d.parent
+        if repo_root is None:
+            return script_parent
+
+        name = Path(self.calling_script).stem
+        if name.startswith('run_'):
+            name = name[len('run_'):]
+        derived = str(repo_root.parent / 'projects' / name)
+        hb.log('Bare ProjectFlow(): calling script is inside the git repo at ' + str(repo_root)
+               + ', so the project dir is placed outside the repo at ' + derived
+               + '. Pass project_dir explicitly to override.')
+        return derived
+
     def set_project_dir(self, project_dir=None):
         # Resolve the project_dir: an explicit arg wins; otherwise keep an already-set
         # project_dir (e.g. from a prior call); otherwise fall back to the CWD.
         if project_dir == 'script_parent':
-            self.project_dir = str(Path(self.script_dir).parent)
+            self.project_dir = self._derive_default_project_dir()
         elif project_dir:
             self.project_dir = project_dir
         elif not getattr(self, 'project_dir', None):
@@ -659,6 +695,15 @@ class ProjectFlow(object):
                          '(returns the would-be path under the first searched root).')
             return '\n'.join(lines)
 
+        # Skip-aware failure: when the current task is skipped (p.run_this == 0), its
+        # pre-gate code runs purely to PUBLISH paths for later tasks — nothing is about
+        # to consume the file, so not-found must not be fatal. Form the would-be path
+        # and defer any failure to the next task that actually runs and consumes it.
+        # run_this is None outside the task loop (e.g. in the run file), where
+        # fail-fast on a typo'd ref_path is still correct.
+        _run_this = getattr(self, 'run_this', None)
+        in_skipped_task = _run_this is not None and not _run_this
+
         if os.path.isabs(relative_path):
             # Check that it has one of the possible_dirs already embedded in it
             found_possible_dir_in_input = False
@@ -686,6 +731,10 @@ class ProjectFlow(object):
                 elif hb.path_exists(relative_path):
                     hb.log('WARNING: You gave an absolute path to hb.get_path. It still might work if it found the possible_dirs in the path and removed them, but this is not good practice. Inputted path: ', relative_path, 'Possible dirs: ', possible_dirs, include_script_location=True)
                     return relative_path
+                elif in_skipped_task:
+                    hb.log('get_path (skipped task): absolute path ' + str(path_as_inputted)
+                           + ' was not found; publishing it as-is for later tasks.')
+                    return path_as_inputted
                 else:
                     raise NameError('get_path was given an absolute path it could not resolve (absolute paths are '
                                     'not good practice here — prefer a ref_path relative to the searched roots).\n'
@@ -694,18 +743,24 @@ class ProjectFlow(object):
         if leave_ref_path_if_fail:
             return path_as_inputted
 
-        if raise_error_if_fail:
+        if raise_error_if_fail and not in_skipped_task:
             raise NameError(_not_found_message())
 
-        # Caller opted out of raising (raise_error_if_fail=False): assume the file is
-        # about to be generated and return the would-be path under the first root.
-        # Log the assumption so a typo'd ref_path leaves a diagnostic trail instead
-        # of silently producing a phantom path.
+        # Deferred failure: either the caller opted out of raising
+        # (raise_error_if_fail=False, e.g. a task about to generate the file) or the
+        # current task is skipped and this call is only publishing a path. Return the
+        # would-be path under the first root and log the assumption so a typo'd
+        # ref_path leaves a diagnostic trail instead of silently producing a phantom path.
         possible_dirs = [i for i in possible_dirs if i is not None and i != 'input_bucket_name']
         path = os.path.join(possible_dirs[0], relative_path)
-        hb.log('get_path: ' + str(path_as_inputted) + ' was not found in any searched root; '
-               'assuming it will be generated at ' + str(path)
-               + '. If you expected it to exist, check the ref_path spelling.')
+        if in_skipped_task:
+            hb.log('get_path (skipped task): ' + str(path_as_inputted) + ' was not found in any searched root; '
+                   'publishing would-be path ' + str(path) + ' for later tasks. Any real failure will surface '
+                   'in the next task that consumes it.')
+        else:
+            hb.log('get_path: ' + str(path_as_inputted) + ' was not found in any searched root; '
+                   'assuming it will be generated at ' + str(path)
+                   + '. If you expected it to exist, check the ref_path spelling.')
         return path
 
     def write_args_to_project(self, args):
