@@ -35,9 +35,13 @@ shim, exactly as initialize_definitions.py argues for post_process hooks.
 Reconciliation decisions (where the four originals disagreed):
   * Path detection: the originals used three rules -- gtappy's `'.' in value[-5:-1]`
     (an extension test that silently FAILS for >4-char extensions like .geojson),
-    and seals' `'.' in value` (treats any dotted string as a path). Unified here to
-    an anchored extension regex OR a path separator -- a strict superset of the
-    useful cases and a fix for both originals' bugs.
+    and seals' `'.' in value` (treats any dotted string as a path). First unified to
+    an anchored extension regex OR a path separator; since 2026-07-24 hydration is
+    NAME-driven instead (`*_path` columns resolve, everything else stays literal),
+    because no value heuristic can separate ssh targets (user@192.168.64.2),
+    backend-machine paths (C:\\GP) or free text (Expansion/Loss) from local ref
+    paths. The value heuristic survives as the public `looks_like_path` for
+    consumers of value-conditional columns (aoi, calibration_parameters_source).
   * gtappy's row parser ran `hb.parse_flex_to_python_object` as a pre-pass; the
     seals parsers did not. Dropped in favor of explicit [list]/{dict} literal
     parsing, which is the part that actually mattered and now applies to both
@@ -58,14 +62,6 @@ import hazelbean as hb
 _PATH_EXTENSION_RE = re.compile(r"\.[A-Za-z0-9]{1,8}$")
 
 
-def _is_floatable(value):
-    try:
-        float(value)
-        return True
-    except (ValueError, TypeError):
-        return False
-
-
 def _is_intable(value):
     try:
         int(value)
@@ -74,8 +70,17 @@ def _is_intable(value):
         return False
 
 
-def _looks_like_path(value):
-    """Unified replacement for the three divergent path heuristics."""
+def looks_like_path(value):
+    """Value-based path heuristic: a path separator or a trailing .ext.
+
+    Since 2026-07-24 this no longer drives hydration -- `parse_attribute_value`
+    resolves paths by NAME (`*_path` columns), because no value heuristic can
+    separate an ssh target (user@192.168.64.2), a backend-machine path (C:\\GP)
+    or free text ('Expansion/Loss') from a local ref path. It stays public for
+    consumers of value-conditional columns whose values are only SOMETIMES paths
+    (e.g. aoi, calibration_parameters_source): gate on looks_like_path(value),
+    then resolve with get_path(..., leave_ref_path_if_fail=True).
+    """
     s = str(value).strip()
     if s == "" or s.lower() == "nan" or s == "skip":
         return False
@@ -152,13 +157,14 @@ def parse_attribute_value(input_object, attribute_name, attribute_value):
         1. cat-ears (`<^attr^>`) resolved against `input_object`'s attributes
         2. explicit `[list]` literal (with `int(...)`/`float(...)` token casts)
         3. explicit `{dict}` literal
-        4. path-like string -> `input_object.get_path(...)`
+        4. `*_path`-named column -> `input_object.get_path(...)` (name-driven,
+           per the EE Spec convention that path-bearing columns are named *_path;
+           blank/'skip' pass through, 'nan' -> None)
         5. `*year*`-named column -> int / space-delimited list-of-int parsing
         6. `*dimensions*`-named column -> space-delimited list-of-str parsing
         7. literal 'nan' -> None; otherwise the value unchanged
     """
     value = attribute_value
-    is_floatable = _is_floatable(value)
     is_intable = _is_intable(value)
 
     # 1. cat-ears: resolve placeholders against already-set attributes (seals_utils
@@ -175,12 +181,23 @@ def parse_attribute_value(input_object, attribute_name, attribute_value):
         if stripped.startswith("{") and stripped.endswith("}"):
             return _parse_dict_literal(value)
 
-    # 4. paths -- checked before year/dimensions so e.g. base_year_lulc_path
-    # (name contains 'year') still resolves as a path.
-    if _looks_like_path(value) and not is_floatable:
+    # 4. paths -- name-driven since 2026-07-24 (was value-driven, which get_path'd
+    # anything dotted or slashed: ssh targets, backend-machine paths, free text).
+    # Checked before year/dimensions so e.g. base_year_lulc_path (name contains
+    # 'year') still resolves as a path. Columns whose values are only sometimes
+    # paths (aoi, calibration_parameters_source) resolve at their consumers via
+    # the public looks_like_path + get_path(leave_ref_path_if_fail=True).
+    if str(attribute_name).endswith("_path"):
+        if not isinstance(value, str):
+            return None if str(value).lower() == "nan" else value
+        stripped = value.strip()
+        if stripped == "" or stripped == "skip":
+            return value
+        if stripped.lower() == "nan":
+            return None
         if has_cat_ears:
-            return input_object.get_path(value, leave_ref_path_if_fail=True)
-        return input_object.get_path(value)
+            return input_object.get_path(stripped, leave_ref_path_if_fail=True)
+        return input_object.get_path(stripped)
 
     if "year" in attribute_name:
         return _parse_year(value, attribute_name, is_intable)
