@@ -376,15 +376,7 @@ class ProjectFlow(object):
         if not getattr(self, 'calling_script', None):
             return script_parent
 
-        repo_root = None
-        d = Path(self.script_dir)
-        while True:
-            if (d / '.git').exists():  # dir in a normal clone, file in a worktree
-                repo_root = d
-                break
-            if d.parent == d:
-                break
-            d = d.parent
+        repo_root = self._find_git_repo_root()
         if repo_root is None:
             return script_parent
 
@@ -396,6 +388,42 @@ class ProjectFlow(object):
                + ', so the project dir is placed outside the repo at ' + derived
                + '. Pass project_dir explicitly to override.')
         return derived
+
+    def _find_git_repo_root(self):
+        """Return the Path of the git repo containing the calling script, or None."""
+        if not getattr(self, 'script_dir', None):
+            return None
+        d = Path(self.script_dir)
+        while True:
+            if (d / '.git').exists():  # dir in a normal clone, file in a worktree
+                return d
+            if d.parent == d:
+                return None
+            d = d.parent
+
+    def _infer_project_parent_dir(self):
+        """Infer the dir that holds project dirs from the calling script's git repo.
+
+        Two layouts (devstack conventions): a run file inside a library repo
+        (~/Files/<stack>/<repo>) puts project dirs at <stack>/projects/; a run
+        file inside a project repo nested under a projects/ tree
+        (.../projects[/<group>]/<wrapper>/<repo>) puts them beside the repo's
+        wrapper dir — i.e. the wrapper's parent — or directly in the projects/
+        dir when the repo sits under it with no wrapper level. Raises
+        ValueError when the calling script is not inside a git repo; pass
+        extra_dirs explicitly in that case.
+        """
+        repo_root = self._find_git_repo_root()
+        if repo_root is None:
+            raise ValueError(
+                'set_project_dir_for_run_mode could not infer where project dirs live '
+                'because the calling script is not inside a git repo. Pass extra_dirs '
+                "explicitly, e.g. extra_dirs=['Files', 'seals', 'projects'].")
+        if 'projects' in repo_root.parts:
+            if repo_root.parent.name == 'projects':
+                return str(repo_root.parent)
+            return str(repo_root.parent.parent)
+        return str(repo_root.parent / 'projects')
 
     def set_project_dir(self, project_dir=None):
         # Resolve the project_dir: an explicit arg wins; otherwise keep an already-set
@@ -429,6 +457,57 @@ class ProjectFlow(object):
             self.input_bucket_name = None # If you want to use a different bucket than the default, provide the name here. Otherwise uses default public data 'gtap_invest_seals_2023_04_21'.
 
         self.copy_input_template()
+
+    def set_project_dir_for_run_mode(self, project_name, run_mode, extra_dirs=None):
+        """Validate run_mode and set the project_dir to <project parent dir>/<project_name>.
+
+        This is the standard entry point for run_*.py files, replacing the
+        boilerplate they used to repeat: run_mode='full' appends a timestamp to
+        project_name so each run gets a fresh dir; 'check' (and
+        'fresh_intermediate') reuse the stable dir so repeated runs resume in
+        place; 'fresh_intermediate' additionally deletes intermediate/ and
+        outputs/ in place — allowed only on test projects (project_name
+        containing 'test'). input/ is kept: it holds per-machine values (e.g.
+        parameters.csv connection settings) that a freshly seeded template
+        would leave blank.
+
+        The project parent dir is inferred git-aware from the calling script's
+        repo by default (see _infer_project_parent_dir); pass extra_dirs (path
+        parts under the user dir, e.g. ['Files', 'seals', 'projects']) to place
+        projects somewhere the inference can't know about — a grouping
+        subfolder, another stack's tree, or a script outside any git repo.
+        Sets user_dir, extra_dirs, project_name and project_dir on self, then
+        calls set_project_dir().
+        """
+        valid_run_modes = ('check', 'fresh_intermediate', 'full')
+        if run_mode not in valid_run_modes:
+            raise ValueError('run_mode must be one of ' + str(valid_run_modes) + ', got ' + repr(run_mode))
+        if run_mode == 'fresh_intermediate' and 'test' not in project_name:
+            raise ValueError("run_mode='fresh_intermediate' deletes the project's intermediate/ and outputs/ "
+                             "dirs, so it is only allowed on dedicated test projects (project_name containing "
+                             "'test'), got " + repr(project_name))
+
+        self.user_dir = os.path.expanduser('~')
+        self.extra_dirs = extra_dirs
+        self.project_name = project_name
+        if run_mode == 'full':
+            self.project_name = self.project_name + '_' + hb.pretty_time()  # fresh dir per run; other modes reuse/resume the stable dir.
+
+        if extra_dirs is None:
+            project_parent_dir = self._infer_project_parent_dir()
+        else:
+            project_parent_dir = os.path.join(self.user_dir, os.sep.join(extra_dirs))
+        self.project_dir = os.path.join(project_parent_dir, self.project_name)
+        self.set_project_dir(self.project_dir)
+
+        if run_mode == 'fresh_intermediate':
+            # Delete in place (rather than timestamping a new dir) so any path derived
+            # from project_dir still resolves to the fresh results.
+            import shutil
+            for stale_dir in [self.intermediate_dir, self.output_dir]:
+                if os.path.exists(stale_dir):
+                    shutil.rmtree(stale_dir)
+                    print("run_mode='fresh_intermediate': deleted " + stale_dir)
 
     def copy_input_template(self):
         # Check for any input_templates in the repository and copy anything not
