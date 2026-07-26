@@ -936,72 +936,6 @@ class ProjectFlow(object):
             
         return iterator
 
-    def add_all_functions_from_script_to_task_tree(self, script_path):
-        module_name = os.path.splitext(os.path.basename(script_path))[0]
-
-        # Load the module from the given script path
-        spec = importlib.util.spec_from_file_location(module_name, script_path)
-        module = importlib.util.module_from_spec(spec)
-        sys.modules[module_name] = module
-        spec.loader.exec_module(module)
-
-        # Parse the file to get the function definitions in the order they appear
-        with open(script_path, "r") as file:
-            file_contents = file.read()
-
-        parsed_ast = ast.parse(file_contents)
-        functions_list = [node.name for node in parsed_ast.body if isinstance(node, ast.FunctionDef)]
-
-        # Print the function names and add them to the task tree
-        print("Functions in the script:")
-        for func_name in functions_list:
-            func = getattr(module, func_name)
-            if func_name not in self.task_names_defined:
-                self.add_task(func)       
-        
-        # for name, obj in inspect.getmembers(sys.modules[self.calling_script]):
-        #     if inspect.isfunction(obj):
-        #         if name not in self.task_names_defined:
-        #             self.add_task(obj)        
-        
-        # module_name = os.path.splitext(os.path.basename(script_path))[0]
-
-        # # Load the module from the given script path
-        # spec = importlib.util.spec_from_file_location(module_name, script_path)
-        # module = importlib.util.module_from_spec(spec)
-        # sys.modules[module_name] = module
-        # spec.loader.exec_module(module)
-
-        # # List all functions in the module
-        # functions_list = [func for func in dir(module) if inspect.isfunction(getattr(module, func))]
-
-        # # Print the function names and add them to the task tree
-        # print("Functions in the script:")
-        # for func in functions_list:
-        #     print(func)
-        #     self.add_task(getattr(module, func))        
-            
-        
-        # # Get the current module (i.e., your script)
-        # hb.print_iterable(sys.modules)
-        # current_module = sys.modules[script_path]
-
-        # # List all functions in the current module
-        # functions_list = [func for func in dir(current_module) if inspect.isfunction(getattr(current_module, func))]
-
-        # # Print the function names
-        # print("Functions in the current script:")
-        # for func in functions_list:
-        #     print(func)
-        #     self.add_task(getattr(current_module, func))
-
-
-
-        # for name, obj in inspect.getmembers(sys.modules[self.calling_script]):
-        #     if inspect.isfunction(obj):
-        #         if name not in self.task_names_defined:
-        #             self.add_task(obj)
-
     def run_task(self, current_task):
 
         for task in anytree.LevelOrderIter(current_task, maxlevel=1): # We ALWAYS have maxlevel = 1 even if there are nested things because it handles all nested children recursively and we don't want the tree iterator to find them. This is sorta stupid instead of just giving the tree itself at the top  node.
@@ -1362,8 +1296,12 @@ class ProjectFlow(object):
         self.registered_dirs = ['.', self.input_dir, self.project_base_data_dir, self.model_base_data_dir, self.base_data_dir]
         
         if len(self.task_tree.children) == 0:
-            # Add all functions from the script to the task tree
-            self.add_all_functions_from_script_to_task_tree(self.calling_script)
+            raise NameError(
+                'No tasks are in the task tree. Add your task functions before calling '
+                'execute(), e.g.\n'
+                '    p.add_task(your_function)\n'
+                'or collect the add_task calls in a build_task_tree(p) function and call '
+                'that first (the canonical run-file shape).')
 
         self.show_tasks()
 
