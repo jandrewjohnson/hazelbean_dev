@@ -1,6 +1,6 @@
 # Hazelbean Changelog
 
-## Unreleased
+## v1.9.0 (2026-07-30)
 
 #### New Features
 
