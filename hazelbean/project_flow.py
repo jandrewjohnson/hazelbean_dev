@@ -369,8 +369,6 @@ class ProjectFlow(object):
         # p.skip_tasks(p.tasks_to_skip) without guarding for the attribute.
         self.tasks_to_skip = None
 
-        # TODO FIX get rid of inputs dir, but it's used a lot, including in putting scenarios.csv files in the right place.... er. The Python ecosystem overwhelmingly prefers singular names for a type of directory* and plural only when the directory itself contains many heterogeneous items.
-        # self.inputs_dir = getattr(self, 'inputs_dir', os.path.join(self.project_dir, 'inputs'))
         # self.input_dir = getattr(self, 'input_dir', os.path.join(self.project_dir, 'input'))
         # self.intermediate_dir = getattr(self, 'intermediate_dir', os.path.join(self.project_dir, 'intermediate'))
         # self.output_dir = getattr(self, 'output_dir', os.path.join(self.project_dir, 'output'))
@@ -515,7 +513,7 @@ class ProjectFlow(object):
             self.project_name = hb.file_root(self.project_dir)
 
         if run_mode == 'fresh_intermediate' and 'test' not in self.project_name:
-            raise ValueError("run_mode='fresh_intermediate' deletes the project's intermediate/ and outputs/ "
+            raise ValueError("run_mode='fresh_intermediate' deletes the project's intermediate/ and output/ "
                              "dirs, so it is only allowed on dedicated test projects (project name containing "
                              "'test'), got " + repr(self.project_name))
 
@@ -523,11 +521,9 @@ class ProjectFlow(object):
         self.project_base_data_dir = os.path.join(self.project_dir, 'base_data')
         self.model_base_data_dir = os.path.abspath(os.path.join(self.ui_agnostic_project_dir, '../../base_data'))  # Data that must be redistributed with this project for it to work. Do not put actual base data here that might be used across many projects.
 
-        # BIG ASS-MISTAKE here, repeating inputs
         self.input_dir = os.path.join(self.project_dir, 'input')
-        self.inputs_dir = os.path.join(self.project_dir, 'inputs')
         self.intermediate_dir = os.path.join(self.project_dir, 'intermediate')
-        self.output_dir = os.path.join(self.project_dir, 'outputs')
+        self.output_dir = os.path.join(self.project_dir, 'output')
 
         if not getattr(self, 'data_credentials_path', None):
             self.data_credentials_path = None # If you want to use a different bucket than the default, provide the credentials here. Otherwise uses default public data 'gtap_invest_seals_2023_04_21'.
@@ -587,7 +583,7 @@ class ProjectFlow(object):
         self.set_project_dir(project_name=project_name, run_mode=run_mode, extra_dirs=extra_dirs)
 
     def copy_input_template(self):
-        # Check for any input_templates in the repository and copy anything not
+        # Check for any input_template in the repository and copy anything not
         # already present into the project's input_dir. Strictly skip-existing:
         # the input/ working copy holds per-machine values (e.g. parameters.csv
         # connection settings) and user edits that a re-run must never clobber.
@@ -1500,7 +1496,7 @@ class ProjectFlow(object):
         # if self.intermediate_dir == '':
         #     self.intermediate_dir = os.path.join(self.project_dir, 'intermediate')
 
-        self.output_dir = getattr(self, 'output_dir', os.path.join(self.project_dir, 'outputs'))
+        self.output_dir = getattr(self, 'output_dir', os.path.join(self.project_dir, 'output'))
 
 
         L.debug('self.model_base_data_dir set to ' + str(self.model_base_data_dir))

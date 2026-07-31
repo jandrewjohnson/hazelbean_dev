@@ -14,7 +14,7 @@ Learn how to initialize a Hazelbean ProjectFlow for organized geospatial workflo
 
 **Key concepts:**
 - ProjectFlow initialization
-- Directory management (`inputs/`, `intermediate/`, `outputs/`)
+- Directory management (`input/`, `intermediate/`, `output/`)
 - Data discovery paths
 
 ### Step 2: Data Loading (`step_2_data_loading.py`)
@@ -104,10 +104,10 @@ Each example provides clear console output showing:
 After running all examples, you'll have:
 ```
 hazelbean_tutorial/
-├── inputs/           # Input data directory
+├── input/           # Input data directory
 ├── intermediate/     # Processing files
 │   └── analysis_summary.txt
-└── outputs/          # Final results
+└── output/          # Final results
     └── tutorial_analysis_[timestamp]/
         ├── rasters/  # Analysis outputs
         └── reports/  # Documentation

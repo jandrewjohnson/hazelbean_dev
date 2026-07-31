@@ -35,7 +35,7 @@ flowchart TD
     F --> G[Document and Share]
     
     A1["p = hb.ProjectFlow('project_name')"] --> A
-    B1["inputs/, intermediate/, outputs/"] --> B
+    B1["input/, intermediate/, output/"] --> B
     C1["p.get_path() intelligent search"] --> C
     D1["Array operations & transformations"] --> D
     E1["Multi-raster analysis & statistics"] --> E
@@ -350,13 +350,13 @@ Understanding how Hazelbean organizes projects on your platform:
 
 ```
 /Users/username/my_analysis/          # Project root
-├── inputs/                          # Input data
+├── input/                          # Input data
 │   ├── rasters/
 │   └── vectors/
 ├── intermediate/                    # Processing files
 │   ├── aligned/
 │   └── processed/
-└── outputs/                        # Final results
+└── output/                        # Final results
     ├── YYYYMMDD_analysis/
     └── reports/
 ```
@@ -384,13 +384,13 @@ C:\Users\username\my_analysis\        # Project root
 
 ```
 /home/username/my_analysis/          # Project root
-├── inputs/                          # Input data
+├── input/                          # Input data
 │   ├── rasters/
 │   └── vectors/
 ├── intermediate/                    # Processing files  
 │   ├── aligned/
 │   └── processed/
-└── outputs/                        # Final results
+└── output/                        # Final results
     ├── YYYYMMDD_analysis/
     └── reports/
 ```

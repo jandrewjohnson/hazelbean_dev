@@ -211,7 +211,7 @@ class EducationalGenerator:
             'step_2': "=== Hazelbean Data Loading Demo ===\n✓ Found raster: /path/to/data/tests/sample.tif\n...",
             'step_3': "=== Basic Processing Operations ===\nProcessing raster data...\n...",
             'step_4': "=== Spatial Analysis Results ===\nAnalysis complete...\n...",
-            'step_5': "=== Export Complete ===\nResults saved to outputs/\n..."
+            'step_5': "=== Export Complete ===\nResults saved to output/\n..."
         }
         
         # Return example output or generate generic one

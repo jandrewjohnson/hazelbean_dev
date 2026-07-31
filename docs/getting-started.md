@@ -157,9 +157,9 @@ p = hb.ProjectFlow('my_analysis')
 
 # Automatic directory structure:
 # my_analysis/
-# ├── inputs/      # Source data
+# ├── input/      # Source data
 # ├── intermediate/ # Processing files  
-# └── outputs/     # Final results
+# └── output/     # Final results
 ```
 
 ### Intelligent Data Discovery

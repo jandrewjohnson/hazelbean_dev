@@ -25,7 +25,7 @@ class FakeProjectFlow:
     def __init__(self, root, stem, filename, base_data_path):
         # Where the project expects its definitions csv to live (initially absent).
         self.script_dir = os.path.join(root, "script")
-        self.input_dir = os.path.join(root, "inputs")
+        self.input_dir = os.path.join(root, "input")
         os.makedirs(self.script_dir, exist_ok=True)
         os.makedirs(self.input_dir, exist_ok=True)
 
@@ -126,7 +126,7 @@ def test_derives_path_from_input_dir(temp_dir):
     class FakeWithoutPath:
         def __init__(self, root):
             self.script_dir = os.path.join(root, "script")
-            self.input_dir = os.path.join(root, "inputs")
+            self.input_dir = os.path.join(root, "input")
             os.makedirs(self.script_dir, exist_ok=True)
             os.makedirs(self.input_dir, exist_ok=True)
             self.parameter_definitions_filename = filename
