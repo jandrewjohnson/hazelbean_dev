@@ -1,22 +1,42 @@
 # Hazelbean Changelog
 
-## v1.9.0 (2026-07-30)
+## v2.0.0 (2026-07-31)
 
 #### New Features
 
-* `ProjectFlow` initializes `tasks_to_skip` to `None`, so run files on the caller-configured convention can call `p.skip_tasks(p.tasks_to_skip)` without a `getattr` guard.
+* unify value parsing in assign_to_object module and add comprehensive unit tests
+#### Fixes
 
-#### Chores
+* warp_raster_hb dst_ndv default uses GDAL type enum instead of nodata
+* enable pytest and disable unittest in VSCode settings
+#### Refactorings
 
-* Removed `hazelbean/project_flow_old_spec.py`. Git history is the archive for pre-conversion forms; the `_old_spec` twins are being retired stack-wide.
+* update documentation paths and compression defaults across multiple files
+* unify directory naming from plural to singular for consistency
+#### Docs
+
+* version the changelog entry as v1.9.0
+* update changelog for v1.8.0
+#### Others
+
+* added claude code config
+
+Full set of changes: [`v1.8.0...v2.0.0`](https://github.com/jandrewjohnson/hazelbean_dev/compare/v1.8.0...v2.0.0)
 
 ## v1.8.0 (2026-01-16)
 
 #### New Features
 
+* add release process documentation for Hazelbean, detailing automated workflows for PyPI and conda-forge, along with system test organization and execution guidelines
+* migrate documentation from MkDocs to Quarto, enhancing automation and structure
+* added fixes for modulized python execution and md docs
+* added some testing functions
 * enhance parse_flex_to_python_object with comprehensive parsing capabilities and add split_respecting_nesting function
 #### Fixes
 
+* cleaned up docs
+* removed emojis
+* updated vscode settings.json
 * improve JSON error handling and enhance input parsing logic
 * correct input directory name and add method to set base data directory with search functionality
 #### Docs
