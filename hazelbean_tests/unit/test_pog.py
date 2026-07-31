@@ -29,7 +29,7 @@ class TestPOGCompliance(unittest.TestCase):
         with self.subTest(file=self.invalid_cog_path):
             temp_path = hb.temp('.tif', remove_at_exit=True, tag_along_file_extensions=['.aux.xml'])
             
-            hb.make_path_pog(self.invalid_cog_path, temp_path, output_data_type=5, overview_resampling_method='mode', ndv=-111, compression="ZSTD", blocksize=512, verbose=True)
+            hb.make_path_pog(self.invalid_cog_path, temp_path, output_data_type=5, overview_resampling_method='mode', ndv=-111, compression="DEFLATE", blocksize=512, verbose=True)
             result = hb.is_path_pog(temp_path, check_tiled=True, full_check=True, raise_exceptions=False, verbose=True)
             self.assertTrue(result, f"{temp_path} is a valid POG")
             

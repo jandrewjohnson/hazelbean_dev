@@ -919,7 +919,7 @@ def is_path_global_pyramid(input_path, verbose=False):
     # Check if compressed (pyramidal file standards require compression)
     if str(compression).lower() not in ['lzw', 'deflate']:
         if verbose:
-            hb.log('Not a global pyramid because compression was not zstd/lzw: ' + str(input_path))
+            hb.log('Not a global pyramid because compression was not lzw/deflate: ' + str(input_path))
         to_return = False
 
     data_type = ds.GetRasterBand(1).DataType
@@ -1392,8 +1392,8 @@ def make_path_global_pyramid(
     rewrite_array = False
 
     # Check if compressed (pyramidal file standards require compression)
-    if str(compression).lower() not in  ['zstd']:
-        L.critical('rewrite_array triggered because compression was not deflate.')
+    if str(compression).lower() not in  ['lzw', 'deflate']:
+        L.critical('rewrite_array triggered because compression was not lzw/deflate.')
         rewrite_array = True
 
     data_type = ds.GetRasterBand(1).DataType
@@ -1403,7 +1403,7 @@ def make_path_global_pyramid(
         options = (
             'TILED=YES',
             'BIGTIFF=YES',
-            'COMPRESS=ZSTD',
+            'COMPRESS=DEFLATE',
             'BLOCKXSIZE=512',
             'BLOCKYSIZE=512',
         )
@@ -1661,7 +1661,7 @@ def make_path_spatially_clean(input_path,
 
     # Consider operations that may need rewriting the underlying data
     rewrite_array = False
-    compression_method = 'ZSTD'
+    compression_method = 'DEFLATE'
     # Check if compressed (pyramidal file standards require compression)
     if str(compression).lower() != compression_method.lower():
         rewrite_array = True

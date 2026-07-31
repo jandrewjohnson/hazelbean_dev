@@ -49,8 +49,11 @@ def test_path_detection_resolves(value):
 
 def test_long_extension_is_a_path():
     # gtappy's old [-5:-1] test silently FAILED for >4-char extensions. Regression guard.
+    # Since hydration went name-driven (2026-07-24) the value heuristic lives in
+    # looks_like_path, and parse_attribute_value resolves only *_path-named attributes.
     p = FakeP()
-    assert hb.parse_attribute_value(p, "out", "x.geojson").startswith("RESOLVED:")
+    assert hb.looks_like_path("x.geojson")
+    assert hb.parse_attribute_value(p, "out_path", "x.geojson").startswith("RESOLVED:")
 
 
 def test_floatable_is_not_a_path():

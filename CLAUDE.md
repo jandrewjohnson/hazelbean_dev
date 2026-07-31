@@ -99,20 +99,13 @@ hazelbean_tests/
 
 ## Documentation
 
-The documentation site uses Quarto and lives in `docs-site/quarto-docs/`.
+User documentation lives in `earth_economy_devstack/docs/` as the Hazelbean
+section (`hazelbean_overview.qmd`, `hazelbean_learning_path.qmd`,
+`hazelbean_examples.qmd`, `hazelbean_troubleshooting.qmd`, `project_flow.qmd`)
+and is rendered by the devstack site build. Edit it there.
 
-```bash
-# Preview docs (generates reports first, then starts live server)
-./tools/preview_docs.sh
-
-# Or manually:
-python tools/generate_all_reports.py  # Generate reports first
-cd docs-site/quarto-docs
-quarto preview  # Live preview
-quarto render   # Build static site
-```
-
-**Important**: Always run report generation before `quarto preview`. The pre-render hook was removed to prevent an infinite loop (file watcher detecting regenerated .qmd files).
+`docs/` in this repo holds developer-facing notes (release process, cython
+workflow, benchmarking) that are not published.
 
 ## Known Issues
 

@@ -48,7 +48,7 @@ def _worker_make_path_pog_starmap(input_file_path, specific_output_path, common_
             output_data_type=common_pog_options_dict.get('output_data_type', 'auto'),
             overview_resampling_method=common_pog_options_dict.get('overview_resampling_method'),
             ndv=common_pog_options_dict.get('ndv'),
-            compression=common_pog_options_dict.get('compression', "ZSTD"),
+            compression=common_pog_options_dict.get('compression', "DEFLATE"),
             blocksize=common_pog_options_dict.get('blocksize', 512),
             verbose=common_pog_options_dict.get('verbose_hb_call', False)
         )
@@ -68,7 +68,7 @@ def make_paths_pogs_in_parallel(
     output_data_type='auto',
     overview_resampling_method=None,
     ndv=None,
-    compression="ZSTD",
+    compression="DEFLATE",
     blocksize=512,
     verbose_hb_call=False,
     max_workers=None,
@@ -298,7 +298,7 @@ def make_path_pog(input_raster_path,
         if verbose:            
             hb.log(f"Changing data type from {input_data_type} to {output_data_type} for {input_raster_path}")
         output_data_type = hb.gdal_number_to_gdal_type[output_data_type]
-        gdal.Translate(temp_translate_path, input_raster_path, outputType=output_data_type, options=['-co', 'COMPRESS=ZSTD'], callback=hb.make_gdal_callback(f"Translating to change datatype on {hb.path_filename(input_raster_path)} to {temp_translate_path} to be datatype {output_data_type}."))
+        gdal.Translate(temp_translate_path, input_raster_path, outputType=output_data_type, options=['-co', f'COMPRESS={compression}'], callback=hb.make_gdal_callback(f"Translating to change datatype on {hb.path_filename(input_raster_path)} to {temp_translate_path} to be datatype {output_data_type}."))
         current_path = temp_translate_path
     else:
         if verbose:
@@ -450,7 +450,7 @@ def make_path_pog(input_raster_path,
 
 
     
-def write_pog_of_value_from_scratch(output_path, value, arcsecond_resolution, output_data_type, ndv=None, overview_resampling_method=None, compression='ZSTD', blocksize='512', verbose=False):
+def write_pog_of_value_from_scratch(output_path, value, arcsecond_resolution, output_data_type, ndv=None, overview_resampling_method=None, compression='DEFLATE', blocksize='512', verbose=False):
     # Define creation options for COG
     precog_gtiff_creation_options = [
         f"COMPRESS={compression}",
@@ -545,7 +545,7 @@ def write_pog_of_value_from_scratch(output_path, value, arcsecond_resolution, ou
     del tmp_ds
 
 
-def write_pog_of_value_from_match(output_path, match_path, value, output_data_type=None, ndv=None, overview_resampling_method=None, compression='ZSTD', blocksize='512', verbose=False):
+def write_pog_of_value_from_match(output_path, match_path, value, output_data_type=None, ndv=None, overview_resampling_method=None, compression='DEFLATE', blocksize='512', verbose=False):
     
     # Define creation options for COG
     precog_gtiff_creation_options = [

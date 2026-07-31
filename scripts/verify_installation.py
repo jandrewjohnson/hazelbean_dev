@@ -213,7 +213,7 @@ def main():
         print("\n🎉 Hazelbean is properly installed and ready to use!")
         print("\n📚 Next steps:")
         print("   - Explore examples: cd examples && python step_1_project_setup.py")
-        print("   - View documentation: cd docs-site && mkdocs serve")
+        print("   - Documentation: https://justinandrewjohnson.com/earth_economy_devstack/hazelbean_overview.html")
         print("   - Run tests (from project root, hazelbean_env activated):")
         print("     python -m pytest hazelbean_tests/system/test_smoke.py -v")
         return True

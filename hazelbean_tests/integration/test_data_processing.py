@@ -417,6 +417,10 @@ class TestRasterVectorInterface(BaseDataProcessingTest):
                                                 zone_ids_raster_path=zone_ids_raster_path, verbose=False)
         print('results_dict', results_dict)
 
+    @pytest.mark.skipif(
+        not os.path.exists(os.path.expanduser("~/Files/base_data/pyramids/ha_per_cell_300sec.tif")),
+        reason="Requires pyramid data files in ~/Files/base_data/ (not available in CI)"
+    )
     def test_super_simplify(self):
         """Test vector super simplification"""
         input_vector_path = self.ee_r264_correspondence_vector_path
