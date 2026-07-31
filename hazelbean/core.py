@@ -134,7 +134,13 @@ def path_needs_rerender(render_src_path, render_dst_path, minimum_size_check=0, 
             if verbose:
                 hb.log('Path did not change: ' + str(render_src_path_mtime) + ' was NOT changed more recently than ' + str(render_dst_path_mtime) + '.')
             return False
-
+        
+def path_is_dir(path):
+    if hb.path_exists(path):
+        return os.path.isdir(path)
+    else:
+        return False
+    
 def path_assert_exists(path, minimum_size_check=0, verbose=False):
     path_exists(path, minimum_size_check=minimum_size_check, verbose=verbose, assert_true=True)
 
@@ -198,8 +204,9 @@ def path_exists(path, minimum_size_check=0, dir_must_have_content=False, verbose
                         return False     
                 else:
                     if verbose:
-                        hb.log('Path DOES NOT exist: ' + str(path) + ', Absolute path is: ' + str(os.path.abspath(path)) + ', Normalized path is: ' + str(os.path.normpath(path)))
-                    
+                        hb.log('Path DOES NOT exist: ' + str(path) + ',\n Absolute path is: ' + str(os.path.abspath(path)) + ',\n Normalized path is: ' + str(os.path.normpath(path)))
+                        hb.log(' Othre files in folder: ' + str(os.listdir(os.path.split(path)[0])))
+                        hb.log('  Minimum size check was: ' + str(minimum_size_check) + ', but the file size was: ' + str(os.path.getsize(path)))
                     return False                
                 
                 

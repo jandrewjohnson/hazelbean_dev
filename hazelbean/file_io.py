@@ -9,10 +9,8 @@ from PIL import Image
 import io
 from pptx import Presentation
 import hazelbean as hb
+import re # Import at top level
 
-# import numdal as nd
-# import hazelbean as hb
-# from hazelbean.data_structures
 
 
 goals = """
@@ -110,10 +108,6 @@ def get_strings_between_values(input_string, value_1, value_2, return_only_first
             return ''
     else:
         print ('NYI')
-
-
-    
-
 
 
 def file_to_python_object(file_uri, declare_type=None, verbose=False, return_all_parts=False, xls_worksheet=None, output_key_data_type=None, output_value_data_type=None, add_first_col_as_named_var=True):
@@ -248,9 +242,12 @@ def file_to_python_object(file_uri, declare_type=None, verbose=False, return_all
         return data, metadata
     else:
         return data
+
+
 def save_string_as_file(input_string, file_path):
     with open(file_path, 'w') as file:
         file.write(input_string)
+
 
 def determine_data_type_and_dimensions_from_uri(file_uri):
     """
@@ -369,6 +366,7 @@ def determine_data_type_and_dimensions_from_object(input_python_object):
         raise NameError('Unsupported object type. You probably gave "None" to python_object_to_csv()')
     return data_type
 
+
 def dict_to_df(input_dict):
     """Fast way to go from double-named nested dictionary to DF. Assumes row-column orientation.
     Example: input_dict[row_label][col_label] = Dict
@@ -383,6 +381,7 @@ def dict_to_df(input_dict):
             data_dict[k1].append(input_dict[k1][k2])
 
     return pd.DataFrame.from_dict(data_dict, orient='index', columns=columns)
+
 
 def df_to_dict(input_df):
     """Fast way to go from DF to double-named nested dictionary. Assumes row-column orientation.
@@ -596,6 +595,7 @@ def determine_data_type_and_dimensions_for_write(input_python_object):
         raise NameError('Unsupported object type. You probably gave "None" to python_object_to_csv()')
     return data_type
 
+
 def comma_linebreak_string_to_2d_array(input_string, dtype=None):
     """Only good for small arrays for testing purposes. Not vectorized."""
     s = str(input_string)
@@ -617,6 +617,7 @@ def comma_linebreak_string_to_2d_array(input_string, dtype=None):
 
     return a
 
+
 def dictionary_to_dataframe(input_dictionary, output_path=None):
     """Input dictionary or OrderedDict should be 2-dimension in row-column nesting."""
     if type(input_dictionary) not in [OrderedDict, dict]:
@@ -637,12 +638,6 @@ def dictionary_to_dataframe(input_dictionary, output_path=None):
             output_df.to_excel(output_path)
     return output_df
 
-# def read_csv(input_path):
-#     df = pd.read_csv(input_path)
-    
-#     for col in df.columns:
-#         if col.split('_')[-1] == 'list':
-#             for 
 
 def propose_fuzzy_merge(left_df, right_df, on=None, left_on=None, right_on=None, how=None,
                         fuzzy_merge_csv_path=None, fuzzy_merge_report_path=None, cutoff=0.65):
@@ -719,6 +714,7 @@ def propose_fuzzy_merge(left_df, right_df, on=None, left_on=None, right_on=None,
         potential_merge.to_csv(fuzzy_merge_csv_path)
     return potential_merge, report, comparison_dict_left, comparison_dict_right
 
+
 def merge_dataframes_with_remap(left_df, right_df, remap_df_or_path, remap_left_col='remap_input', remap_right_col='remap_output', on=None, left_on=None, right_on=None, how='outer'):
     if isinstance(remap_df_or_path, str):
         if remap_df_or_path.endswith('.csv'):
@@ -748,6 +744,7 @@ def merge_dataframes_with_remap(left_df, right_df, remap_df_or_path, remap_left_
     merged_df = pd.merge(left_df, right_df, left_on=left_on, right_on=right_on, how=how)
     return merged_df
 
+
 def check_if_has_key(notebook_path):
     """Bespoke for quarto notebooks and related publishing. Checks if the notebook has a key in the first cell."""
     with open(notebook_path, 'r', encoding='utf-8') as f:
@@ -758,6 +755,7 @@ def check_if_has_key(notebook_path):
                 has_key = True
                 break
     return has_key
+
 
 def strip_quarto_header_from_ipynb(input_path, output_path):
     
@@ -786,6 +784,7 @@ def strip_quarto_header_from_ipynb(input_path, output_path):
     # print('output_path', output_path, '\n', output_dict)
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(output_dict, f, ensure_ascii=False, indent=4) 
+
           
 def strip_quarto_header_and_keys_from_ipynb(input_path, output_path):
     """Bespoke for quarto notebooks and related publishing. Removes the quarto header from an ipynb file.
@@ -818,167 +817,62 @@ def strip_quarto_header_and_keys_from_ipynb(input_path, output_path):
     #     f.writelines(to_write)
                     
 
-
-def pptx_to_markdown_slide_dict(pptx_path, output_dir=None):
-    
-    if output_dir is None:
-        output_dir = os.path.dirname(pptx_path)
-        
-    prs = Presentation(pptx_path)
-    markdown_slide_dict = {}
-    image_count = 0
-    for slide_number, slide in enumerate(prs.slides):
-        markdown_slide_dict[slide_number] = {}
-        
-        if slide_number == 3:
-            pass
-            
-        actual_shape_number = 0
-        for shape_number, shape in enumerate(slide.shapes):
-            
-            markdown_slide_dict[slide_number][actual_shape_number] = ''
-            if hasattr(shape, "text_frame"):
-                paragraphs = shape.text_frame.paragraphs
-
-                for paragraph in paragraphs:
-                    level = paragraph.level
-                    bullet_prefix = ' ' * (4 * level) + ('- ' if len(paragraphs) > 0 and actual_shape_number > 0 else '')
-                    to_append = bullet_prefix + paragraph.text + ('\n' if len(paragraphs) > 1 else '')
-                    if len(paragraph.text) > 0:
-                        markdown_slide_dict[slide_number][actual_shape_number] += to_append  
-                if len(markdown_slide_dict[slide_number][actual_shape_number]) > 0: 
-                    actual_shape_number += 1                
-            
-            elif shape.shape_type == 13:
-                image_stream = io.BytesIO(shape.image.blob)
-                hb.create_directories(f"{output_dir}/images")
-
-                with Image.open(image_stream) as img:
-                    try:
-                        time = hb.pretty_time()
-                        img_path = f"{output_dir}/images/image_{image_count}_{time}.png"
-                        img.save(img_path)
-                        image_count += 1    
-                    except:
-                        raise NameError('Error saving image: ', img_path)
-
-                    img_hash = hb.hash_file_path(img_path)
-                    parent_dir = os.path.split(os.path.dirname(pptx_path))[1]
-                    filename = os.path.split(pptx_path)[1].replace('.', '_')
-                    qmd_embed_image_path = os.path.join('images', 'image_' + parent_dir + '_' + filename + '_' + img_hash + '.png')
-                    hashed_img_path = os.path.join(output_dir, qmd_embed_image_path)
-                    
-                    hb.path_rename(img_path, hashed_img_path, skip_if_exists=True)
-                    
-                    # If it still exists (cause the hasehd version already existed) delete it
-                    if hb.path_exists(img_path):
-                        hb.remove_path(img_path)
-                        
-                        
-                    image_md = f"![]({qmd_embed_image_path})\n"
-                    
-                    # Add the markdown to display the image
-                    markdown_slide_dict[slide_number][actual_shape_number] += image_md
-                    actual_shape_number += 1
-
-
-            
-            elif shape.shape_type == 14: # PLACEHOLDER TEXT?
-                if hasattr(shape, "text"): 
-                    markdown_slide_dict[slide_number][actual_shape_number] += f"- {shape.text}\n"
-                    actual_shape_number += 1
-                else:
-                    current_text = ""                
-                    markdown_slide_dict[slide_number][actual_shape_number] += f"{current_text}\n"
-                    actual_shape_number += 1
-                
-            elif shape.shape_type == 17: # TEXT BOX
-                markdown_slide_dict[slide_number][actual_shape_number] += f"- {shape.text}\n"
-                actual_shape_number += 1
-            else:
-                print('Unknown shape type', shape.shape_type)
-                
-    # Clean the dict
-    output_dict = {}
-    slide_counter = 0
-    for slide_number, slide_dict in markdown_slide_dict.items():
-        
-        # Strip empty elements
-        if len(slide_dict) > 0:
-            output_dict[slide_number] = {}
-            
-        # Replace images with text if there is text in the same slide ## LEARNING POINT: This has to be done before you iterate through the dict or it raises a dict changes when iterated.           
-        if slide_dict[0].lstrip().startswith('![') and len(slide_dict) > 1: # Then it's a slide with an image as its first element and it has something else in it.
-            for shape_number, shape_text in slide_dict.items():
-                if not shape_text.lstrip().startswith('!['):
-                    key_to_move = shape_number
-                    break
-            value_to_move = slide_dict.pop(key_to_move)
-            if value_to_move[0:2] == '- ': # If it starts with a bullet point, remove it
-                value_to_move = value_to_move[2:]
-            slide_dict = {key_to_move: value_to_move, **slide_dict}
-                                           
-        # Iterate through slides  
-        shape_counter = 0
-        for shape_number, shape_text in slide_dict.items():
-            
-            if len(shape_text) > 0:
-                if shape_text.endswith('\n'):
-                    shape_text = shape_text[:-1]
-                output_dict[slide_counter][shape_counter] = shape_text
-                
-
-                        
-                # # create a new dict with the found text as the first
-                # new_dict = {}
-                # for shape_number in range(len(slide_dict)):
-                    
-                #     new_dict[shape_number]
-                #     output_dict[slide_counter][shape_counter] = found_text
-            
-            
-            shape_counter += 1   
-             
-        slide_counter += 1
-            
-    return output_dict
-
-def markdown_slide_dict_to_qmd(markdown_slide_dict, output_path, theme='serif'):
-
-    output_string = ""
-    for slide_number, slide in markdown_slide_dict.items():
-        if slide_number == 3:
-            pass
-        for shape_number, shape in slide.items():
-
-            if shape_number == 0:
-                if len([v for k, v in slide.items() if len(v.replace('\n', ''))]) == 1:
-
-                    output_string += "# " + shape + "\n\n"
-                else:
-                    output_string += "## " + shape + "\n\n"
-            else:
-                if len(shape.replace('\n', '')) > 0:
-                    output_string += shape + '\n\n'
-
-        revealjs_prepend = """---
+def markdown_slide_dict_to_qmd(markdown_slide_dict, output_path, theme='white'):
+    # 1. Define header OUTSIDE the loop
+    # Note: added "css: styles.css" based on your other function expecting it
+    revealjs_header = f"""---
 format: 
     revealjs:
-        theme: """ + theme + """
+        theme: {theme}
         margin: 0       
         self-contained: false
         scrollable: true
         code-fold: show
         slide-number: true  
         preview-links: auto
-        css: styles.css
         incremental: true  
         auto-stretch: false
+        css: styles.css
 ---
 
 """
 
-    hb.write_to_file(revealjs_prepend + output_string, output_path)
+    output_string = ""
+    
+    for slide_number, slide_data in markdown_slide_dict.items():
+        # Extract content and layout
+        if isinstance(slide_data, dict) and 'content' in slide_data:
+            slide = slide_data['content']
+            layout = slide_data.get('layout', '')
+        else:
+            slide = slide_data
+            layout = ''
+
+        # FIX: Use continue to actually skip the slide
+        if slide_number == 3:
+            pass
+            
+        for shape_number, shape in slide.items():
+            # Clean text once
+            text = shape.replace('\n', '')
+            
+            if shape_number == 0:
+                # Logic: Leverage slide layout from python-pptx
+                is_title_slide = False
+                if layout:
+                    layout_lower = layout.lower()
+                    if 'title slide' in layout_lower or 'subtitle' in layout_lower:
+                        is_title_slide = True
+                
+                if is_title_slide:
+                    output_string += f"# {shape}\n\n"
+                else:
+                    output_string += f"## {shape}\n\n"
+            else:
+                if len(text) > 0:
+                    output_string += f"{shape}\n\n"
+
+    hb.write_to_file(revealjs_header + output_string, output_path)
 
 # TODOOO: make it so <nonincremental> still has r-fit-text
 
@@ -1170,13 +1064,316 @@ format:
     hb.write_to_file(output_string, marked_qmd_path)
 
 
-
+def qmd_path_to_marked_qmd_path_new(qmd_path, marked_qmd_path):
+    # THIS CAME FROM GEMINI and it implemented some good improvements but it lost the autotagging. consider merging back into default.
     
+    # --- HELPER: Read File ---
+    with open(qmd_path, 'r', encoding='utf-8') as f:
+        lines = f.read().split('\n')
+        
+    header_lines = []
+    content_lines = []
+    
+    # --- STEP 1: Separate YAML Header ---
+    in_yaml = False
+    yaml_count = 0
+    
+    for line in lines:
+        if line.strip() == '---':
+            yaml_count += 1
+            header_lines.append(line)
+            if yaml_count == 2:
+                in_yaml = False
+                header_lines.append('') 
+                continue 
+            in_yaml = True
+            continue
+            
+        if in_yaml or yaml_count < 2:
+            header_lines.append(line)
+        else:
+            content_lines.append(line)
+
+    # Fallback header if missing
+    if len(header_lines) <= 1:
+        header_lines = [
+            "---", "format:", "    revealjs:", "        theme: simple", 
+            "        slide-number: true", "        incremental: true", "---", ""
+        ]
+
+    output_content_lines = []
+    i = 0
+    n_lines = len(content_lines)
+    fit_threshold = 300
+    
+    # --- STEP 2: Process Slides ---
+    while i < n_lines:
+        line = content_lines[i]
+        
+        # Detect start of a slide
+        if line.startswith('# ') or line.startswith('## '):
+            
+            # Gather all lines belonging to this slide
+            slide_buffer = [line]
+            i += 1
+            while i < n_lines and not (content_lines[i].startswith('# ') or content_lines[i].startswith('## ')):
+                slide_buffer.append(content_lines[i])
+                i += 1
+            
+            # --- PROCESS THE SLIDE BUFFER ---
+            
+            # 1. Extract Tags
+            tags = []
+            if '>' in slide_buffer[0] and '<' in slide_buffer[0]:
+                tags = re.findall(r'<[^>]+>', slide_buffer[0])
+            
+            # 2. Check for images
+            n_images = sum(1 for l in slide_buffer if l.lstrip().startswith('!['))
+            
+            # --- TAG: <list-left-images-right> ---
+            # Using specific tag OR implicit detection if requested
+            if "<list-left-images-right>" in tags or (n_images > 0 and "<list-left-images-right>" in slide_buffer[0]):
+                # Remove tag from title
+                slide_buffer[0] = slide_buffer[0].replace('<list-left-images-right>', '')
+                
+                text_part = []
+                img_part = []
+                
+                text_part.append(slide_buffer[0]) 
+                text_part.append("\n::: columns \n::: {.column width=\"60%\"}")
+                
+                for sl in slide_buffer[1:]:
+                    if sl.lstrip().startswith('!['):
+                        img_part.append(sl)
+                    else:
+                        text_part.append(sl)
+                
+                # Reconstruct buffer as columns
+                slide_buffer = text_part + [":::\n::: {.column width=\"40%\"}"] + img_part + [":::\n:::\n"]
+
+            # --- TAG: <imgbg> ---
+            # Note: This is mutually exclusive with standard column layout usually, 
+            # so we use 'elif' if you want to prioritize one, or 'if' if they can overlap.
+            # Assuming Image BG overrides standard layout:
+            if "<imgbg>" in tags:
+                bg_image_path = ""
+                clean_buffer = []
+                
+                for sl in slide_buffer:
+                    if sl.lstrip().startswith('![') and not bg_image_path:
+                        try:
+                            bg_image_path = sl.split('(')[1].split(')')[0]
+                        except: pass
+                    else:
+                        sl = sl.replace('<imgbg>', '')
+                        clean_buffer.append(sl)
+                
+                if bg_image_path:
+                    clean_buffer[0] = clean_buffer[0].rstrip() + f' {{background-image="{bg_image_path}" background-size="contain" background-repeat="no-repeat"}}'
+                
+                # Add formatting div
+                for k in range(1, len(clean_buffer)):
+                    if len(clean_buffer[k].strip()) > 0 and not clean_buffer[k].startswith(':::'):
+                        clean_buffer[k] = f'<div style="background-color: rgba(255, 255, 255, 0.4); color: black; padding: 20px;">{clean_buffer[k]}</div>'
+                
+                slide_buffer = clean_buffer
+
+            # --- TAG: <nonincremental> ---
+            # Independent IF statement so it runs even if columns/bg were applied
+            if "<nonincremental>" in tags:
+                slide_buffer[0] = slide_buffer[0].replace('<nonincremental>', '')
+                # Check if we are inside columns or standard
+                if "::: columns" in "".join(slide_buffer):
+                     # If columns exist, we usually want non-incremental on the text column
+                     # This is hard to regex inject safely. 
+                     # For now, let's wrap the whole thing or specific logic:
+                     slide_buffer.insert(1, "::: {.nonincremental}")
+                     slide_buffer.append(":::")
+                else:
+                    slide_buffer.insert(1, "::: {.nonincremental}")
+                    slide_buffer.append(":::")
+
+            # --- LOGIC: r-fit-text ---
+            # Independent IF statement.
+            # We must be careful not to break Markdown structures (like columns)
+            # Only apply fit-text if we haven't already complexified the layout with columns
+            has_columns = "::: columns" in "".join(slide_buffer)
+            total_chars = sum(len(l) for l in slide_buffer)
+            
+            # Condition: Not manual override, Enough text, No complex columns
+            if not has_columns and total_chars >= fit_threshold and "r-fit-text" not in "".join(slide_buffer):
+                # Check if we already added a div (like for nonincremental)
+                # If so, we need to nest or append class. 
+                # Easiest way in Quarto: Just wrap the content again.
+                slide_buffer.insert(1, "::: r-fit-text")
+                slide_buffer.append(":::")
+
+            output_content_lines.extend(slide_buffer)
+                
+        else:
+            # Non-slide lines
+            output_content_lines.append(line)
+            i += 1
+
+    final_output = '\n'.join(header_lines + output_content_lines)
+    hb.write_to_file(final_output, marked_qmd_path)
+
+
+def normalize_ppt_text(s: str) -> str:
+    if s is None:
+        return ""
+    # PowerPoint soft line breaks often show up as vertical tabs
+    s = s.replace("\x0b", "\n")
+    s = s.replace("\r", "\n")
+    # Collapse excessive blank lines
+    while "\n\n\n" in s:
+        s = s.replace("\n\n\n", "\n\n")
+    return s.strip()
+
+
+def pptx_to_markdown_slide_dict(pptx_path, output_dir=None):
+    if output_dir is None:
+        output_dir = os.path.dirname(pptx_path)
+        
+    prs = Presentation(pptx_path)
+    markdown_slide_dict = {}
+    slide_layouts = {}
+    image_count = 0
+    
+    for slide_number, slide in enumerate(prs.slides):
+        markdown_slide_dict[slide_number] = {}
+        slide_layouts[slide_number] = slide.slide_layout.name
+        actual_shape_number = 0
+        
+        # Sort shapes by vertical position (top to bottom) to ensure reading order
+        # otherwise PPT parses them in creation order, which might be random
+        sorted_shapes = sorted(slide.shapes, key=lambda x: (x.top or 0, x.left or 0))
+
+        for shape in sorted_shapes:
+            # Initialize the current index if not exists (though we usually assign directly)
+            if actual_shape_number not in markdown_slide_dict[slide_number]:
+                markdown_slide_dict[slide_number][actual_shape_number] = ''
+
+            # --- TEXT HANDLING ---
+            if hasattr(shape, "text_frame"):
+                paragraphs = shape.text_frame.paragraphs
+                
+                # Iterate through paragraphs (bullets)
+                for paragraph in paragraphs:
+                    # Clean text
+                    raw_text = normalize_ppt_text(paragraph.text)
+                    
+                    # Skip empty paragraphs
+                    if not raw_text:
+                        continue
+                        
+                    level = paragraph.level
+                    # Logic: If it is level 0, make it a main bullet. If nested, indent.
+                    # Note: We rely on Quarto/Pandoc to handle indentation if we provide proper markdown.
+                    # But if separating into dict items, indentation matters less for 'structure' 
+                    # and more for 'visual'.
+                    
+                    bullet_char = '- '
+                    indent = '    ' * level # 4 spaces per level
+                    
+                    # Construct the Markdown string
+                    to_append = f"{indent}{bullet_char}{raw_text}\n"
+                    
+                    # FIX: Assign to current number and increment IMMEDIATELY
+                    markdown_slide_dict[slide_number][actual_shape_number] = to_append
+                    actual_shape_number += 1
+
+            # --- IMAGE HANDLING ---
+            elif shape.shape_type == 13: # PICTURE
+                try:
+                    image_stream = io.BytesIO(shape.image.blob)
+                    hb.create_directories(f"{output_dir}/images")
+
+                    with Image.open(image_stream) as img:
+                        time_str = hb.pretty_time() # Renamed to avoid conflict with time module
+                        img_path = f"{output_dir}/images/image_{image_count}_{time_str}.png"
+                        img.save(img_path)
+                        image_count += 1    
+
+                    # Hashing logic
+                    img_hash = hb.hash_file_path(img_path)
+                    parent_dir = os.path.split(os.path.dirname(pptx_path))[1]
+                    filename_safe = os.path.split(pptx_path)[1].replace('.', '_')
+                    qmd_embed_image_path = os.path.join('images', f"image_{parent_dir}_{filename_safe}_{img_hash}.png")
+                    hashed_img_path = os.path.join(output_dir, qmd_embed_image_path)
+                    
+                    hb.path_rename(img_path, hashed_img_path, skip_if_exists=True)
+                    if hb.path_exists(img_path):
+                        hb.remove_path(img_path)
+                        
+                    image_md = f"![]({qmd_embed_image_path})\n"
+                    
+                    markdown_slide_dict[slide_number][actual_shape_number] = image_md
+                    actual_shape_number += 1
+                except Exception as e:
+                    print(f"Error saving image on slide {slide_number}: {e}")
+
+            # --- PLACEHOLDERS / TEXT BOXES ---
+            elif shape.shape_type in [14, 17]: # Placeholder or Text Box
+                if hasattr(shape, "text") and shape.text.strip(): 
+                    text = normalize_ppt_text(shape.text)
+                    markdown_slide_dict[slide_number][actual_shape_number] = f"- {text}\n"
+                    actual_shape_number += 1
+            
+            else:
+                # Optional: Uncomment to see what shapes are being skipped
+                # print(f'Skipping shape type {shape.shape_type} on slide {slide_number}')
+                pass
+
+    # --- CLEANUP / REORDERING LOGIC ---
+    # This keeps your existing logic for moving images to the top, but cleans it up.
+    output_dict = {}
+    
+    for slide_idx, content_dict in markdown_slide_dict.items():
+        if not content_dict:
+            continue
+            
+        # Re-key the dictionary to ensure continuous keys 0,1,2... 
+        # (Since we might have skipped empty paragraphs)
+        sorted_keys = sorted(content_dict.keys())
+        cleaned_slide = {i: content_dict[k] for i, k in enumerate(sorted_keys)}
+        
+        # Check for Image-First reordering logic
+        # If the first item is an image and there are other items:
+        if len(cleaned_slide) > 1 and cleaned_slide[0].lstrip().startswith('!['):
+            
+            # Find the first text item to swap (make it the title/header)
+            text_key = None
+            for k, v in cleaned_slide.items():
+                if not v.lstrip().startswith('!['):
+                    text_key = k
+                    break
+            
+            if text_key is not None:
+                text_val = cleaned_slide.pop(text_key)
+                # Remove leading bullet from title if it exists
+                if text_val.strip().startswith('- '):
+                    text_val = text_val.strip()[2:] + '\n'
+                
+                # Create new dict with Text at 0, then the rest
+                new_slide = {0: text_val}
+                current_idx = 1
+                for k, v in cleaned_slide.items():
+                    new_slide[current_idx] = v
+                    current_idx += 1
+                cleaned_slide = new_slide
+
+        output_dict[slide_idx] = {
+            'content': cleaned_slide,
+            'layout': slide_layouts.get(slide_idx, 'Unknown')
+        }
+
+    return output_dict
 
 
 def qmd_to_revealjs(src_qmd_path):
            
-    os.system("quarto preview \"" + src_qmd_path + "\"")
+    os.system("quarto render \"" + src_qmd_path + "\"")
     
 
 

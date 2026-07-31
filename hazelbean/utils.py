@@ -695,6 +695,10 @@ def df_pivot_vertical_up(df, row_indices, column_indices, values, aggregation_di
                 if isinstance(value, list):
                     condition &= (df[key].isin(value))
                 else:
+                    try:
+                        value = int(value)
+                    except:
+                        'we good'
                     condition &= (df[key] == value)
             else:
                 # condition &= (df[key] == value)
@@ -1016,7 +1020,7 @@ def df_merge(left_input,
              same_name_nonidentical_column_behavior='keep_both', # One of 'keep_both', 'keep_left', 'keep_right', 'raise_error'
              raise_error_if_not_identical=False,
              verbose=False,
-             supress_warnings=False,
+             supress_warnings=True,
              ):
     
     """
@@ -2314,10 +2318,6 @@ def get_reclassification_dict_from_df(input_df_or_path, src_id_col='src_id', dst
 
     return return_dict
 
-def assign_df_row_to_object_attributes(input_object, input_row):
-    for attribute_name, attribute_value in list(zip(input_row.index, input_row.values)):
-        setattr(input_object, attribute_name, attribute_value)
-
 def call_conda_info():
     command = 'conda info'
     output = subprocess.check_output(command)
@@ -2705,7 +2705,8 @@ def parse_flex_to_python_object(input_df_element, verbose=False):
         
         # coerce DICT here
         if not is_json and ':' in input_df_element:
-            input_df_element = '{' + input_df_element + '}'
+            if not input_df_element.startswith('{'):
+                input_df_element = '{' + input_df_element + '}'
             if input_df_element.startswith('{'):
                 split_element = split_respecting_nesting(input_df_element[1:-1], ',')
                 for i in split_element:

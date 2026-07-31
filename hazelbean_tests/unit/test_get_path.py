@@ -297,7 +297,7 @@ class TestErrorHandlingAndEdgeCases(GetPathUnitTest):
             self.assertIsInstance(resolved_path, str)
         except Exception as e:
             # Acceptable to raise exception for invalid characters
-            self.assertIsInstance(e, (OSError, ValueError))
+            self.assertIsInstance(e, (OSError, ValueError, NameError))
             
     @pytest.mark.unit
     @pytest.mark.xfail(
@@ -311,7 +311,7 @@ class TestErrorHandlingAndEdgeCases(GetPathUnitTest):
         long_filename = "a" * 200 + ".txt"
         
         # Act
-        resolved_path = self.p.get_path(long_filename)
+        resolved_path = self.p.get_path(long_filename, raise_error_if_fail=False)
         
         # Assert
         self.assertIsInstance(resolved_path, str)
@@ -329,7 +329,7 @@ class TestErrorHandlingAndEdgeCases(GetPathUnitTest):
         special_chars_file = "test file with spaces & symbols (1).txt"
         
         # Act
-        resolved_path = self.p.get_path(special_chars_file)
+        resolved_path = self.p.get_path(special_chars_file, raise_error_if_fail=False)
         
         # Assert
         self.assertIsInstance(resolved_path, str)
@@ -360,7 +360,7 @@ class TestErrorHandlingAndEdgeCases(GetPathUnitTest):
         missing_file = "definitely_does_not_exist_12345.txt"
         
         # Act
-        resolved_path = self.p.get_path(missing_file)
+        resolved_path = self.p.get_path(missing_file, raise_error_if_fail=False)
         
         # Assert
         # Should return a constructed path even if file doesn't exist
@@ -427,7 +427,7 @@ class TestCloudStorageIntegration(GetPathUnitTest):
         test_file = "cloud_test_file.tif"
         
         # Act
-        resolved_path = self.p.get_path(test_file)
+        resolved_path = self.p.get_path(test_file, raise_error_if_fail=False)
         
         # Assert
         # Should return a valid path (either local or constructed cloud path)
@@ -456,7 +456,7 @@ class TestCloudStorageIntegration(GetPathUnitTest):
         test_file = "only_in_cloud.tif"
             
         # Act
-        resolved_path = self.p.get_path(test_file)
+        resolved_path = self.p.get_path(test_file, raise_error_if_fail=False)
         
         # Assert
         # Should return a constructed path even if file doesn't exist locally

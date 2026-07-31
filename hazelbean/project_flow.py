@@ -12,6 +12,7 @@ import importlib.util
 import sys
 import inspect
 import pandas as pd
+from pathlib import Path
 
 # try:
 #     import anytree    
@@ -285,45 +286,49 @@ class OutputTask(anytree.NodeMixin):
         self.skip_existing = 0  # Will thus overwrite by default.
 
 class ProjectFlow(object):
-    def __init__(self, project_dir=None):
+    def __init__(self, project_dir=None, project_name=None, run_mode=None, extra_dirs=None):
+        """Create a ProjectFlow and decide where its project dir lives.
+
+        The canonical run-file form passes the name and run_mode here, so no
+        separate directory-setup call is needed:
+
+            p = hb.ProjectFlow(project_name='my_project', run_mode='check')
+
+        A bare hb.ProjectFlow() still works and is the recommended start: the
+        project dir is derived git-aware from the calling script (see
+        _resolve_project_dir for the full ladder). Nothing is written to disk
+        until the dirs are actually needed, so a bare constructor followed by an
+        explicit set_project_dir(...) leaves no stray directory behind.
+
+        project_dir (an explicit path) and project_name are mutually exclusive.
+        """
         try:
             self.calling_script = inspect.stack()[1][1]
             self.script_dir = os.path.split(self.calling_script)[0]
         except:
             L.debug('Could not identify a calling script.')
 
-        # self.calling_globals = inspect.stack()[1][0].f_globals
         user_dir = os.path.expanduser('~')
+        self.user_dir = user_dir
         default_extra_dirs = ['Files']
-        
-        ## PROJECT LEVEL ATTRIBUTES
+
         # Set the project-level logging level. Individual tasks can overwrite this.
         self.logging_level = logging.INFO
 
-        # # WARNING, although this seems logical, it can mess up multiprocessing if L has a handler. Move back outside.
-        # self.L = hb.get_logger('project_flow')
+        self.is_linux = sys.platform.startswith('linux')
+        self.is_mac = sys.platform == 'darwin'
+        self.is_windows = platform.system() == 'Windows'
 
-        # TODOO Renable run_dir separation.
-        # If true, generates a random dirname and creates it in the folder determined by the following options.
-        self.make_run_dir = False
-
-
-
-        # If project_dir is not defined, use CWD.
-        if project_dir:
-            self.project_dir = project_dir
+        # Set project_dir and all derived directory paths so a freshly constructed
+        # ProjectFlow is fully initialized. When the caller said nothing about where
+        # the project goes, only RESOLVE the paths -- creating dirs (and seeding
+        # input/ from input_template/) is deferred until they are needed, so the
+        # common `p = hb.ProjectFlow()` + `p.set_project_dir(project_name=...)` pair
+        # no longer builds a throwaway dir tree under the derived default name.
+        if project_dir is None and project_name is None and run_mode is None and extra_dirs is None:
+            self._resolve_project_dir()
         else:
-            self.project_dir = os.getcwd() # This may be temporary though because it may be overwritten by UI
-
-        if not os.path.isdir(self.project_dir):
-            try:
-                hb.create_directories(self.project_dir)
-            except:
-                raise NotADirectoryError('A Project Flow object is based on defining a project_dir as its base, but we were unable to create the dir at the given path: ' + self.project_dir + '. It is possible that you do not have write access to this directory or that you are working on a virtual machine with some weird setup.')
-
-        self.ui_agnostic_project_dir = self.project_dir # The project_dir can be overwritten by a UI but it can be useful to know where it would have been for eg decing project_base_data_dir
-
-        self.model_base_data_dir = os.path.abspath(os.path.join(self.ui_agnostic_project_dir, '../../base_data'))  # Data that must be redistributed with this project for it to work. Do not put actual base data here that might be used across many projects.
+            self.set_project_dir(project_dir, project_name, run_mode, extra_dirs)
 
         if hb.path_exists(hb.config.BASE_DATA_DIR):
             self.base_data_dir = hb.config.BASE_DATA_DIR
@@ -335,9 +340,6 @@ class ProjectFlow(object):
             self.external_bulk_data_dir = hb.config.EXTERNAL_BULK_DATA_DIR
         else:
             self.external_bulk_data_dir = None
-
-        self.project_name = hb.file_root(self.project_dir)
-        self.project_base_data_dir = os.path.join(self.project_dir, 'base_data')
 
 
         # args is used by UI elements.
@@ -362,15 +364,18 @@ class ProjectFlow(object):
 
         self.task_names_defined = [] # Store a list of tasks defined somewhere in the target script. For convenience, e.g., when setting runtime conditionals based on function names existence.
 
-        # TODO FIX get rid of inputs dir, but it's used a lot, including in putting scenarios.csv files in the right place.... er. The Python ecosystem overwhelmingly prefers singular names for a type of directory* and plural only when the directory itself contains many heterogeneous items.
-        self.inputs_dir = getattr(self, 'inputs_dir', os.path.join(self.project_dir, 'inputs'))
-        self.input_dir = getattr(self, 'input_dir', os.path.join(self.project_dir, 'input'))
-        self.intermediate_dir = getattr(self, 'intermediate_dir', os.path.join(self.project_dir, 'intermediate'))
-        self.output_dir = getattr(self, 'output_dir', os.path.join(self.project_dir, 'output'))
+        # Variant runs pare the task tree by setting p.tasks_to_skip before calling
+        # run_project(p). Initialized here so run files can always write
+        # p.skip_tasks(p.tasks_to_skip) without guarding for the attribute.
+        self.tasks_to_skip = None
+
+        # self.input_dir = getattr(self, 'input_dir', os.path.join(self.project_dir, 'input'))
+        # self.intermediate_dir = getattr(self, 'intermediate_dir', os.path.join(self.project_dir, 'intermediate'))
+        # self.output_dir = getattr(self, 'output_dir', os.path.join(self.project_dir, 'output'))
         self.documentation = None 
         self.note = None 
         #
-        self.registered_dirs = ['.', self.input_dir]
+        # self.registered_dirs = ['.', self.input_dir]
         
         self.L = hb.get_logger('project_flow')
         # self.registered_dirs = ['.', self.input_dir, self.project_base_data_dir, self.model_base_data_dir, self.base_data_dir]
@@ -381,25 +386,238 @@ class ProjectFlow(object):
     def __repr__(self):
         return 'Hazelbean ProjectFlow object. ' # +  hb.pp(self.__dict__, return_as_string=True)
 
-    def set_project_dir(self, input_dir):
-        self.project_dir = input_dir
-        self.project_name = hb.file_root(self.project_dir)
+    def _derive_default_project_dir(self):
+        """Resolve the no-argument default git-aware.
 
-        try:
-            hb.create_directories(self.project_dir)
-        except:
-            raise NotADirectoryError('A Project Flow object is based on defining a project_dir as its base, but we were unable to create the dir at the given path: ' + self.project_dir)
+        Plain folder: the script's parent dir, as always. But if the calling script
+        lives inside a git repo, never put project outputs in the repo: walk up to the
+        repo root, step one level above it, and land at <that dir>/projects/<name>,
+        where <name> is the run file's stem minus any 'run_' prefix. For a repo in the
+        standard devstack layout (~/Files/<stack>/<repo>) this reproduces the house
+        convention (~/Files/<stack>/projects/<name>) without the run file spelling it
+        out. An explicit project_dir or project_name bypasses all of this.
+        """
+        if not getattr(self, 'script_dir', None):
+            return os.getcwd()  # No identifiable calling script (e.g. a REPL).
 
-        # BIG ASS-MISTAKE here, repeating inputs
+        script_parent = str(Path(self.script_dir).parent)
+        if not getattr(self, 'calling_script', None):
+            return script_parent
+
+        repo_root = self._find_git_repo_root()
+        if repo_root is None:
+            return script_parent
+
+        name = Path(self.calling_script).stem
+        if name.startswith('run_'):
+            name = name[len('run_'):]
+        derived = str(repo_root.parent / 'projects' / name)
+        hb.log('Bare ProjectFlow(): calling script is inside the git repo at ' + str(repo_root)
+               + ', so the project dir is placed outside the repo at ' + derived
+               + '. Pass project_dir explicitly to override.')
+        return derived
+
+    def _find_git_repo_root(self):
+        """Return the Path of the git repo containing the calling script, or None."""
+        if not getattr(self, 'script_dir', None):
+            return None
+        d = Path(self.script_dir)
+        while True:
+            if (d / '.git').exists():  # dir in a normal clone, file in a worktree
+                return d
+            if d.parent == d:
+                return None
+            d = d.parent
+
+    def _infer_project_parent_dir(self):
+        """Infer the dir that holds project dirs from the calling script's git repo.
+
+        Two layouts (devstack conventions): a run file inside a library repo
+        (~/Files/<stack>/<repo>) puts project dirs at <stack>/projects/; a run
+        file inside a project repo nested under a projects/ tree
+        (.../projects[/<group>]/<wrapper>/<repo>) puts them beside the repo's
+        wrapper dir — i.e. the wrapper's parent — or directly in the projects/
+        dir when the repo sits under it with no wrapper level. Raises
+        ValueError when the calling script is not inside a git repo; pass
+        extra_dirs explicitly in that case.
+        """
+        repo_root = self._find_git_repo_root()
+        if repo_root is None:
+            raise ValueError(
+                'ProjectFlow could not infer where project dirs live because the calling '
+                'script is not inside a git repo. Pass extra_dirs explicitly, e.g. '
+                "hb.ProjectFlow(project_name=..., run_mode=..., "
+                "extra_dirs=['Files', 'seals', 'projects']).")
+        if 'projects' in repo_root.parts:
+            if repo_root.parent.name == 'projects':
+                return str(repo_root.parent)
+            return str(repo_root.parent.parent)
+        return str(repo_root.parent / 'projects')
+
+    VALID_RUN_MODES = ('check', 'fresh_intermediate', 'full')
+
+    def _resolve_project_dir(self, project_dir=None, project_name=None, run_mode=None, extra_dirs=None):
+        """Work out project_dir and every path derived from it. Touches no disk.
+
+        One resolution ladder, tried in order:
+
+        1. An explicit ``project_dir`` path wins outright.
+        2. A ``project_name`` places the project at <project parent dir>/<name>.
+           The parent is inferred git-aware from the calling script's repo (see
+           _infer_project_parent_dir); pass ``extra_dirs`` (path parts under the
+           user dir, e.g. ['Files', 'seals', 'projects']) for placements the
+           inference cannot know about — a grouping subfolder, another stack's
+           tree, or a script outside any git repo.
+        3. Neither given: keep an already-set project_dir from a prior call, and
+           otherwise derive the default git-aware from the calling script (see
+           _derive_default_project_dir), falling back to the CWD when there is no
+           identifiable script.
+
+        ``run_mode`` is orthogonal to all of the above -- it says how repeated runs
+        REUSE the dir, not where the dir is, so it composes with any rung of the
+        ladder. 'full' appends a timestamp to the final path component so each run
+        gets a fresh dir; 'check' and 'fresh_intermediate' reuse the stable dir so
+        runs resume in place, skipping tasks whose outputs already exist. The
+        deletion half of 'fresh_intermediate' happens in set_project_dir, once the
+        paths are known, and is gated on the project name containing 'test'.
+        """
+        if project_dir is not None and project_name is not None:
+            raise ValueError('Pass either project_dir (an explicit path) or project_name '
+                             '(a name placed under the inferred project parent dir), not both. '
+                             'Got project_dir=' + repr(project_dir) + ' and project_name=' + repr(project_name) + '.')
+        if run_mode is not None and run_mode not in self.VALID_RUN_MODES:
+            raise ValueError('run_mode must be one of ' + str(self.VALID_RUN_MODES) + ', got ' + repr(run_mode))
+
+        if project_name is not None:
+            self.extra_dirs = extra_dirs
+            self.project_name = project_name
+            if run_mode == 'full':
+                self.project_name = self.project_name + '_' + hb.pretty_time()  # fresh dir per run; other modes reuse/resume the stable dir.
+            if extra_dirs is None:
+                project_parent_dir = self._infer_project_parent_dir()
+            else:
+                project_parent_dir = os.path.join(self.user_dir, os.sep.join(extra_dirs))
+            self.project_dir = os.path.join(project_parent_dir, self.project_name)
+        else:
+            if project_dir == 'script_parent':
+                project_dir = None  # Legacy spelling of "derive the default"; kept working.
+            if project_dir:
+                self.project_dir = project_dir
+            elif not getattr(self, 'project_dir', None):
+                self.project_dir = self._derive_default_project_dir()
+            if run_mode == 'full':
+                # Same "fresh dir per run" rule, applied to the path's last component.
+                parent_dir, base_name = os.path.split(self.project_dir.rstrip(os.sep))
+                self.project_dir = os.path.join(parent_dir, base_name + '_' + hb.pretty_time())
+            # project_name follows the dir here, rather than the dir following the name.
+            self.project_name = hb.file_root(self.project_dir)
+
+        if run_mode == 'fresh_intermediate' and 'test' not in self.project_name:
+            raise ValueError("run_mode='fresh_intermediate' deletes the project's intermediate/ and output/ "
+                             "dirs, so it is only allowed on dedicated test projects (project name containing "
+                             "'test'), got " + repr(self.project_name))
+
+        self.ui_agnostic_project_dir = self.project_dir # The project_dir can be overwritten by a UI but it can be useful to know where it would have been for eg decing project_base_data_dir
+        self.project_base_data_dir = os.path.join(self.project_dir, 'base_data')
+        self.model_base_data_dir = os.path.abspath(os.path.join(self.ui_agnostic_project_dir, '../../base_data'))  # Data that must be redistributed with this project for it to work. Do not put actual base data here that might be used across many projects.
+
         self.input_dir = os.path.join(self.project_dir, 'input')
-        self.inputs_dir = os.path.join(self.project_dir, 'inputs')
         self.intermediate_dir = os.path.join(self.project_dir, 'intermediate')
-        self.output_dir = os.path.join(self.project_dir, 'outputs')
-        
+        self.output_dir = os.path.join(self.project_dir, 'output')
+
         if not getattr(self, 'data_credentials_path', None):
             self.data_credentials_path = None # If you want to use a different bucket than the default, provide the credentials here. Otherwise uses default public data 'gtap_invest_seals_2023_04_21'.
         if not getattr(self, 'input_bucket_name', None):
             self.input_bucket_name = None # If you want to use a different bucket than the default, provide the name here. Otherwise uses default public data 'gtap_invest_seals_2023_04_21'.
+
+        self._project_dirs_materialized = False
+
+    def _materialize_project_dirs(self):
+        """Create the project dir on disk and seed input/ from input_template/.
+
+        Split out from _resolve_project_dir so that merely constructing a
+        ProjectFlow writes nothing: a run file that constructs bare and then calls
+        set_project_dir(project_name=...) would otherwise leave an orphan dir tree
+        (with a copied input_template) under the derived default name. Idempotent,
+        and called both by set_project_dir and at the top of execute().
+        """
+        if getattr(self, '_project_dirs_materialized', False):
+            return
+
+        try:
+            hb.create_directories(self.project_dir)
+        except:
+            raise NotADirectoryError('A Project Flow object is based on defining a project_dir as its base, but we were unable to create the dir at the given path: ' + self.project_dir + '. It is possible that you do not have write access to this directory or that you are working on a virtual machine with some weird setup.')
+
+        self.copy_input_template()
+        self._project_dirs_materialized = True
+
+    def set_project_dir(self, project_dir=None, project_name=None, run_mode=None, extra_dirs=None):
+        """Point the project at a directory, creating it and seeding input/.
+
+        The single directory-setup entry point. Run files that pass project_name
+        and run_mode to hb.ProjectFlow() do not need to call this at all; call it
+        to re-point an existing ProjectFlow, or when the dir is chosen after
+        construction. Arguments and the resolution ladder are documented on
+        _resolve_project_dir.
+        """
+        self._resolve_project_dir(project_dir, project_name, run_mode, extra_dirs)
+        self._materialize_project_dirs()
+
+        if run_mode == 'fresh_intermediate':
+            # Delete in place (rather than timestamping a new dir) so any path derived
+            # from project_dir still resolves to the fresh results. input/ is kept: it
+            # holds per-machine values (e.g. parameters.csv connection settings) that a
+            # freshly seeded template would leave blank.
+            import shutil
+            for stale_dir in [self.intermediate_dir, self.output_dir]:
+                if os.path.exists(stale_dir):
+                    shutil.rmtree(stale_dir)
+                    print("run_mode='fresh_intermediate': deleted " + stale_dir)
+
+    def set_project_dir_for_run_mode(self, project_name, run_mode, extra_dirs=None):
+        """DEPRECATED: use hb.ProjectFlow(project_name=..., run_mode=...) instead.
+
+        Kept so existing run files keep working; delegates to set_project_dir.
+        """
+        self.set_project_dir(project_name=project_name, run_mode=run_mode, extra_dirs=extra_dirs)
+
+    def copy_input_template(self):
+        # Check for any input_template in the repository and copy anything not
+        # already present into the project's input_dir. Strictly skip-existing:
+        # the input/ working copy holds per-machine values (e.g. parameters.csv
+        # connection settings) and user edits that a re-run must never clobber.
+        # (hb.path_copy's overwrite flag is ignored for directory sources, so we
+        # walk the tree ourselves.)
+        template_dir = os.path.join(getattr(self, 'script_dir', ''), 'input_template')
+        if getattr(self, 'script_dir', None) and hb.path_exists(template_dir, verbose=True):
+            import shutil
+            for walk_root, _, walk_files in os.walk(template_dir):
+                rel = os.path.relpath(walk_root, template_dir)
+                dst_root = self.input_dir if rel == '.' else os.path.join(self.input_dir, rel)
+                os.makedirs(dst_root, exist_ok=True)
+                for filename in walk_files:
+                    dst = os.path.join(dst_root, filename)
+                    if not os.path.exists(dst):
+                        shutil.copy2(os.path.join(walk_root, filename), dst)
+            hb.log(f'Found {template_dir} in the input_template dir of this project. Copied missing items to {self.input_dir}')
+
+    def skip_tasks(self, task_names):
+        """Set run=0 on the named tasks (function names, without the '_task' suffix).
+
+        Used by run_project() variant runs (tests, fast runs, backend tests) to pare
+        the task tree without forking it: the tree is always built in full so its
+        structure (parents, dirs, iterators) is identical across variants, and only
+        the run flags differ. Call after the task tree is built, before execute().
+        No-op on None/empty. Warns on names that match no task so a typo doesn't
+        silently leave an expensive task enabled.
+        """
+        for name in task_names or []:
+            task = getattr(self, name + '_task', None)
+            if task is not None:
+                task.run = 0
+            else:
+                hb.log(f'skip_tasks: no task named {name!r} in this task tree — check spelling.')
 
     def set_base_data_dir(self, input_base_data_dir=None, match_string='seals/default_inputs'):
                 
@@ -437,6 +655,11 @@ class ProjectFlow(object):
         # 2. relative path has directories, join path args is empty
         # 3. relative path has no directories, join path args is not empty
         # 4. relative path has directories, join path args is not empty
+
+        caller = sys._getframe(1).f_code.co_filename
+        caller_dir = os.path.dirname(caller)
+        cwd = os.getcwd()
+
         if hb.has_cat_ears(relative_path):
             if verbose:
                 hb.log("A refpath with catears was given. You probably want to replace the variables wrapped in catears. Returning the original path intact: " + str(relative_path))
@@ -501,7 +724,7 @@ class ProjectFlow(object):
         relative_joined_path = relative_path
 
         if possible_dirs == 'default':
-            possible_dirs = [self.cur_dir, self.intermediate_dir, self.input_dir, self.base_data_dir]
+            possible_dirs = [self.cur_dir, self.intermediate_dir, self.input_dir, caller_dir, cwd, self.base_data_dir]
             # possible_dirs = [self.cur_dir, self.input_dir, self.base_data_dir]
             
             # I Just changed this to be cur_dir instead of intermeiate_dir for base_data_promotion to work
@@ -609,6 +832,30 @@ class ProjectFlow(object):
 
 
         # It wasnt found anywhere, so do some final checks and then use the default
+        def _not_found_message():
+            searched = [i for i in possible_dirs if isinstance(i, str) and i != 'input_bucket_name']
+            lines = ['get_path could not resolve a ref_path.',
+                     '  ref_path as given: ' + str(path_as_inputted)]
+            if relative_path != path_as_inputted:
+                lines.append('  resolved relative path: ' + str(relative_path))
+            lines.append('  searched these roots in order (not found in any):')
+            lines += ['    - ' + str(i) for i in searched]
+            if 'input_bucket_name' in possible_dirs:
+                lines.append('    - cloud bucket: ' + str(self.input_bucket_name))
+            lines.append('  If you expected this file to exist, check the ref_path spelling against base_data.')
+            lines.append('  If a task generates this file, call get_path with raise_error_if_fail=False '
+                         '(returns the would-be path under the first searched root).')
+            return '\n'.join(lines)
+
+        # Skip-aware failure: when the current task is skipped (p.run_this == 0), its
+        # pre-gate code runs purely to PUBLISH paths for later tasks — nothing is about
+        # to consume the file, so not-found must not be fatal. Form the would-be path
+        # and defer any failure to the next task that actually runs and consumes it.
+        # run_this is None outside the task loop (e.g. in the run file), where
+        # fail-fast on a typo'd ref_path is still correct.
+        _run_this = getattr(self, 'run_this', None)
+        in_skipped_task = _run_this is not None and not _run_this
+
         if os.path.isabs(relative_path):
             # Check that it has one of the possible_dirs already embedded in it
             found_possible_dir_in_input = False
@@ -636,19 +883,36 @@ class ProjectFlow(object):
                 elif hb.path_exists(relative_path):
                     hb.log('WARNING: You gave an absolute path to hb.get_path. It still might work if it found the possible_dirs in the path and removed them, but this is not good practice. Inputted path: ', relative_path, 'Possible dirs: ', possible_dirs, include_script_location=True)
                     return relative_path
+                elif in_skipped_task:
+                    hb.log('get_path (skipped task): absolute path ' + str(path_as_inputted)
+                           + ' was not found; publishing it as-is for later tasks.')
+                    return path_as_inputted
                 else:
-                    raise NameError('The path given to hb.get_path() does not appear to be relative, is not relative to one of the possible dirs, does not exist at the unmodified path, and or is not available for download on your selected cloud bucket): ' + str(relative_path) + ', ' + str(possible_dirs))
-                            
+                    raise NameError('get_path was given an absolute path it could not resolve (absolute paths are '
+                                    'not good practice here — prefer a ref_path relative to the searched roots).\n'
+                                    + _not_found_message())
+
         if leave_ref_path_if_fail:
             return path_as_inputted
-                                            
-        if raise_error_if_fail:
-            raise NameError('The path given to hb.get_path() does not exist at the unmodified path, and or is not available for download on your selected cloud bucket): ' + str(relative_path) + ', ' + str(possible_dirs) + '\n\n')                    
-                            
-                            # If it was neither found nor None, THEN return the path constructed from the first element in possible_dirs
-        # Get the first non None element in possible_dirs
-        possible_dirs = [i for i in possible_dirs if i is not None]
+
+        if raise_error_if_fail and not in_skipped_task:
+            raise NameError(_not_found_message())
+
+        # Deferred failure: either the caller opted out of raising
+        # (raise_error_if_fail=False, e.g. a task about to generate the file) or the
+        # current task is skipped and this call is only publishing a path. Return the
+        # would-be path under the first root and log the assumption so a typo'd
+        # ref_path leaves a diagnostic trail instead of silently producing a phantom path.
+        possible_dirs = [i for i in possible_dirs if i is not None and i != 'input_bucket_name']
         path = os.path.join(possible_dirs[0], relative_path)
+        if in_skipped_task:
+            hb.log('get_path (skipped task): ' + str(path_as_inputted) + ' was not found in any searched root; '
+                   'publishing would-be path ' + str(path) + ' for later tasks. Any real failure will surface '
+                   'in the next task that consumes it.')
+        else:
+            hb.log('get_path: ' + str(path_as_inputted) + ' was not found in any searched root; '
+                   'assuming it will be generated at ' + str(path)
+                   + '. If you expected it to exist, check the ref_path spelling.')
         return path
 
     def write_args_to_project(self, args):
@@ -823,72 +1087,6 @@ class ProjectFlow(object):
             iterator.documentation = None   
             
         return iterator
-
-    def add_all_functions_from_script_to_task_tree(self, script_path):
-        module_name = os.path.splitext(os.path.basename(script_path))[0]
-
-        # Load the module from the given script path
-        spec = importlib.util.spec_from_file_location(module_name, script_path)
-        module = importlib.util.module_from_spec(spec)
-        sys.modules[module_name] = module
-        spec.loader.exec_module(module)
-
-        # Parse the file to get the function definitions in the order they appear
-        with open(script_path, "r") as file:
-            file_contents = file.read()
-
-        parsed_ast = ast.parse(file_contents)
-        functions_list = [node.name for node in parsed_ast.body if isinstance(node, ast.FunctionDef)]
-
-        # Print the function names and add them to the task tree
-        print("Functions in the script:")
-        for func_name in functions_list:
-            func = getattr(module, func_name)
-            if func_name not in self.task_names_defined:
-                self.add_task(func)       
-        
-        # for name, obj in inspect.getmembers(sys.modules[self.calling_script]):
-        #     if inspect.isfunction(obj):
-        #         if name not in self.task_names_defined:
-        #             self.add_task(obj)        
-        
-        # module_name = os.path.splitext(os.path.basename(script_path))[0]
-
-        # # Load the module from the given script path
-        # spec = importlib.util.spec_from_file_location(module_name, script_path)
-        # module = importlib.util.module_from_spec(spec)
-        # sys.modules[module_name] = module
-        # spec.loader.exec_module(module)
-
-        # # List all functions in the module
-        # functions_list = [func for func in dir(module) if inspect.isfunction(getattr(module, func))]
-
-        # # Print the function names and add them to the task tree
-        # print("Functions in the script:")
-        # for func in functions_list:
-        #     print(func)
-        #     self.add_task(getattr(module, func))        
-            
-        
-        # # Get the current module (i.e., your script)
-        # hb.print_iterable(sys.modules)
-        # current_module = sys.modules[script_path]
-
-        # # List all functions in the current module
-        # functions_list = [func for func in dir(current_module) if inspect.isfunction(getattr(current_module, func))]
-
-        # # Print the function names
-        # print("Functions in the current script:")
-        # for func in functions_list:
-        #     print(func)
-        #     self.add_task(getattr(current_module, func))
-
-
-
-        # for name, obj in inspect.getmembers(sys.modules[self.calling_script]):
-        #     if inspect.isfunction(obj):
-        #         if name not in self.task_names_defined:
-        #             self.add_task(obj)
 
     def run_task(self, current_task):
 
@@ -1079,6 +1277,11 @@ class ProjectFlow(object):
 
             # Currently in this version of the code, if the parent is not run, none of the children run.
             if len(task.children) > 0 and self.run_this:
+                
+                if hasattr(self, 'skip_children'):
+                    if self.skip_children:
+                        L.info('Skipping children of task ' + str(task.name) + ' because skip_children is set to True.')
+                        continue
                 # Whether run or not, search for children
                 # if len(task.children) > 0: ORIGINAL
 
@@ -1241,12 +1444,21 @@ class ProjectFlow(object):
 
     def execute(self, args=None):
 
+        # Create the project dir (and seed input/) if nothing has yet. A bare
+        # hb.ProjectFlow() only resolves paths, so this is where a run that never
+        # called set_project_dir actually gets its directories.
+        self._materialize_project_dirs()
+
         # These are registered at execute time because the user may specify overrides.
         self.registered_dirs = ['.', self.input_dir, self.project_base_data_dir, self.model_base_data_dir, self.base_data_dir]
         
         if len(self.task_tree.children) == 0:
-            # Add all functions from the script to the task tree
-            self.add_all_functions_from_script_to_task_tree(self.calling_script)
+            raise NameError(
+                'No tasks are in the task tree. Add your task functions before calling '
+                'execute(), e.g.\n'
+                '    p.add_task(your_function)\n'
+                'or collect the add_task calls in a build_task_tree(p) function and call '
+                'that first (the canonical run-file shape).')
 
         self.show_tasks()
 
@@ -1256,7 +1468,7 @@ class ProjectFlow(object):
         # Execute can be passed an args dict that can be, for instance, generated by a UI. If args exists, write each
         # key value pair as project object level attributes.
         if args:
-            self.write_args_to_project(args)
+            self.write_args_to_project(args) # TODO HOLY OLD CODE HELL BATMAT!
 
 
         # Check to see if any args have been set that change runtime conditionals.
@@ -1284,7 +1496,7 @@ class ProjectFlow(object):
         # if self.intermediate_dir == '':
         #     self.intermediate_dir = os.path.join(self.project_dir, 'intermediate')
 
-        self.output_dir = getattr(self, 'output_dir', os.path.join(self.project_dir, 'outputs'))
+        self.output_dir = getattr(self, 'output_dir', os.path.join(self.project_dir, 'output'))
 
 
         L.debug('self.model_base_data_dir set to ' + str(self.model_base_data_dir))

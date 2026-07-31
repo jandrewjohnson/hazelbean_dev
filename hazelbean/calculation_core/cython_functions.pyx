@@ -184,11 +184,11 @@ cpdef unsigned char[::, ::1] reclassify_uint8_to_uint8_by_array(unsigned char[::
 @cython.embedsignature(True)
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cpdef long[::, ::1] reclassify_uint8_to_int_by_dict(unsigned char[::, ::1] input_array, dict rules):
+cpdef DTYPEINT32_t[::, ::1] reclassify_uint8_to_int_by_dict(unsigned char[::, ::1] input_array, dict rules):
     cdef long n_rows = input_array.shape[0]
     cdef long n_cols = input_array.shape[1]
     cdef long r, c
-    cdef long[::, ::1] output_array = np.empty([n_rows, n_cols], dtype=DTYPEINT32)
+    cdef DTYPEINT32_t[::, ::1] output_array = np.empty([n_rows, n_cols], dtype=DTYPEINT32)
 
     for r in range(n_rows):
         for c in range(n_cols):
@@ -200,11 +200,11 @@ cpdef long[::, ::1] reclassify_uint8_to_int_by_dict(unsigned char[::, ::1] input
 @cython.embedsignature(True)
 @cython.boundscheck(True)
 @cython.wraparound(False)
-cpdef long[::, ::1] reclassify_uint8_to_int_by_array(unsigned char[::, ::1] input_array, long[::1] rules_array):
+cpdef DTYPEINT32_t[::, ::1] reclassify_uint8_to_int_by_array(unsigned char[::, ::1] input_array, DTYPEINT32_t[::1] rules_array):
     cdef long n_rows = input_array.shape[0]
     cdef long n_cols = input_array.shape[1]
     cdef long r, c
-    cdef long[::, ::1] output_array = np.empty([n_rows, n_cols], dtype=DTYPEINT32)
+    cdef DTYPEINT32_t[::, ::1] output_array = np.empty([n_rows, n_cols], dtype=DTYPEINT32)
 
     for r in range(n_rows):
         for c in range(n_cols):
@@ -217,11 +217,11 @@ cpdef long[::, ::1] reclassify_uint8_to_int_by_array(unsigned char[::, ::1] inpu
 @cython.embedsignature(True)
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cpdef long[::, ::1] reclassify_int_to_int_by_dict(long[::, ::1] input_array, dict rules):
+cpdef DTYPEINT32_t[::, ::1] reclassify_int_to_int_by_dict(DTYPEINT32_t[::, ::1] input_array, dict rules):
     cdef long n_rows = input_array.shape[0]
     cdef long n_cols = input_array.shape[1]
     cdef long r, c
-    cdef long[::, ::1] output_array = np.empty([n_rows, n_cols], dtype=DTYPEINT32)
+    cdef DTYPEINT32_t[::, ::1] output_array = np.empty([n_rows, n_cols], dtype=DTYPEINT32)
 
     for r in range(n_rows):
         for c in range(n_cols):
@@ -233,11 +233,11 @@ cpdef long[::, ::1] reclassify_int_to_int_by_dict(long[::, ::1] input_array, dic
 @cython.embedsignature(True)
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cpdef long[::, ::1] reclassify_int_to_int_by_array(long[::, ::1] input_array, long[::1] rules_array):
+cpdef DTYPEINT32_t[::, ::1] reclassify_int_to_int_by_array(DTYPEINT32_t[::, ::1] input_array, DTYPEINT32_t[::1] rules_array):
     cdef long n_rows = input_array.shape[0]
     cdef long n_cols = input_array.shape[1]
     cdef long r, c
-    cdef long[::, ::1] output_array = np.empty([n_rows, n_cols], dtype=DTYPEINT32)
+    cdef DTYPEINT32_t[::, ::1] output_array = np.empty([n_rows, n_cols], dtype=DTYPEINT32)
 
     for r in range(n_rows):
         for c in range(n_cols):
@@ -250,7 +250,7 @@ cpdef long[::, ::1] reclassify_int_to_int_by_array(long[::, ::1] input_array, lo
 @cython.embedsignature(True)
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cpdef unsigned char[::, ::1] reclassify_int_to_uint8_by_dict(long[::, ::1] input_array, dict rules):
+cpdef unsigned char[::, ::1] reclassify_int_to_uint8_by_dict(DTYPEINT32_t[::, ::1] input_array, dict rules):
     cdef long n_rows = input_array.shape[0]
     cdef long n_cols = input_array.shape[1]
     cdef long r, c
@@ -266,7 +266,7 @@ cpdef unsigned char[::, ::1] reclassify_int_to_uint8_by_dict(long[::, ::1] input
 @cython.embedsignature(True)
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cpdef unsigned char[::, ::1] reclassify_int_to_uint8_by_array(long[::, ::1] input_array, unsigned char[::1] rules_array):
+cpdef unsigned char[::, ::1] reclassify_int_to_uint8_by_array(DTYPEINT32_t[::, ::1] input_array, unsigned char[::1] rules_array):
     cdef long n_rows = input_array.shape[0]
     cdef long n_cols = input_array.shape[1]
     cdef long r, c
@@ -347,7 +347,7 @@ cpdef double[::, ::1] reclassify_uint8_to_float64_by_array(unsigned char[::, ::1
 @cython.embedsignature(True)
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cpdef float[::, ::1] reclassify_int_to_float32_by_dict(long[::, ::1] input_array, dict rules):
+cpdef float[::, ::1] reclassify_int_to_float32_by_dict(DTYPEINT32_t[::, ::1] input_array, dict rules):
     cdef long n_rows = input_array.shape[0]
     cdef long n_cols = input_array.shape[1]
     cdef long r, c
@@ -363,7 +363,7 @@ cpdef float[::, ::1] reclassify_int_to_float32_by_dict(long[::, ::1] input_array
 @cython.embedsignature(True)
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cpdef float[::, ::1] reclassify_int_to_float32_by_array(long[::, ::1] input_array, float[::1] rules_array):
+cpdef float[::, ::1] reclassify_int_to_float32_by_array(DTYPEINT32_t[::, ::1] input_array, float[::1] rules_array):
     cdef long n_rows = input_array.shape[0]
     cdef long n_cols = input_array.shape[1]
     cdef long r, c
@@ -379,7 +379,7 @@ cpdef float[::, ::1] reclassify_int_to_float32_by_array(long[::, ::1] input_arra
 @cython.embedsignature(True)
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cpdef double[::, ::1] reclassify_int_to_float64_by_dict(long [::, ::1] input_array, dict rules):
+cpdef double[::, ::1] reclassify_int_to_float64_by_dict(DTYPEINT32_t[::, ::1] input_array, dict rules):
     cdef long n_rows = input_array.shape[0]
     cdef long n_cols = input_array.shape[1]
     cdef long r, c
@@ -395,7 +395,7 @@ cpdef double[::, ::1] reclassify_int_to_float64_by_dict(long [::, ::1] input_arr
 @cython.embedsignature(True)
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cpdef double[::, ::1] reclassify_int_to_float64_by_array(long[::, ::1] input_array, double[::1] rules_array):
+cpdef double[::, ::1] reclassify_int_to_float64_by_array(DTYPEINT32_t[::, ::1] input_array, double[::1] rules_array):
     cdef long n_rows = input_array.shape[0]
     cdef long n_cols = input_array.shape[1]
     cdef long r, c

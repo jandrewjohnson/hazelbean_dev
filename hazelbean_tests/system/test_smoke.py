@@ -150,7 +150,9 @@ class TestBasicSmokeTests:
             
             # Verify error message provides useful context
             error_msg = str(exc_info.value)
-            assert "does not exist" in error_msg.lower()
+            assert "could not resolve a ref_path" in error_msg
+            assert "definitely_does_not_exist.txt" in error_msg
+            assert "searched these roots in order" in error_msg
 
 
 class TestDocumentationGeneration:

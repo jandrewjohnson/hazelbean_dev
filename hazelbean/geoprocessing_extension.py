@@ -510,7 +510,7 @@ def warp_raster_hb(
         output_data_type = base_raster_info['datatype']
 
     if src_ndv is None:
-        src_ndv = base_raster_info['nodata']
+        src_ndv = base_raster_info['ndv']
 
     if dst_ndv is None:
         dst_ndv = base_raster_info['ndv']
@@ -553,9 +553,22 @@ def warp_raster_hb(
     # this ensures the bounding boxes perfectly fit a multiple of the target
     # pixel size. EXTENSION: includes using Decimal object to ensure no funny floating point imprecision.
     # Note the input of str object to Decimal. Otherwise we would get a very long precision float that is not exactly the intention.
-    working_bb[2] = float(Decimal(str(working_bb[0])) + abs(Decimal(str(target_pixel_size[0])) * Decimal(str(target_x_size))))
-    working_bb[3] = float(Decimal(str(working_bb[1])) + abs(Decimal(str(target_pixel_size[1])) * Decimal(str(target_y_size))))
+    decimal_working_bb = working_bb.copy()
+    
+    decimal_working_bb[2] = float(Decimal(str(decimal_working_bb[0])) + abs(Decimal(str(target_pixel_size[0])) * Decimal(str(target_x_size))))
+    decimal_working_bb[3] = float(Decimal(str(decimal_working_bb[1])) + abs(Decimal(str(target_pixel_size[1])) * Decimal(str(target_y_size))))
 
+    if decimal_working_bb != working_bb:
+            hb.log(
+                "The working bounding box %s does not perfectly fit a multiple of the target pixel size %s and target raster size %s. The adjusted bounding box is %s. This likely means that the target pixel size is not an even divisor of the bounding box dimensions. Consider adjusting the target pixel size or the bounding box to ensure a perfect fit." % (
+                    working_bb, target_pixel_size, (target_x_size, target_y_size), decimal_working_bb)) 
+            
+
+    # alt_working_bb = working_bb.copy()
+    # alt_working_bb[2] = alt_working_bb[0] + target_pixel_size[0] * target_x_size
+    # alt_working_bb[3] = alt_working_bb[1] + target_pixel_size[1] * target_y_size
+
+    # working_bb
 
     reproject_callback = hb.make_gdal_callback("Warp %.1f%% complete %s for %s")
 

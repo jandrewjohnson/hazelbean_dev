@@ -1,6 +1,21 @@
 from __future__ import division, absolute_import, print_function
 import sys, time, os
 
+
+conda_prefix = os.path.dirname(sys.executable)
+# On Linux/Mac, python is in env/bin/, so go up one more level
+if os.path.basename(conda_prefix) in ("bin", "Scripts"):
+    conda_prefix = os.path.dirname(conda_prefix)
+gdal_bin = os.path.join(conda_prefix, "Library", "bin")
+if os.path.exists(gdal_bin) and gdal_bin not in os.environ["PATH"]:
+    os.environ["PATH"] = gdal_bin + os.pathsep + os.environ["PATH"]
+
+# Per-machine, never-committed settings (e.g. gtappy's solve-backend connection vars)
+# live in ~/.config/hazelbean/machine.env and are loaded here into any env-var gaps.
+# Real environment variables always win. See hazelbean/machine_env.py.
+from hazelbean.machine_env import load_user_machine_env
+load_user_machine_env()
+
 import hazelbean.config # Needs to be imported before core so that hb.config.LAST_TIME_CHECK is set for hb.timer()
 from hazelbean.config import *
 
@@ -15,6 +30,15 @@ import pandas as pd
 pd.set_option('display.max_columns', 20)
 pd.set_option('display.width', 200)
 pd.set_option('display.max_rows', 10)
+
+# pandas 3.0 defaults to Arrow-backed strings (future.infer_string=True). The devstack is written
+# for pandas 2.x semantics — df[col].values as numpy object arrays, needed by GEMPACK/harpy HAR I/O
+# and other code that passes .values into numpy-expecting APIs. Restore 2.x behavior devstack-wide.
+# Guarded so it's a harmless no-op on pandas versions that lack this option.
+try:
+    pd.set_option('future.infer_string', False)
+except Exception:
+    pass
             
 import_medium_level = 1 # If this is not true, will import all of the HB library on first import, which can take up to 7 seconds.
 use_strict_importing = 0 
@@ -106,7 +130,17 @@ import hazelbean.utils
 from hazelbean.utils import *
 if report_import_times:
     hb.timer('utils')
-  
+
+import hazelbean.initialize_definitions
+from hazelbean.initialize_definitions import *
+if report_import_times:
+    hb.timer('initialize_definitions')
+
+import hazelbean.assign_to_object
+from hazelbean.assign_to_object import *
+if report_import_times:
+    hb.timer('assign_to_object')
+
 import hazelbean.arrayframe
 from hazelbean.arrayframe import *
 if report_import_times:

@@ -887,8 +887,8 @@ def assert_path_global_pyramid(input_path):
 def is_path_global_pyramid(input_path, verbose=False):
     """Fast method for testing if path is pyramidal."""
     to_return = True
-    if verbose:
-        L.info('Testing if path is global pyramid: ' + str(input_path))
+    # if verbose:
+    #     L.info('Testing if path is global pyramid: ' + str(input_path))
     res = hb.determine_pyramid_resolution(input_path)
 
     if res is None:
@@ -917,9 +917,9 @@ def is_path_global_pyramid(input_path, verbose=False):
     compression = image_structure.get('COMPRESSION', None)
 
     # Check if compressed (pyramidal file standards require compression)
-    if str(compression).lower() not in ['zstd', 'lzw']:
+    if str(compression).lower() not in ['lzw', 'deflate']:
         if verbose:
-            hb.log('Not a global pyramid because compression was not zstd/lzw: ' + str(input_path))
+            hb.log('Not a global pyramid because compression was not lzw/deflate: ' + str(input_path))
         to_return = False
 
     data_type = ds.GetRasterBand(1).DataType
@@ -937,8 +937,8 @@ def is_path_global_pyramid(input_path, verbose=False):
     overview_count = band.GetOverviewCount()
     for i in range(overview_count):
         ovr = band.GetOverview(i)
-        if verbose:
-            hb.log(f"Overview {i+1}: {ovr.XSize} x {ovr.YSize}")
+        # if verbose:
+        #     hb.log(f"Overview {i+1}: {ovr.XSize} x {ovr.YSize}")
         levels.append(shape[1] / ovr.XSize)
         
     correct_levels = hb.pyramid_compatible_overview_levels[pyramid_compatible_resolution_to_arcseconds[res]]
@@ -1392,8 +1392,8 @@ def make_path_global_pyramid(
     rewrite_array = False
 
     # Check if compressed (pyramidal file standards require compression)
-    if str(compression).lower() not in  ['zstd']:
-        L.critical('rewrite_array triggered because compression was not deflate.')
+    if str(compression).lower() not in  ['lzw', 'deflate']:
+        L.critical('rewrite_array triggered because compression was not lzw/deflate.')
         rewrite_array = True
 
     data_type = ds.GetRasterBand(1).DataType
@@ -1403,7 +1403,7 @@ def make_path_global_pyramid(
         options = (
             'TILED=YES',
             'BIGTIFF=YES',
-            'COMPRESS=ZSTD',
+            'COMPRESS=DEFLATE',
             'BLOCKXSIZE=512',
             'BLOCKYSIZE=512',
         )
@@ -1661,7 +1661,7 @@ def make_path_spatially_clean(input_path,
 
     # Consider operations that may need rewriting the underlying data
     rewrite_array = False
-    compression_method = 'ZSTD'
+    compression_method = 'DEFLATE'
     # Check if compressed (pyramidal file standards require compression)
     if str(compression).lower() != compression_method.lower():
         rewrite_array = True

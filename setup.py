@@ -30,9 +30,6 @@ setup(
       "pandas",
       "pillow",
       "pygeoprocessing",
-      "pytest",
-      "pytest-cov",
-      "pytest-benchmark",
       "python-pptx",
       "pyyaml",
       "qtawesome",
@@ -53,6 +50,13 @@ setup(
       "xarray",
       "xlrd",
     ],
+    extras_require={
+      "test": [
+        "pytest",
+        "pytest-cov",
+        "pytest-benchmark",
+      ],
+    },
     include_dirs=[numpy.get_include()],
     cmdclass={'build_ext': build_ext},
     ext_modules=[

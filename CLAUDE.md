@@ -2,15 +2,23 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+Hazelbean is the shared base library for the earth-economy devstack. Shared
+devstack guidance (reuse rule + ownership map + EE Spec conventions) is imported
+here so it applies whenever you work in this repo:
+
+@../../earth_economy_devstack/devstack_guidance.md
+
 ## Project Overview
 
 Hazelbean is a geospatial processing library built on GDAL, NumPy, SciPy, Cython, PyGeoProcessing, and TaskGraph. It provides tools for sustainability science, ecosystem service assessment, and land-use modeling.
 
 ## Development Environment
 
-**Required**: Always activate the conda environment before any development work:
+**Required**: Always activate a conda environment with hazelbean's dependencies
+before any development work. The environment name is contributor-specific — use
+your own (see your user-level Claude config):
 ```bash
-conda activate hazelbean_env
+conda activate <your-env>
 ```
 
 **Installation** (after environment activation):
@@ -91,20 +99,13 @@ hazelbean_tests/
 
 ## Documentation
 
-The documentation site uses Quarto and lives in `docs-site/quarto-docs/`.
+User documentation lives in `earth_economy_devstack/docs/` as the Hazelbean
+section (`hazelbean_overview.qmd`, `hazelbean_learning_path.qmd`,
+`hazelbean_examples.qmd`, `hazelbean_troubleshooting.qmd`, `project_flow.qmd`)
+and is rendered by the devstack site build. Edit it there.
 
-```bash
-# Preview docs (generates reports first, then starts live server)
-./tools/preview_docs.sh
-
-# Or manually:
-python tools/generate_all_reports.py  # Generate reports first
-cd docs-site/quarto-docs
-quarto preview  # Live preview
-quarto render   # Build static site
-```
-
-**Important**: Always run report generation before `quarto preview`. The pre-render hook was removed to prevent an infinite loop (file watcher detecting regenerated .qmd files).
+`docs/` in this repo holds developer-facing notes (release process, cython
+workflow, benchmarking) that are not published.
 
 ## Known Issues
 

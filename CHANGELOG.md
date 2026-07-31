@@ -1,5 +1,15 @@
 # Hazelbean Changelog
 
+## v1.9.0 (2026-07-30)
+
+#### New Features
+
+* `ProjectFlow` initializes `tasks_to_skip` to `None`, so run files on the caller-configured convention can call `p.skip_tasks(p.tasks_to_skip)` without a `getattr` guard.
+
+#### Chores
+
+* Removed `hazelbean/project_flow_old_spec.py`. Git history is the archive for pre-conversion forms; the `_old_spec` twins are being retired stack-wide.
+
 ## v1.8.0 (2026-01-16)
 
 #### New Features

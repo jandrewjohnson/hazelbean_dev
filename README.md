@@ -18,15 +18,18 @@ Our integrated documentation system provides comprehensive guides and examples:
 
 ### Local Documentation Site
 
-You can serve the full documentation site locally with searchable content, test examples, and live reports:
+Hazelbean's user documentation is published as the Hazelbean section of the
+Earth-Economy Devstack site:
 
-``` bash
-conda activate hazelbean_env
-cd docs-site/quarto-docs
-quarto preview  # Visit http://localhost:4848
-```
+- [Overview](https://justinandrewjohnson.com/earth_economy_devstack/hazelbean_overview.html)
+- [Learning path](https://justinandrewjohnson.com/earth_economy_devstack/hazelbean_learning_path.html)
+- [Tutorial examples](https://justinandrewjohnson.com/earth_economy_devstack/hazelbean_examples.html)
+- [Troubleshooting](https://justinandrewjohnson.com/earth_economy_devstack/hazelbean_troubleshooting.html)
+- [ProjectFlow](https://justinandrewjohnson.com/earth_economy_devstack/project_flow.html)
 
-The local site includes: - Progressive learning path with tutorials - 50+ test examples showing real-world usage patterns - Current test results and performance metrics - Searchable content across all documentation
+Those pages live in `earth_economy_devstack/docs/` and are rendered by the
+devstack site build. The standalone `docs-site/` that used to duplicate them has
+been removed.
 
 ## Quick Start
 
@@ -51,7 +54,7 @@ python scripts/verify_installation.py
 cd examples && python step_1_project_setup.py
 
 # 6. Explore documentation locally
-cd docs-site/quarto-docs && quarto preview  # Visit http://localhost:4848
+cd ../../earth_economy_devstack/docs && quarto preview  # devstack docs, incl. the Hazelbean section
 ```
 
 **Important Notes:**

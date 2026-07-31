@@ -118,7 +118,7 @@ python -m pytest hazelbean_tests/ -v
 ### Documentation
 
 ```bash
-./tools/preview_docs.sh  # Quick preview with existing test data
+quarto preview  # from earth_economy_devstack/docs
 ./tools/generate_complete_site.sh --serve  # Full build + preview
 ```
 
@@ -213,7 +213,7 @@ python -m pytest hazelbean_tests/performance/test_benchmarks.py::TestSimpleBench
 ./tools/generate_complete_site.sh
 
 # Quick preview - use existing test data
-./tools/preview_docs.sh
+quarto preview  # from earth_economy_devstack/docs
 ```
 
 ---

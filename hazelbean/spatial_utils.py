@@ -1373,7 +1373,9 @@ def extract_features_in_shapefile_by_attribute(
         input_path,
         output_path,
         column_name,
-        column_filters
+        column_filters,
+        force_into_string=True,
+        force_into_int=True,
     ):
     """
     Extract features where `column_name` is in `column_filters`
@@ -1391,6 +1393,24 @@ def extract_features_in_shapefile_by_attribute(
         Values of `column_name` to keep (inclusive filter).
     """
     gdf = gpd.read_file(input_path)
+    
+    hb.log(f'Filtering {input_path} where {column_name} in {column_filters}')
+    
+    if force_into_int:
+        try:
+            column_filters = int(column_filters)
+            is_intable = True
+        except:
+            is_intable = False  
+        # column_filters = [int(v) for v in column_filters]
+    if force_into_string:
+        try:
+            column_filters = str(column_filters)
+            is_stringable = True
+        except:
+            is_stringable = True
+
+        # column_filters = [str(v) for v in column_filters]
 
     # Normalize to list in case someone passes a single value
     if not isinstance(column_filters, (list, tuple, set)):
@@ -1399,6 +1419,29 @@ def extract_features_in_shapefile_by_attribute(
     # Cast to string on both sides for robustness
     filters_str = {str(v) for v in column_filters}
     col_str = gdf[column_name].astype(str)
+    print('col_str', col_str)
+    
+    
+    # YEP ITS  = False
+        # column_filters = [str(v) for v in column_filters]
+
+    # Normalize to list in case someone passes a single value
+    if not isinstance(column_filters, (list, tuple, set)):
+        column_filters = [column_filters]
+
+    # Cast to string on both sides for robustness
+    filters_str = {str(v) for v in column_filters}
+    col_str = gdf[column_name].astype(str)
+    print('col_str', col_str)
+    
+    
+    # YEP ITS AN INT, just make the colstring an int
+    if is_intable:
+        col_str = gdf[column_name].astype('Int64').astype(str)
+    
+    print('col_str', col_str)
+    
+    
 
     gdf_out = gdf.loc[col_str.isin(filters_str)]
 

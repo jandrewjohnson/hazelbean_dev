@@ -17,7 +17,7 @@ classifiers = [
         "Programming Language :: Cython",
         "Programming Language :: Python :: 3",
 ]
-dynamic = ["version", "dependencies"]
+dynamic = ["version", "dependencies", "optional-dependencies"]
 
 [project.urls]
 homepage = "https://github.com/jandrewjohnson/hazelbean_dev"
