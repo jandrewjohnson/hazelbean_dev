@@ -88,19 +88,22 @@ python step_1_project_setup.py
 
 ### Comprehensive Documentation Site
 
-**🌐 [Visit Full Documentation](https://jandrewjohnson.github.io/hazelbean_dev/)**
+Hazelbean's published documentation lives on the Earth-Economy Devstack site:
 
-Your one-stop resource for: - **📖 [Educational Tutorials](https://jandrewjohnson.github.io/hazelbean_dev/educational/)** - Step-by-step learning path - **🧪 [Test Examples](https://jandrewjohnson.github.io/hazelbean_dev/tests/)** - 50+ real-world usage patterns\
-- **📊 [Live Reports](https://jandrewjohnson.github.io/hazelbean_dev/reports/)** - Current system metrics - **🔍 [Search Functionality](https://jandrewjohnson.github.io/hazelbean_dev/)** - Find anything instantly
+**🌐 [Visit Full Documentation](https://justinandrewjohnson.com/earth_economy_devstack/hazelbean_overview.html)**
+
+- **📖 [Learning Path](https://justinandrewjohnson.com/earth_economy_devstack/hazelbean_learning_path.html)** - step-by-step route through the library
+- **🧪 [Tutorial Examples](https://justinandrewjohnson.com/earth_economy_devstack/hazelbean_examples.html)** - worked usage patterns
+- **🔧 [Troubleshooting](https://justinandrewjohnson.com/earth_economy_devstack/hazelbean_troubleshooting.html)** - common setup and runtime problems
+- **🔍 Search** - available from the search box on any page of the site
 
 ### Local Documentation (Development Setup)
 
-``` bash
-# Serve documentation locally
-cd docs-site
-mkdocs serve
+The tutorial sources live in this repo under `docs/educational/`. Render them
+with Quarto:
 
-# Visit: http://127.0.0.1:8000
+``` bash
+quarto preview docs/educational
 ```
 
 ## 🗂️ Understanding Project Structure
@@ -116,7 +119,7 @@ hazelbean_dev/
 │   ├── step_3_basic_processing.py
 │   ├── step_4_analysis.py
 │   └── step_5_export_results.py
-├── docs-site/              # Complete documentation system
+├── docs/                   # Documentation sources (incl. educational/)
 ├── hazelbean_tests/        # Comprehensive test suite
 └── environment.yml         # Environment configuration
 ```
@@ -127,15 +130,14 @@ hazelbean_dev/
 
 1.  **Complete setup** using Option A above
 2.  **Run all 5 tutorial examples** in `examples/` directory\
-3.  **Explore [Educational Journey](https://jandrewjohnson.github.io/hazelbean_dev/educational/)** online
+3.  **Explore the [Learning Path](https://justinandrewjohnson.com/earth_economy_devstack/hazelbean_learning_path.html)** online
 4.  **Try modifying examples** with your own data
 
 ### For Contributors
 
 1.  **Complete development setup** (Option A)
-2.  **Review [Test Documentation](https://jandrewjohnson.github.io/hazelbean_dev/tests/)** to understand patterns
-3.  **Check [Live Reports](https://jandrewjohnson.github.io/hazelbean_dev/reports/)** for current system status
-4.  **Read contribution guidelines** in the repository
+2.  **Review the test suite** in `hazelbean_tests/` to understand patterns
+3.  **Read [How to Contribute](https://justinandrewjohnson.com/earth_economy_devstack/how_to_contribute.html)** for the branching and PR workflow
 
 ### For Power Users
 
@@ -206,13 +208,13 @@ conda activate hazelbean_env
 pip list | grep hazelbean
 ```
 
-**MkDocs Command Not Found**
+**Quarto Command Not Found**
 
 ``` bash
 # Ensure you're in the hazelbean_env environment
 conda activate hazelbean_env
-cd docs-site
-mkdocs serve
+quarto --version
+quarto preview docs/educational
 ```
 
 **Examples Not Running**
@@ -267,8 +269,8 @@ pip install -e . --no-deps --force-reinstall
 
 ### Getting Help
 
-1.  **Check [Documentation Site](https://jandrewjohnson.github.io/hazelbean_dev/)** for comprehensive guides
-2.  **Review [Test Examples](https://jandrewjohnson.github.io/hazelbean_dev/tests/)** for usage patterns
+1.  **Check the [Documentation Site](https://justinandrewjohnson.com/earth_economy_devstack/hazelbean_overview.html)** for comprehensive guides
+2.  **Review the [Troubleshooting Guide](https://justinandrewjohnson.com/earth_economy_devstack/hazelbean_troubleshooting.html)** for common problems
 3.  **Search documentation** using the site search functionality
 4.  **Check [GitHub Issues](https://github.com/jandrewjohnson/hazelbean_dev/issues)** for known problems
 
@@ -279,12 +281,12 @@ pip install -e . --no-deps --force-reinstall
 ### Immediate Next Steps
 
 -   **Complete all 5 tutorial examples** in sequence
--   **Explore the [Educational Journey](https://jandrewjohnson.github.io/hazelbean_dev/educational/)** online
+-   **Explore the [Learning Path](https://justinandrewjohnson.com/earth_economy_devstack/hazelbean_learning_path.html)** online
 -   **Try modifying examples** with your own data files
 
 ### Continued Learning
 
--   **Study [Test Documentation](https://jandrewjohnson.github.io/hazelbean_dev/tests/)** for advanced patterns
+-   **Study the [Tutorial Examples](https://justinandrewjohnson.com/earth_economy_devstack/hazelbean_examples.html)** for advanced patterns
 -   **Review ProjectFlow architecture** to understand task management
 -   **Experiment with performance benchmarking** tools
 
@@ -298,4 +300,4 @@ pip install -e . --no-deps --force-reinstall
 
 **Welcome to the Hazelbean community!** 🌿
 
-*This getting-started guide reflects the current project structure as of the latest version. For the most up-to-date information, always refer to the [comprehensive documentation site](https://jandrewjohnson.github.io/hazelbean_dev/).*
+*This getting-started guide reflects the current project structure as of the latest version. For the most up-to-date information, always refer to the [comprehensive documentation site](https://justinandrewjohnson.com/earth_economy_devstack/hazelbean_overview.html).*

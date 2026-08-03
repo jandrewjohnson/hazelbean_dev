@@ -508,15 +508,13 @@ hazelbean_tests/
 
 ### Documentation Resources
 - **Getting Started**: [../docs/getting-started.md](../docs/getting-started.md) - Consolidated setup guide
-- **Educational System**: [../docs/educational-system.md](../docs/educational-system.md) - Tutorial generation system  
-- **Project Status**: [../docs/project-status.md](../docs/project-status.md) - Current development status
-- **Architecture**: [../docs/technical_architecture.md](../docs/technical_architecture.md) - System design
-- **Setup Guides** (consolidated): Content moved to [Getting Started Guide](../docs/getting-started.md)
-- **QMD Automation**: [tools/qmd_automation/README.md](tools/qmd_automation/README.md)
+- **Educational System**: [../docs/educational/index.qmd](../docs/educational/index.qmd) - Tutorial series
+- **Known Bugs**: [KNOWN_BUGS.md](KNOWN_BUGS.md) - Open defects and their xfail markers
+- **Cython Workflow**: [../docs/cython-development-workflow.md](../docs/cython-development-workflow.md) - Building the compiled extensions
+- **Benchmarking**: [../docs/performance-benchmarking-guide.md](../docs/performance-benchmarking-guide.md) - Performance test workflow
+- **Test Tooling**: [tools/README.md](tools/README.md)
 
 ### Status & Monitoring
-- **Current Status**: [../docs/project-status.md](../docs/project-status.md) - Consolidated project status
-- **Historical Status** (legacy): `status/` directory - Historical status reports
 - **Performance Metrics**: `../metrics/` directory
 
 ### Contact & Support
