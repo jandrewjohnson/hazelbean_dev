@@ -26,13 +26,6 @@
   
   "python-envs.defaultEnvManager": "ms-python.python:conda",
   "python-envs.defaultPackageManager": "ms-python.python:conda",
-  "python.testing.unittestArgs": [
-    "-v",
-    "-s",
-    "./hazelbean_tests",
-    "-p",
-    "test_*.py"
-  ],
   "python-envs.pythonProjects": [
     {
       "path": ".",

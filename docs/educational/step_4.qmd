@@ -17,7 +17,7 @@ execute:
 <div class="navigation-breadcrumbs">
   <nav aria-label="breadcrumb">
     <ol class="breadcrumb">
-      <li class="breadcrumb-item"><a href="../index.html">Hazelbean Documentation</a></li>
+      <li class="breadcrumb-item"><a href="https://justinandrewjohnson.com/earth_economy_devstack/hazelbean_overview.html">Hazelbean Documentation</a></li>
       <li class="breadcrumb-item"><a href="index.html">Educational Tutorials</a></li>
       <li class="breadcrumb-item active" aria-current="page">Spatial Analysis</li>
     </ol>
