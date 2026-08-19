@@ -1,7 +1,4 @@
 from google.cloud import storage
-from googleapiclient.discovery import build
-from google_auth_oauthlib.flow import InstalledAppFlow
-from google.auth.transport.requests import Request
 import pickle
 import os
 import os
@@ -231,6 +228,15 @@ def download_google_cloud_blob(bucket_name, source_blob_name, credentials_path, 
 
 def list_files_in_google_drive_folder(input_folder_id, credentials_path):
     # NYI! This approach uses google drive, but htat means I need to verify gtapinvest as an app with google. not worth it. switching back to gsutil for now.
+    # Nothing in the devstack calls this. To read data off a Drive shared drive, mount it
+    # with Drive for Desktop and point HB_SHARED_DATA_DIRS at its base_data mirror --
+    # get_path then treats it as a shared root (see ProjectFlow.shared_root_is_available).
+    # The Drive-API imports are function-local so this dead path does not make
+    # googleapiclient / google_auth_oauthlib hard import requirements of the whole module.
+    from googleapiclient.discovery import build
+    from google_auth_oauthlib.flow import InstalledAppFlow
+    from google.auth.transport.requests import Request
+
     # If modifying these SCOPES, delete the file token.pickle.
     SCOPES = ['https://www.googleapis.com/auth/drive']
 
@@ -289,8 +295,14 @@ def promote_ref_path_to_base_data(input_path, pivot_path, base_data_dir):
 
     # Move the file to the base_data_dir
     os.rename(input_path, joined_path)
-def download_gdrive_refpath(ref_path, base_data_dir=None, data_credentials_path=None, input_bucket_name=None, create_shortcut=False, intermediate_path_override=None, verbose=False):
+def download_bucket_refpath(ref_path, base_data_dir=None, data_credentials_path=None, input_bucket_name=None, create_shortcut=False, intermediate_path_override=None, verbose=False):
+    """Download a ref_path from the cloud STORAGE BUCKET into base_data_dir, if missing.
 
+    Named for the bucket because that is what it talks to. It has nothing to do with
+    Google Drive despite the old download_gdrive_refpath spelling (kept below as an
+    alias for existing callers) -- for Drive, mount the shared drive and configure
+    HB_SHARED_DATA_DIRS so ProjectFlow.get_path picks it up as a shared root.
+    """
     source_blob_name =  ref_path.replace('\\', '/')
     default_bucket = 'gtap_invest_seals_2023_04_21'
     if input_bucket_name is None:
@@ -301,7 +313,10 @@ def download_gdrive_refpath(ref_path, base_data_dir=None, data_credentials_path=
 
     destination_file_path = os.path.join(base_data_dir, ref_path)
 
-    if hb.path_exists(destination_file_path):
+    # Download only when the file is MISSING. This test used to be inverted: it
+    # downloaded when the file already existed, and logged 'already exists. Skipping
+    # download.' when it did not.
+    if not hb.path_exists(destination_file_path):
 
         if is_internet_available(1):
             if data_credentials_path is not None:
@@ -325,6 +340,11 @@ def download_gdrive_refpath(ref_path, base_data_dir=None, data_credentials_path=
     else:
         hb.log('The file ' + str(destination_file_path) + ' already exists. Skipping download.')
         return destination_file_path
+
+
+# Deprecated spelling. The function has always downloaded from the storage bucket, never
+# from Google Drive; kept so existing callers keep working.
+download_gdrive_refpath = download_bucket_refpath
 
 
 def download_file(url, target_path, chunk_size=1024 * 1024, retries=3):

@@ -25,6 +25,12 @@ L = hb.get_logger('project_flow')
 L.setLevel(logging.INFO)
 initial_logging_level = L.getEffectiveLevel()
 
+# get_path's possible_dirs list holds plain directory strings plus a few sentinels for
+# roots that need more than a path join. 'input_bucket_name' is the long-standing one
+# (the cloud bucket); this marks a read-only shared data root, whose path follows the
+# prefix. Not a valid path prefix on any platform, so it can never collide with a dir.
+SHARED_ROOT_SENTINEL_PREFIX = 'shared_data_root::'
+
 # module level get_path. Usually you want to use the project_level version
 def get_path(relative_path, *join_path_args, possible_dirs='default', prepend_possible_dirs=None, create_shortcut=False, download_destination_dir=None, strip_relative_paths_for_output=False, leave_ref_path_if_fail=False, verbose=False):
     # SUPER DANGEROUS TO USE IF YOU ACTUALLY WANT TO USE A PROJECT FLOW OBJECT.
@@ -341,6 +347,27 @@ class ProjectFlow(object):
         else:
             self.external_bulk_data_dir = None
 
+        # Read-only roots that mirror base_data's ref_path layout: a mounted lab drive
+        # (Google Drive for Desktop, Dropbox), a group scratch dir, an external disk.
+        # get_path searches them after base_data_dir and before the cloud bucket, and
+        # copies any hit into base_data_dir so later runs resolve locally.
+        #
+        # Configured per machine, because the mount path is a property of the machine
+        # (a Drive mount embeds the signed-in account) rather than of any project:
+        #   HB_SHARED_DATA_DIRS=/path/to/drive/base_data   in ~/.config/hazelbean/machine.env
+        # os.pathsep-separated for more than one. Unset (the default) means no shared
+        # roots and get_path behaves exactly as it did before this existed.
+        #
+        # A run file may also set p.shared_data_dirs = [...] directly.
+        self.shared_data_dirs = [i.strip() for i in
+                                 os.environ.get('HB_SHARED_DATA_DIRS', '').split(os.pathsep)
+                                 if i.strip()]
+
+        # Availability is cached per ProjectFlow: parallel iterators call get_path
+        # thousands of times per run, and stat-ing a network filesystem on each call is
+        # the performance trap that would make people turn this off.
+        self._shared_root_availability = {}
+
 
         # args is used by UI elements.
         self.args = {}
@@ -619,6 +646,29 @@ class ProjectFlow(object):
             else:
                 hb.log(f'skip_tasks: no task named {name!r} in this task tree — check spelling.')
 
+    def shared_root_is_available(self, shared_root):
+        """True if a configured shared root is present on this machine, cached per ProjectFlow.
+
+        A shared root is opportunistic by design: it is a mounted lab drive or group
+        scratch dir that some machines have and others cannot. Google Drive for Desktop
+        has no Linux client at all, so an absent root is the NORMAL state on the cluster,
+        not an error — get_path skips it and falls through to the cloud bucket.
+
+        Cached because get_path is called thousands of times per run inside parallel
+        iterators, and each check may hit a network filesystem.
+        """
+        if shared_root not in self._shared_root_availability:
+            try:
+                available = os.path.isdir(shared_root)
+            except OSError:
+                # A stale or unauthenticated mount can raise rather than return False.
+                available = False
+            self._shared_root_availability[shared_root] = available
+            if not available:
+                hb.log('Shared data root not available on this machine (skipping it in get_path): '
+                       + str(shared_root))
+        return self._shared_root_availability[shared_root]
+
     def set_base_data_dir(self, input_base_data_dir=None, match_string='seals/default_inputs'):
                 
         # Search over multiple possible places to find a base data dir that contains correct data then use it.
@@ -735,8 +785,16 @@ class ProjectFlow(object):
         # if len(join_path_args) > 1:
         #     to_insert = os.path.join(self.intermediate_dir, os.sep.join([path_as_inputted] + list(join_path_args)[:-1]))
         #     possible_dirs.insert(0, to_insert)
-        
-            # Check if self has google_drive_path attribute and if so, add it to the possible_dirs
+
+        # Shared data roots (a mounted lab drive, a group scratch dir) go after the local
+        # dirs and before the cloud bucket: local disk is fastest, a mount is free but
+        # slower, the bucket is slowest and costs egress. They are marked with a sentinel
+        # rather than added as plain dirs because a hit must be COPIED to base_data and the
+        # local path returned -- handing GDAL a path on a streaming filesystem is the thing
+        # this tier exists to avoid. No roots configured means nothing is appended and the
+        # ladder is exactly what it was.
+        for shared_root in getattr(self, 'shared_data_dirs', []):
+            possible_dirs.append(SHARED_ROOT_SENTINEL_PREFIX + shared_root)
 
         if not hasattr(self, 'input_bucket_name'):
             self.input_bucket_name = default_bucket
@@ -807,13 +865,33 @@ class ProjectFlow(object):
                         else:
                             pass
 
+                elif possible_dir.startswith(SHARED_ROOT_SENTINEL_PREFIX):
+                    # A read-only root mirroring base_data's ref_path layout. Copy any hit
+                    # into base_data and return the LOCAL path, which is what makes this a
+                    # cache rather than a symlink: the next run resolves at base_data and
+                    # never touches the shared root again.
+                    shared_root = possible_dir[len(SHARED_ROOT_SENTINEL_PREFIX):]
+                    if not self.shared_root_is_available(shared_root):
+                        continue
+
+                    shared_path = os.path.join(shared_root, relative_path)
+                    if os_utils.is_google_native_file(shared_path):
+                        # A Drive .gsheet/.gdoc is a ~100-byte JSON pointer, not data.
+                        continue
+
+                    if hb.path_exists(shared_path, verbose=verbose):
+                        local_path = os.path.join(self.base_data_dir, relative_path)
+                        os_utils.cache_file_from_shared_root(shared_path, local_path, verbose=verbose)
+                        hb.log('get_path: cached ' + str(relative_path) + ' from shared root '
+                               + str(shared_root) + ' to ' + str(local_path))
+                        if create_shortcut:
+                            os_utils.create_shortcut(destination_file_name, intermediate_path_override)
+                        return local_path
+
                 else:
 
                     path = os.path.join(possible_dir, relative_path)
 
-
-                    
-                    
 
                     if hb.path_exists(path, verbose=verbose):
                         if create_shortcut:
@@ -833,13 +911,22 @@ class ProjectFlow(object):
 
         # It wasnt found anywhere, so do some final checks and then use the default
         def _not_found_message():
-            searched = [i for i in possible_dirs if isinstance(i, str) and i != 'input_bucket_name']
+            searched = [i for i in possible_dirs if isinstance(i, str)
+                        and i != 'input_bucket_name'
+                        and not i.startswith(SHARED_ROOT_SENTINEL_PREFIX)]
             lines = ['get_path could not resolve a ref_path.',
                      '  ref_path as given: ' + str(path_as_inputted)]
             if relative_path != path_as_inputted:
                 lines.append('  resolved relative path: ' + str(relative_path))
             lines.append('  searched these roots in order (not found in any):')
             lines += ['    - ' + str(i) for i in searched]
+            # Mark each shared root available or not: without this, "the drive is not
+            # mounted" and "the file does not exist" produce an identical message.
+            for i in possible_dirs:
+                if isinstance(i, str) and i.startswith(SHARED_ROOT_SENTINEL_PREFIX):
+                    shared_root = i[len(SHARED_ROOT_SENTINEL_PREFIX):]
+                    state = 'available' if self.shared_root_is_available(shared_root) else 'NOT AVAILABLE on this machine'
+                    lines.append('    - shared data root (' + state + '): ' + str(shared_root))
             if 'input_bucket_name' in possible_dirs:
                 lines.append('    - cloud bucket: ' + str(self.input_bucket_name))
             lines.append('  If you expected this file to exist, check the ref_path spelling against base_data.')
@@ -903,7 +990,10 @@ class ProjectFlow(object):
         # current task is skipped and this call is only publishing a path. Return the
         # would-be path under the first root and log the assumption so a typo'd
         # ref_path leaves a diagnostic trail instead of silently producing a phantom path.
-        possible_dirs = [i for i in possible_dirs if i is not None and i != 'input_bucket_name']
+        # Drop the sentinels: what follows joins possible_dirs[0] as an actual directory,
+        # and neither the bucket nor a shared root is one.
+        possible_dirs = [i for i in possible_dirs if i is not None and i != 'input_bucket_name'
+                         and not (isinstance(i, str) and i.startswith(SHARED_ROOT_SENTINEL_PREFIX))]
         path = os.path.join(possible_dirs[0], relative_path)
         if in_skipped_task:
             hb.log('get_path (skipped task): ' + str(path_as_inputted) + ' was not found in any searched root; '
