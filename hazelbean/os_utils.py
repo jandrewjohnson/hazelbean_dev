@@ -1481,6 +1481,82 @@ def path_abs(input_relative_path):
         return "Failed path_abs on " + str(input_relative_path)
 
 
+# Files GDAL and OGR write beside a dataset. Copying a raster without these silently
+# drops statistics, overviews and georeferencing -- a performance and rendering
+# regression rather than an error, so it is easy to miss.
+GDAL_SIDECAR_SUFFIXES = ('.aux.xml', '.ovr', '.tfw', '.wld', '.prj', '.msk', '.vat.dbf', '.xml')
+
+# Google Drive stores its native documents as ~100-byte JSON pointers with these
+# extensions. They look like files on a mounted drive but contain no data.
+GOOGLE_NATIVE_EXTENSIONS = ('.gdoc', '.gsheet', '.gslides', '.gform', '.gdraw', '.gmap', '.gsite')
+
+
+def is_google_native_file(path):
+    """True for Drive's placeholder documents (.gsheet, .gdoc, ...), which hold no data."""
+    return os.path.splitext(str(path))[1].lower() in GOOGLE_NATIVE_EXTENSIONS
+
+
+def cache_file_from_shared_root(src, dst, verbose=False):
+    """Copy src to dst atomically, bringing any sidecars, and return dst.
+
+    Used by ProjectFlow.get_path to pull a ref_path off a read-only shared root (a
+    mounted lab drive, a group scratch dir) into the local base_data dir, so that
+    every later run resolves it locally and never touches the shared root again.
+
+    Atomic on purpose: the copy lands on '<dst>.partial.<pid>', is size-verified, and
+    is then os.replace()d onto the final name. A run killed mid-copy must never leave
+    a truncated file behind, because a truncated file passes hb.path_exists() forever
+    afterwards and silently poisons every subsequent run. The pid in the temp name
+    keeps two parallel workers requesting the same file from colliding; os.replace is
+    atomic, so last-writer-wins is harmless.
+
+    Never writes to the source. Shared roots are read-only by contract.
+    """
+    if not os.path.isfile(src):
+        raise NameError('cache_file_from_shared_root needs an existing source file, got: ' + str(src))
+
+    dst_dir = os.path.dirname(dst)
+    if dst_dir and not os.path.exists(dst_dir):
+        hb.create_directories(dst_dir)
+
+    def _atomic_copy(one_src, one_dst):
+        tmp = one_dst + '.partial.' + str(os.getpid())
+        try:
+            shutil.copyfile(one_src, tmp)
+            src_size = os.path.getsize(one_src)
+            tmp_size = os.path.getsize(tmp)
+            if src_size != tmp_size:
+                raise IOError('Short read copying ' + str(one_src) + ': expected ' + str(src_size)
+                              + ' bytes, got ' + str(tmp_size)
+                              + '. The shared root may have stalled mid-stream.')
+            os.replace(tmp, one_dst)
+        except BaseException:
+            # Leave nothing half-written for a later run to mistake for a good file.
+            if os.path.exists(tmp):
+                try:
+                    os.remove(tmp)
+                except OSError:
+                    pass
+            raise
+
+    _atomic_copy(src, dst)
+    if verbose:
+        hb.log('Cached ' + str(src) + ' to ' + str(dst))
+
+    # Sidecars. A shapefile's siblings share the file root rather than extending the
+    # full filename, so they are handled separately from the GDAL suffix set.
+    if os.path.splitext(src)[1].lower() == '.shp':
+        for extension in ('.dbf', '.shx', '.prj', '.cpg', '.sbn', '.sbx', '.qix', '.shp.xml'):
+            sidecar_src = path_replace_extension(src, extension)
+            if os.path.isfile(sidecar_src):
+                _atomic_copy(sidecar_src, path_replace_extension(dst, extension))
+    for suffix in GDAL_SIDECAR_SUFFIXES:
+        if os.path.isfile(src + suffix):
+            _atomic_copy(src + suffix, dst + suffix)
+
+    return dst
+
+
 def path_copy(src, dst, copy_tree=True, displace_overwrites=False, overwrite=True, verbose=False):
     copy_shutil_flex(src, dst, copy_tree=copy_tree, displace_overwrites=displace_overwrites, overwrite=overwrite, verbose=verbose)
 

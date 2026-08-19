@@ -22,6 +22,11 @@ dynamic = ["version", "dependencies", "optional-dependencies"]
 [project.urls]
 homepage = "https://github.com/jandrewjohnson/hazelbean_dev"
 
+[project.scripts]
+# Run once, deliberately, to record a mounted lab drive in machine.env. Deliberately
+# not an install-time or import-time hook -- see hazelbean/setup_machine_env.py.
+hb-setup-machine-env = "hazelbean.setup_machine_env:main"
+
 [build-system]
 requires = [
         "setuptools>=61", "wheel", "cython>3",

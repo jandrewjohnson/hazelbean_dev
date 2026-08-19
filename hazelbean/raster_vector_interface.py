@@ -1061,7 +1061,7 @@ def vector_super_simplify(input_vector_path, id_column_label, blur_size, output_
     
     base_data_dir = 'data'
     match_raster_path = os.path.join(base_data_dir, match_raster_refpath)
-    cloud_utils.download_gdrive_refpath(match_raster_path, base_data_dir)
+    cloud_utils.download_bucket_refpath(match_raster_path, base_data_dir)
     
     # Rasterize on id_column
     output_raster_path = os.path.splitext(output_path)[0] + '_raster_ids.tif'
