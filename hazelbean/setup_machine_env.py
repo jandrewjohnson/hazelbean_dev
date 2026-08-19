@@ -69,10 +69,7 @@ def _candidate_patterns():
         patterns += [
             drive + ':\\My Drive\\Files\\base_data' for drive in 'GHIJKLMNOPQRSTUVWXYZ'
         ]
-        patterns += [
-            os.path.join(home, 'Google Drive', 'Files', 'base_data'),
-            os.path.join(home, 'Dropbox', 'Files', 'base_data'),
-        ]
+        patterns.append(os.path.join(home, 'Google Drive', 'Files', 'base_data'))
     else:
         # No official Google Drive client exists for Linux and none is expected.
         # A shared root on Linux is a group scratch dir or network mount, which
