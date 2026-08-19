@@ -929,6 +929,12 @@ class ProjectFlow(object):
                     lines.append('    - shared data root (' + state + '): ' + str(shared_root))
             if 'input_bucket_name' in possible_dirs:
                 lines.append('    - cloud bucket: ' + str(self.input_bucket_name))
+            # Lands in front of someone at the moment they need it, rather than in a
+            # doc they would have to know to look for.
+            if not getattr(self, 'shared_data_dirs', None):
+                lines.append('  No shared data roots are configured. If this file lives on a lab drive or')
+                lines.append('  shared disk, run  hb-setup-machine-env  to detect and record one, or set')
+                lines.append('  HB_SHARED_DATA_DIRS by hand in ~/.config/hazelbean/machine.env.')
             lines.append('  If you expected this file to exist, check the ref_path spelling against base_data.')
             lines.append('  If a task generates this file, call get_path with raise_error_if_fail=False '
                          '(returns the would-be path under the first searched root).')
