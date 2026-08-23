@@ -887,13 +887,21 @@ def df_read(input_path, delimiter=','):
     # Pandas' own default first, which handles a UTF-8 byte-order mark. Then utf-8-sig, which the
     # EE spec names for CSVs that carry one, then the two single-byte encodings international
     # datasets most often arrive in. The first that reads wins.
+    #
+    # A fallback's result is checked before it is accepted, because ISO-8859-1 and latin1 decode
+    # ANY byte sequence: without the check a binary file comes back as a frame with one column
+    # called 'Unnamed: 0' and no rows, which is worse than the error it replaced. A real CSV has
+    # at least one named column in its header.
     for encoding in (None, 'utf-8-sig', 'ISO-8859-1', 'latin1'):
         try:
             if encoding is None:
-                return pd.read_csv(input_path, delimiter=delimiter)
-            return pd.read_csv(input_path, delimiter=delimiter, encoding=encoding)
+                df = pd.read_csv(input_path, delimiter=delimiter)
+            else:
+                df = pd.read_csv(input_path, delimiter=delimiter, encoding=encoding)
         except Exception:
             continue
+        if any(not str(column).startswith('Unnamed:') for column in df.columns):
+            return df
     raise NameError(f'Unable to read {input_path} as a csv under any of utf-8, utf-8-sig, ISO-8859-1 or latin1. It may not be a csv, it may use a different delimiter than {delimiter!r}, or it may be malformed.\n    Abspath: {os.path.abspath(input_path)}\n    Normpath: {os.path.normpath(input_path)}')
 
 
