@@ -107,7 +107,7 @@ def get_area_of_pixel_from_center_lat(pixel_size, center_lat):
 
 
 def get_area_of_pixel_column_from_center_lats(pixel_size, center_lat_column):
-    """Calculate a column of ha per cell in wgs84 of square pixel in a vertical column.
+    """Calculate a column of m^2 per cell in wgs84 of square pixel in a vertical column.
 
     Adapted from: https://gis.stackexchange.com/a/127327/2397
 
