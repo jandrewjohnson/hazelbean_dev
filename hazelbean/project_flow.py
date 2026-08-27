@@ -337,7 +337,7 @@ class ProjectFlow(object):
             self.set_project_dir(project_dir, project_name, run_mode, extra_dirs)
 
         if hb.path_exists(hb.config.BASE_DATA_DIR):
-            self.base_data_dir = hb.config.BASE_DATA_DIR
+            self.base_data_dir = hb.config.BASE_DATA_DIR # TODOOO Consider systematically getting rid of hb.config globals for things related to file paths. 
         else:
             self.base_data_dir = os.path.join(user_dir, os.sep.join(default_extra_dirs), 'base_data')
 
@@ -359,9 +359,7 @@ class ProjectFlow(object):
         # roots and get_path behaves exactly as it did before this existed.
         #
         # A run file may also set p.shared_data_dirs = [...] directly.
-        self.shared_data_dirs = [i.strip() for i in
-                                 os.environ.get('HB_SHARED_DATA_DIRS', '').split(os.pathsep)
-                                 if i.strip()]
+        self.shared_data_dirs = [i.strip() for i in os.environ.get('HB_SHARED_DATA_DIRS', '').split(os.pathsep) if i.strip()]
 
         # Availability is cached per ProjectFlow: parallel iterators call get_path
         # thousands of times per run, and stat-ing a network filesystem on each call is
