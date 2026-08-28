@@ -1242,7 +1242,7 @@ class ProjectFlow(object):
                 # # TODOO NYI, but I want to implement task-level logging conditionals.
                 # L.setLevel(task.logging_level)
 
-
+                # NOTE: HUGE FLAW, I started to implement this, decided i didn't like it, but haven't deleted it, yet it still pollutes the repo.
                 if task.type in ['task', 'input_task', 'output_task']:
                     if self.run_this:
                         if task.creates_dir:
