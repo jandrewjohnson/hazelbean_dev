@@ -33,6 +33,50 @@ import pandas as pd
 
 import hazelbean as hb
 
+def _resolve_definitions_path(p, input_path):
+    """Resolve a definitions CSV reference: an existing path is used as given; anything else goes through p.get_path (input/ first, then base_data)."""
+    return input_path if os.path.exists(str(input_path)) else p.get_path(input_path)
+
+
+def initialize_parameters(p, input_path):
+    """Load a vertical key,value parameters CSV and hydrate p from it. Successor to initialize_definitions_csv for the 'parameter' stem.
+
+    Model-specific follow-ups (e.g. gtappy_utils.set_modality_connections) are the CALLER's job, immediately after this call —
+    that is what keeps hazelbean free of model imports and run files explicit about what they include.
+
+    Args:
+        p: ProjectFlow object.
+        input_path: filename (resolved via input/ then base_data) or full path to the parameters CSV.
+
+    Returns:
+        The loaded DataFrame (also stored as p.parameters_df).
+    """
+    p.parameter_definitions_path = _resolve_definitions_path(p, input_path)
+    p.parameter_definitions_filename = os.path.basename(p.parameter_definitions_path)
+    p.parameters_df = pd.read_csv(p.parameter_definitions_path)
+    hb.assign_cols_to_object_attributes(p, p.parameters_df)
+    return p.parameters_df
+
+
+def initialize_scenarios(p, input_path):
+    """Load a row-oriented scenarios CSV, store p.scenarios_df, and hydrate p from row 0. Successor to initialize_definitions_csv for the 'scenario' stem.
+
+    Row 0 seeds project-level attributes; tasks re-hydrate per row while iterating (scenarios.csv stays authoritative).
+    Model-specific derived attributes (e.g. seals_utils.set_derived_attributes) are the CALLER's job, immediately after this call.
+
+    Args:
+        p: ProjectFlow object.
+        input_path: filename (resolved via input/ then base_data) or full path to the scenarios CSV.
+
+    Returns:
+        The loaded DataFrame (also stored as p.scenarios_df).
+    """
+    p.scenario_definitions_path = _resolve_definitions_path(p, input_path)
+    p.scenario_definitions_filename = os.path.basename(p.scenario_definitions_path)
+    p.scenarios_df = pd.read_csv(p.scenario_definitions_path)
+    hb.assign_row_to_object_attributes(p, p.scenarios_df.iloc[0])
+    return p.scenarios_df
+
 
 def initialize_definitions_csv(p, stem, base_data_module, assign_fn, post_process=None):
     # THINKING OF ABANDING THIS AI SLOP
