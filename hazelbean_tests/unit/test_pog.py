@@ -60,6 +60,57 @@ class TestPOGCompliance(unittest.TestCase):
             result = is_path_cog(temp_path, check_tiled=True, full_check=True, raise_exceptions=False, verbose=False)
             self.assertTrue(result, f"{temp_path} is a valid POG")
 
+    def test_make_path_pog_output_arcseconds_invalid(self):
+        """An unsupported output_arcseconds should raise before any processing."""
+        with self.assertRaises(ValueError):
+            hb.make_path_pog(self.valid_pog_path, hb.temp('.tif', remove_at_exit=1), output_arcseconds=123)
+
+    @pytest.mark.skipif(
+        not os.path.exists(os.path.expanduser("~/Files/base_data/pyramids/ha_per_cell_3600sec.tif")),
+        reason="Requires pyramid data files in ~/Files/base_data/ (not available in CI)"
+    )
+    def test_make_path_pog_output_arcseconds_coarsen(self):
+        """output_arcseconds converts a valid POG to a coarser supported resolution."""
+        temp_path = hb.temp('.tif', 'coarsen', remove_at_exit=1, tag_along_file_extensions=['.aux.xml'])
+
+        # Input is a valid 900sec POG; without output_arcseconds this would early-exit untouched.
+        hb.make_path_pog(self.valid_pog_path, temp_path, output_arcseconds=3600, verbose=True)
+
+        self.assertTrue(hb.path_exists(temp_path), f"POG file was not created: {temp_path}")
+        self.assertAlmostEqual(hb.get_cell_size_from_path(temp_path), 1.0)
+        is_cog = hb.is_path_cog(temp_path, check_tiled=True, full_check=True, raise_exceptions=False, verbose=False)
+        self.assertTrue(is_cog, f"Created file is not a valid COG: {temp_path}")
+
+    @pytest.mark.skipif(
+        not os.path.exists(os.path.expanduser("~/Files/base_data/pyramids/ha_per_cell_1800sec.tif")),
+        reason="Requires pyramid data files in ~/Files/base_data/ (not available in CI)"
+    )
+    def test_make_path_pog_output_arcseconds_far_off_resolution(self):
+        """A raster far from any supported resolution errors without output_arcseconds and works with it."""
+        from osgeo import gdal, osr
+        import numpy as np
+
+        far_off_path = hb.temp('.tif', 'faroff', remove_at_exit=1, tag_along_file_extensions=['.aux.xml'])
+        driver = gdal.GetDriverByName('GTiff')
+        ds = driver.Create(far_off_path, 1200, 600, 1, gdal.GDT_Float32, options=['COMPRESS=DEFLATE'])
+        ds.SetGeoTransform((-180.0, 0.3, 0.0, 90.0, 0.0, -0.3))
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(4326)
+        ds.SetProjection(srs.ExportToWkt())
+        ds.GetRasterBand(1).WriteArray(np.random.rand(600, 1200).astype(np.float32))
+        ds = None
+
+        with self.assertRaises(ValueError):
+            hb.make_path_pog(far_off_path, hb.temp('.tif', remove_at_exit=1))
+
+        temp_path = hb.temp('.tif', 'faroff_pog', remove_at_exit=1, tag_along_file_extensions=['.aux.xml'])
+        hb.make_path_pog(far_off_path, temp_path, output_arcseconds=1800, verbose=True)
+
+        self.assertTrue(hb.path_exists(temp_path), f"POG file was not created: {temp_path}")
+        self.assertAlmostEqual(hb.get_cell_size_from_path(temp_path), 0.5)
+        is_cog = hb.is_path_cog(temp_path, check_tiled=True, full_check=True, raise_exceptions=False, verbose=False)
+        self.assertTrue(is_cog, f"Created file is not a valid COG: {temp_path}")
+
     def test_write_pog_of_value_from_match(self):
         """Test write_pog_of_value_from_match function.
         

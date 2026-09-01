@@ -1,5 +1,4 @@
 import os
-import pathlib
 from osgeo import gdal
 import numpy as np
 import tqdm
@@ -46,6 +45,7 @@ def _worker_make_path_pog_starmap(input_file_path, specific_output_path, common_
             input_file_path,
             output_raster_path=specific_output_path, # CRITICAL: Use the specific output path
             output_data_type=common_pog_options_dict.get('output_data_type', 'auto'),
+            output_arcseconds=common_pog_options_dict.get('output_arcseconds'),
             overview_resampling_method=common_pog_options_dict.get('overview_resampling_method'),
             ndv=common_pog_options_dict.get('ndv'),
             compression=common_pog_options_dict.get('compression', "DEFLATE"),
@@ -66,6 +66,7 @@ def make_paths_pogs_in_parallel(
     exclude_extensions=None,
     output_raster_path_suffix=None,
     output_data_type='auto',
+    output_arcseconds=None,
     overview_resampling_method=None,
     ndv=None,
     compression="DEFLATE",
@@ -157,6 +158,7 @@ def make_paths_pogs_in_parallel(
     # These are fixed for all tasks and will be passed via partial.
     common_pog_options = {
         'output_data_type': output_data_type,
+        'output_arcseconds': output_arcseconds,
         'overview_resampling_method': overview_resampling_method,
         'ndv': ndv,
         'compression': compression,
@@ -213,28 +215,38 @@ def make_paths_pogs_in_parallel(
     return results
  
   
-def make_path_pog(input_raster_path, 
-                  output_raster_path=None, 
-                  output_data_type=None, 
-                  ndv=None, 
-                  overview_resampling_method=None, 
-                  compression="DEFLATE", 
-                  blocksize=512, 
-                  force_rewrite=False, 
-                  value_reclassification_dict=None, 
-                  ndv_above=None, 
-                  ndv_below=None, 
+def make_path_pog(input_raster_path,
+                  output_raster_path=None,
+                  output_data_type=None,
+                  output_arcseconds=None,
+                  ndv=None,
+                  overview_resampling_method=None,
+                  compression="DEFLATE",
+                  blocksize=512,
+                  force_rewrite=False,
+                  value_reclassification_dict=None,
+                  ndv_above=None,
+                  ndv_below=None,
                   remove_intermediate_files=True,
                   remove_displaced_files=False,
                   verbose=False):
-    
-    """ Create a Pog (pyramidal cog) from input_raster_path. Writes in-place if output_raster_path is not set. Chooses correct values for 
-    everything else if not set."""
+
+    """ Create a Pog (pyramidal cog) from input_raster_path. Writes in-place if output_raster_path is not set. Chooses correct values for
+    everything else if not set.
+
+    output_arcseconds, if given, sets the resolution of the output POG explicitly: the input is resampled to the
+    canonical match raster at that resolution. Required when the input is not close to any supported pyramid
+    resolution; also usable to deliberately convert between supported resolutions. When it requests a genuinely
+    coarser grid, resampling aggregates (mode for integer types, average for floats) rather than point-sampling."""
 
     # Check if input exists
     if not hb.path_exists(input_raster_path, verbose=verbose):
         raise FileNotFoundError(f"Input raster does not exist: {input_raster_path} at abs path {hb.path_abs(input_raster_path)}")
-    
+
+    if output_arcseconds is not None and output_arcseconds not in hb.pyramid_compatible_resolutions:
+        raise ValueError(f"output_arcseconds {output_arcseconds} is not a supported pyramid resolution. "
+                         f"Supported values (arcseconds): 1, 10, 30, 150, 300, 900, 1800, 3600, 7200, 14400, 36000.")
+
     # Do a fast check to see if it's pog.
     needs_censoring = False
     if not hb.is_path_global_pyramid(input_raster_path, verbose):
@@ -255,9 +267,17 @@ def make_path_pog(input_raster_path,
         needs_reclassification = False
         if value_reclassification_dict is not None:
             needs_reclassification = True
-                
-        # Do a full check to see if the input is already a POG. If so, skip it.    
-        if is_path_pog(input_raster_path, verbose) and not force_rewrite and not needs_censoring and not needs_reclassification:
+
+        # A requested output_arcseconds different from the input's resolution means the input
+        # cannot be accepted as-is even if it already validates as a POG.
+        needs_resolution_change = False
+        if output_arcseconds is not None:
+            input_resolution = hb.determine_pyramid_resolution(input_raster_path)
+            if input_resolution is None or hb.pyramid_compatible_resolution_to_arcseconds[input_resolution] != float(output_arcseconds):
+                needs_resolution_change = True
+
+        # Do a full check to see if the input is already a POG. If so, skip it.
+        if is_path_pog(input_raster_path, verbose) and not force_rewrite and not needs_censoring and not needs_reclassification and not needs_resolution_change:
             if verbose:
                 hb.log(f"Raster is already a POG: {input_raster_path}")
             return
@@ -306,10 +326,20 @@ def make_path_pog(input_raster_path,
         hb.path_copy(input_raster_path, temp_copy_path) # Can just copy it direclty without accessing the raster.        
         current_path = temp_copy_path
 
-    # Get the resolution from the src_ds
-    degrees = hb.get_cell_size_from_path(current_path, force_to_pyramid=True)
-    arcseconds = hb.get_cell_size_from_path_in_arcseconds(current_path, force_to_pyramid=True)
-    
+    # Get the resolution of the output: explicit if output_arcseconds was given, otherwise snapped from the input.
+    if output_arcseconds is not None:
+        arcseconds = output_arcseconds
+        degrees = hb.pyramid_compatible_resolutions[output_arcseconds]
+    else:
+        try:
+            degrees = hb.get_cell_size_from_path(current_path, force_to_pyramid=True)
+            arcseconds = hb.get_cell_size_from_path_in_arcseconds(current_path, force_to_pyramid=True)
+        except ValueError as e:
+            raise ValueError(f"Input raster {input_raster_path} is not close to any supported pyramid resolution, so "
+                             f"make_path_pog cannot infer which canonical match to use. Pass output_arcseconds to choose "
+                             f"the output resolution explicitly (supported: 1, 10, 30, 150, 300, 900, 1800, 3600, 7200, "
+                             f"14400, 36000).") from e
+
     original_output_raster_path = output_raster_path
     if output_raster_path is None:        
         output_raster_path = hb.temp('.tif', 'pog', remove_at_exit=False, folder=os.path.dirname(input_raster_path), tag_along_file_extensions=['.aux.xml'])
@@ -320,14 +350,22 @@ def make_path_pog(input_raster_path,
         resample_method = 'nearest'
     else:
         resample_method = 'bilinear'
-        
+
+    # When output_arcseconds requests a genuinely coarser grid (not just snapping a near-pyramid input),
+    # aggregate rather than point-sample: mode for integer types, average for floats, mirroring the overview logic.
+    if output_arcseconds is not None:
+        native_degrees = hb.get_cell_size_from_path(current_path)
+        if native_degrees < hb.pyramid_compatible_resolution_bounds[output_arcseconds][0]:
+            resample_method = hb.pyramid_resampling_algorithms_by_data_type[output_data_type]
+
     # POG SPECIFIC DIFFERENCE HERE: Handles the case where the raster is not global.
-    gt = hb.get_geotransform_path(input_raster_path)    
+    gt = hb.get_geotransform_path(input_raster_path)
     gt_pyramid = hb.get_global_geotransform_from_resolution(degrees)
-    
-    user_dir = pathlib.Path.home()
-    match_path = os.path.join(user_dir, 'Files', 'base_data', hb.ha_per_cell_ref_paths[arcseconds])
+
     if gt != gt_pyramid:
+        # Resolve the canonical match raster for the output resolution through the get_path ladder
+        # (project dirs, base_data, shared data roots, cloud download) rather than a hardcoded location.
+        match_path = hb.get_path(hb.ha_per_cell_ref_paths[arcseconds])
         resample_temp_path = hb.temp('.tif', 'resample', True, folder=os.path.dirname(input_raster_path), tag_along_file_extensions=['.aux.xml'])
         if verbose:
             hb.log(f"Resampling {current_path} to match {match_path}. Saving at {resample_temp_path}.")
