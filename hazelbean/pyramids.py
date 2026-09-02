@@ -694,7 +694,9 @@ def determine_pyramid_resolution(input_path):
     ulx, xres, _, uly, _, yres = gt[0], gt[1], gt[2], gt[3], gt[4], gt[5]
     # (-180.0, 0.0002777777777777778, 0.0, 90.0, 0.0, -0.0002777777777777778)
     resolution = None
-    if xres in pyramid_compatible_resolutions.keys():
+    # xres is in degrees, so compare against the degree keys (not pyramid_compatible_resolutions, whose keys are
+    # arcseconds; a projected 30m raster would otherwise falsely match the 30-arcsecond key).
+    if xres in pyramid_compatible_resolution_to_arcseconds.keys():
         resolution = xres
     else:
         for k, v in pyramid_compatible_resolution_bounds.items():
