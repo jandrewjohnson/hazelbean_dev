@@ -29,10 +29,31 @@ from typing import Callable, Dict, List, Optional, Union
 import hazelbean as hb
 import zipfile
 import stat
+import tempfile
 from hazelbean import globals
 
-def make_run_dir(base_folder=hb.config.TEMPORARY_DIR, run_name='', just_return_string=False):
-    """Create a directory in a preconfigured location. Does not delete by default. Returns path of dir."""
+def get_temp_dir():
+    """The one root every hazelbean temp file goes under, created if needed.
+
+    HB_TEMP_DIR in ~/.config/hazelbean/machine.env (or the real environment) wins and is
+    used as given -- set it to point a cluster run at scratch space. Otherwise the OS temp
+    dir (tempfile.gettempdir() respects $TMPDIR / %TEMP%) gets a hazelbean-owned, per-user
+    subfolder, so nothing hazelbean writes mixes with other programs' temp files and two
+    users sharing a /tmp never collide. A ProjectFlow puts each run in its own subfolder
+    of this (p.temporary_dir); hb.temp() and hb.temporary_dir() default here.
+    """
+    root = os.environ.get('HB_TEMP_DIR', '').strip()
+    if not root:
+        user = os.environ.get('USER') or os.environ.get('USERNAME') or 'user'
+        root = os.path.join(tempfile.gettempdir(), 'hazelbean_temp_' + user)
+    os.makedirs(root, exist_ok=True)
+    return root
+
+
+def make_run_dir(base_folder=None, run_name='', just_return_string=False):
+    """Create a directory under base_folder (default hb.get_temp_dir()). Does not delete by default. Returns path of dir."""
+    if base_folder is None:
+        base_folder = get_temp_dir()
     run_dir = os.path.join(base_folder, ruri(run_name))
     if not os.path.exists(run_dir):
         if not just_return_string:
@@ -77,16 +98,9 @@ def temp(ext=None, filename_start=None, remove_at_exit=True, folder=None, suffix
         else:
             filename = ruri('tmp.tif')
 
-    if folder is not None:
-        uri = os.path.join(folder, filename)
-    else:
-        user_home = pathlib.Path.home()
-        temp_dir = user_home/'temp'
-        if not os.path.exists(temp_dir):
-            os.makedirs(temp_dir)
-            
-        # Get the user dir
-        uri = os.path.join(temp_dir, filename)
+    if folder is None:
+        folder = get_temp_dir()
+    uri = os.path.join(folder, filename)
 
     if remove_at_exit:
         remove_uri_at_exit(uri)
@@ -128,9 +142,7 @@ def temporary_dir(dir_root=None, dir_name='tmpdir', dirname_prefix=None, dirname
     """
     
     if dir_root is None:
-        # Set as users home temp dir
-        user_home = pathlib.Path.home()
-        dir_root = str(user_home/'temp')
+        dir_root = get_temp_dir()
 
             
     pre_post_string = dir_name
@@ -1713,7 +1725,11 @@ def get_existing_path_from_nested_sources(input_path, project_flow_object=None, 
         elif hb.path_exists(hb.path_rename_change_dir_at_depth(input_path, project_flow_object.model_base_data_dir, depth_to_keep, verbose=verbose), verbose=verbose):
             return hb.path_rename_change_dir_at_depth(input_path, project_flow_object.model_base_data_dir, depth_to_keep, verbose=verbose)
     else:
-
+        import warnings
+        warnings.warn('get_existing_path_from_nested_sources without a ProjectFlow searches the deprecated hb.config path globals '
+                      '(BASE_DATA_DIR, BULK_DATA_DIR, EXTERNAL_BULK_DATA_DIR), which point at no real directory on current machines. '
+                      'Pass project_flow_object, or resolve a ref_path with p.get_path (input/ -> input_template/ -> base_data -> '
+                      'shared roots from machine.env -> bucket). Config holds ref_paths only.', DeprecationWarning, stacklevel=2)
         if hb.path_exists(hb.path_rename_change_dir_at_depth(input_path, hb.BASE_DATA_DIR, depth_to_keep, verbose=verbose), verbose=verbose):
             return hb.path_rename_change_dir_at_depth(input_path, hb.BASE_DATA_DIR, depth_to_keep, verbose=verbose)
         elif hb.path_exists(hb.path_rename_change_dir_at_depth(input_path, hb.BULK_DATA_DIR, depth_to_keep, verbose=verbose), verbose=verbose):

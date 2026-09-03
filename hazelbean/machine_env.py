@@ -14,6 +14,11 @@ import os
 
 USER_MACHINE_ENV_PATH = os.path.join(os.path.expanduser('~'), '.config', 'hazelbean', 'machine.env')
 
+# Provenance of the most recent load, so a ProjectFlow can say at construction where
+# a per-machine value came from (see describe_source).
+LOADED_MACHINE_ENV_PATH = None   # the file that was read, or None when it did not exist
+LOADED_MACHINE_ENV = {}          # KEY -> value as supplied by that file
+
 
 def _parse_value(raw):
     """Strip surrounding quotes (and anything after the closing quote) or, for
@@ -34,9 +39,11 @@ def load_user_machine_env(path=None):
     one won over a pre-existing environment variable). Missing file -> empty dict,
     so machines without a config file are unaffected.
     """
+    global LOADED_MACHINE_ENV_PATH, LOADED_MACHINE_ENV
     if path is None:
         path = USER_MACHINE_ENV_PATH
     if not os.path.isfile(path):
+        LOADED_MACHINE_ENV_PATH, LOADED_MACHINE_ENV = None, {}
         return {}
     supplied = {}
     with open(path) as f:
@@ -53,4 +60,24 @@ def load_user_machine_env(path=None):
             value = _parse_value(raw_value)
             supplied[key] = value
             os.environ.setdefault(key, value)
+    LOADED_MACHINE_ENV_PATH, LOADED_MACHINE_ENV = path, dict(supplied)
     return supplied
+
+
+def describe_source(key):
+    """Where the current value of os.environ[key] came from, as a short phrase for a log line.
+
+    One of: 'machine.env (<path>)', 'process environment (overrides <path>)',
+    'process environment', or 'unset (...)' naming the file that was or was not read.
+    """
+    in_env = key in os.environ
+    in_file = key in LOADED_MACHINE_ENV
+    if in_file and in_env and os.environ[key] == LOADED_MACHINE_ENV[key]:
+        return 'machine.env (%s)' % LOADED_MACHINE_ENV_PATH
+    if in_file and in_env:
+        return 'process environment (overrides %s)' % LOADED_MACHINE_ENV_PATH
+    if in_env:
+        return 'process environment'
+    if LOADED_MACHINE_ENV_PATH is None:
+        return 'unset (no %s)' % USER_MACHINE_ENV_PATH
+    return 'unset (not in %s)' % LOADED_MACHINE_ENV_PATH

@@ -1690,7 +1690,7 @@ def execute_r_string(r_string, output_uri=None, script_save_uri=None, keep_files
     if not output_uri:
         # Learning point: the following line failed because os.path.join put a \ on , which r misinterpreted.
         #output_uri = os.path.join(hb.config.TEMP_FOLDER, hb.ruri('generated_r_output.txt'))
-        output_uri = hb.config.TEMPORARY_DIR + '/' + hb.ruri('generated_r_output.txt')
+        output_uri = os.path.join(hb.get_temp_dir(), hb.ruri('generated_r_output.txt'))
         if not keep_files:
             hb.uris_to_delete_at_exit.append(output_uri)
     else:
@@ -1701,7 +1701,7 @@ def execute_r_string(r_string, output_uri=None, script_save_uri=None, keep_files
         else:
             pass # output_uri  was okay
     if not script_save_uri:
-        script_save_uri = os.path.join(hb.config.TEMPORARY_DIR, hb.ruri('generated_r_script.R'))
+        script_save_uri = os.path.join(hb.get_temp_dir(), hb.ruri('generated_r_script.R'))
         if not keep_files:
             hb.uris_to_delete_at_exit.append(script_save_uri)
 

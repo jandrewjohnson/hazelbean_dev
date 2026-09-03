@@ -314,6 +314,12 @@ class ProjectFlow(object):
         except:
             L.debug('Could not identify a calling script.')
 
+        # The tracked definition files beside the run file. get_path searches this
+        # right after input_dir, so a run reads the template in place and input/
+        # holds only per-machine overrides (nothing is copied into input/).
+        self.input_template_dir = os.path.join(self.script_dir, 'input_template') if getattr(self, 'script_dir', None) else None
+        self.stale_input_paths = []  # input/ files that shadow a newer, different template (see _warn_if_input_copy_is_stale)
+
         user_dir = os.path.expanduser('~')
         self.user_dir = user_dir
         default_extra_dirs = ['Files']
@@ -336,16 +342,10 @@ class ProjectFlow(object):
         else:
             self.set_project_dir(project_dir, project_name, run_mode, extra_dirs)
 
-        if hb.path_exists(hb.config.BASE_DATA_DIR):
-            self.base_data_dir = hb.config.BASE_DATA_DIR # TODOOO Consider systematically getting rid of hb.config globals for things related to file paths. 
-        else:
-            self.base_data_dir = os.path.join(user_dir, os.sep.join(default_extra_dirs), 'base_data')
-
-
-        if hb.path_exists(hb.config.EXTERNAL_BULK_DATA_DIR):
-            self.external_bulk_data_dir = hb.config.EXTERNAL_BULK_DATA_DIR
-        else:
-            self.external_bulk_data_dir = None
+        # Local base_data is the devstack-standard ~/Files/base_data. Paths are never
+        # read from hb.config globals (config holds ref_paths only); per-machine
+        # roots come from machine.env (HB_SHARED_DATA_DIRS, below).
+        self.base_data_dir = os.path.join(user_dir, os.sep.join(default_extra_dirs), 'base_data')
 
         # Read-only roots that mirror base_data's ref_path layout: a mounted lab drive
         # (Google Drive for Desktop, Dropbox), a group scratch dir, an external disk.
@@ -360,6 +360,15 @@ class ProjectFlow(object):
         #
         # A run file may also set p.shared_data_dirs = [...] directly.
         self.shared_data_dirs = [i.strip() for i in os.environ.get('HB_SHARED_DATA_DIRS', '').split(os.pathsep) if i.strip()]
+        L.info('base_data_dir: ' + self.base_data_dir + '; shared data roots: ' + str(self.shared_data_dirs)
+               + ' from HB_SHARED_DATA_DIRS ' + hb.machine_env.describe_source('HB_SHARED_DATA_DIRS'))
+
+        # Every temp file of this run goes in one per-run folder under hb.get_temp_dir()
+        # (HB_TEMP_DIR in machine.env, else the OS temp dir's hazelbean_temp_<user>).
+        # Created when execute() starts and removed at exit; the name says which run made
+        # it, so a crashed run's leftovers are attributable. Tasks: hb.temp(folder=p.temporary_dir).
+        self.run_string = hb.pretty_time()  # unique time-stamp string for run-specific identifications
+        self.temporary_dir = os.path.join(hb.get_temp_dir(), str(self.project_name) + '_' + self.run_string)
 
         # Availability is cached per ProjectFlow: parallel iterators call get_path
         # thousands of times per run, and stat-ing a network filesystem on each call is
@@ -558,13 +567,14 @@ class ProjectFlow(object):
         self._project_dirs_materialized = False
 
     def _materialize_project_dirs(self):
-        """Create the project dir on disk and seed input/ from input_template/.
+        """Create the project dir on disk.
 
         Split out from _resolve_project_dir so that merely constructing a
         ProjectFlow writes nothing: a run file that constructs bare and then calls
         set_project_dir(project_name=...) would otherwise leave an orphan dir tree
-        (with a copied input_template) under the derived default name. Idempotent,
-        and called both by set_project_dir and at the top of execute().
+        under the derived default name. Idempotent, and called both by
+        set_project_dir and at the top of execute(). input_template/ is NOT copied
+        here (or anywhere): get_path reads it in place, after input/.
         """
         if getattr(self, '_project_dirs_materialized', False):
             return
@@ -574,11 +584,13 @@ class ProjectFlow(object):
         except:
             raise NotADirectoryError('A Project Flow object is based on defining a project_dir as its base, but we were unable to create the dir at the given path: ' + self.project_dir + '. It is possible that you do not have write access to this directory or that you are working on a virtual machine with some weird setup.')
 
-        self.copy_input_template()
+        # input/ always exists (empty until the user copies an override into it);
+        # before 2026-09-03 it was created only as a side effect of the template copy.
+        hb.create_directories(self.input_dir)
         self._project_dirs_materialized = True
 
     def set_project_dir(self, project_dir=None, project_name=None, run_mode=None, extra_dirs=None):
-        """Point the project at a directory, creating it and seeding input/.
+        """Point the project at a directory, creating it.
 
         The single directory-setup entry point. Run files that pass project_name
         and run_mode to hb.ProjectFlow() do not need to call this at all; call it
@@ -587,13 +599,16 @@ class ProjectFlow(object):
         _resolve_project_dir.
         """
         self._resolve_project_dir(project_dir, project_name, run_mode, extra_dirs)
+        # Re-pointing renames the run's temp folder too, unless execute() already made it.
+        if getattr(self, 'run_string', None) and not os.path.isdir(getattr(self, 'temporary_dir', '')):
+            self.temporary_dir = os.path.join(hb.get_temp_dir(), str(self.project_name) + '_' + self.run_string)
         self._materialize_project_dirs()
 
         if run_mode == 'fresh_intermediate':
             # Delete in place (rather than timestamping a new dir) so any path derived
             # from project_dir still resolves to the fresh results. input/ is kept: it
-            # holds per-machine values (e.g. parameters.csv connection settings) that a
-            # freshly seeded template would leave blank.
+            # holds the per-machine override copies (e.g. a parameters.csv with
+            # connection settings filled in) that the tracked template leaves blank.
             import shutil
             for stale_dir in [self.intermediate_dir, self.output_dir]:
                 if os.path.exists(stale_dir):
@@ -608,24 +623,47 @@ class ProjectFlow(object):
         self.set_project_dir(project_name=project_name, run_mode=run_mode, extra_dirs=extra_dirs)
 
     def copy_input_template(self):
-        # Check for any input_template in the repository and copy anything not
-        # already present into the project's input_dir. Strictly skip-existing:
-        # the input/ working copy holds per-machine values (e.g. parameters.csv
-        # connection settings) and user edits that a re-run must never clobber.
-        # (hb.path_copy's overwrite flag is ignored for directory sources, so we
-        # walk the tree ourselves.)
-        template_dir = os.path.join(getattr(self, 'script_dir', ''), 'input_template')
-        if getattr(self, 'script_dir', None) and hb.path_exists(template_dir, verbose=True):
-            import shutil
-            for walk_root, _, walk_files in os.walk(template_dir):
-                rel = os.path.relpath(walk_root, template_dir)
-                dst_root = self.input_dir if rel == '.' else os.path.join(self.input_dir, rel)
-                os.makedirs(dst_root, exist_ok=True)
-                for filename in walk_files:
-                    dst = os.path.join(dst_root, filename)
-                    if not os.path.exists(dst):
-                        shutil.copy2(os.path.join(walk_root, filename), dst)
-            hb.log(f'Found {template_dir} in the input_template dir of this project. Copied missing items to {self.input_dir}')
+        """DEPRECATED (2026-09-03): input_template/ is no longer copied into input/.
+
+        get_path searches input_template_dir right after input_dir, so the tracked
+        files are read in place and input/ holds only the files you deliberately
+        copied there to override (e.g. a parameters.csv with connection settings
+        filled in). Kept as a no-op so old callers do not crash.
+        """
+        hb.log('copy_input_template is deprecated and does nothing: get_path reads input_template/ in place '
+               '(after input/). Copy a single file into ' + str(self.input_dir) + ' by hand to override it.')
+
+    def _warn_if_input_copy_is_stale(self, input_path):
+        """Warn once when an input/ file shadows an input_template/ file that is newer AND different.
+
+        mtime is only the trigger, because a git checkout restamps every file: the
+        two files are then compared by size and content, and only a real difference
+        warns. Records the path on self.stale_input_paths so callers (and tests) can
+        see what was flagged. Never raises.
+        """
+        template_dir = getattr(self, 'input_template_dir', None)
+        if not template_dir or input_path in self.stale_input_paths:
+            return
+        try:
+            template_path = os.path.join(template_dir, os.path.relpath(input_path, self.input_dir))
+            if not os.path.isfile(template_path) or os.path.getmtime(template_path) <= os.path.getmtime(input_path):
+                return
+            if os.path.getsize(template_path) == os.path.getsize(input_path):
+                import hashlib
+                digests = []
+                for path in (template_path, input_path):
+                    h = hashlib.sha256()
+                    with open(path, 'rb') as f:
+                        for chunk in iter(lambda: f.read(1024 * 1024), b''):
+                            h.update(chunk)
+                    digests.append(h.hexdigest())
+                if digests[0] == digests[1]:
+                    return
+        except OSError:
+            return
+        self.stale_input_paths.append(input_path)
+        hb.log('WARNING: ' + str(input_path) + ' shadows a newer, different tracked template at ' + str(template_path)
+               + '. Merge the template change into your input/ copy, or delete the copy to read the template in place.')
 
     def skip_tasks(self, task_names):
         """Set run=0 on the named tasks (function names, without the '_task' suffix).
@@ -772,7 +810,7 @@ class ProjectFlow(object):
         relative_joined_path = relative_path
 
         if possible_dirs == 'default':
-            possible_dirs = [self.cur_dir, self.intermediate_dir, self.input_dir, caller_dir, cwd, self.base_data_dir]
+            possible_dirs = [self.cur_dir, self.intermediate_dir, self.input_dir, self.input_template_dir, caller_dir, cwd, self.base_data_dir]
             # possible_dirs = [self.cur_dir, self.input_dir, self.base_data_dir]
             
             # I Just changed this to be cur_dir instead of intermeiate_dir for base_data_promotion to work
@@ -894,7 +932,8 @@ class ProjectFlow(object):
                     if hb.path_exists(path, verbose=verbose):
                         if create_shortcut:
                             os_utils.create_shortcut(destination_file_name, intermediate_path_override)
-
+                        if possible_dir == self.input_dir:
+                            self._warn_if_input_copy_is_stale(path)
                         return path
                     
                     # HACK IUCN RUSH. Also check filepath against possible dir
@@ -903,6 +942,8 @@ class ProjectFlow(object):
                     # incorrectly impli9ed by the cur_dir structure.
                     split_path = os.path.join(possible_dir, os.path.split(path)[1])
                     if hb.path_exists(split_path, verbose=verbose):
+                        if possible_dir == self.input_dir:
+                            self._warn_if_input_copy_is_stale(split_path)
                         return split_path
                     
 
@@ -1602,9 +1643,14 @@ class ProjectFlow(object):
         self.project_base_data_dir = os.path.join(self.project_dir, 'project_base_data')  # Data that must be redistributed with this project for it to work. Do not put actual base data here that might be used across many projects.
 
         L.debug('self.project_base_data_dir set to ' + str(self.project_base_data_dir))
-        self.temporary_dir = getattr(self, 'temporary_dir', os.path.join(hb.config.PRIMARY_DRIVE, 'temp'))  # Generates new run_dirs here. Useful also to set the numdal temporary_dir to here for the run.
-
-        self.run_string = hb.pretty_time()  # unique string with time-stamp. To be used on run_specific identifications.
+        # p.temporary_dir and p.run_string were set at construction. Materialize the
+        # per-run temp folder now and remove it (only it) at exit.
+        if not os.path.isdir(self.temporary_dir):
+            hb.create_directories(self.temporary_dir)
+            import atexit, shutil
+            atexit.register(shutil.rmtree, self.temporary_dir, ignore_errors=True)
+        L.info('temporary_dir: ' + self.temporary_dir + ' (root from HB_TEMP_DIR '
+               + hb.machine_env.describe_source('HB_TEMP_DIR') + ')')
         self.basis_name = ''  # Specify a manually-created dir that contains a subset of results that you want to use. For any input that is not created fresh this run, it will instead take the equivilent file from here. Default is '' because you may not want any subsetting.
         self.basis_dir = os.path.join(self.intermediate_dir, self.basis_name)  # Specify a manually-created dir that contains a subset of results that you want to use. For any input that is not created fresh this run, it will instead take the equivilent file from here. Default is '' because you may not want any subsetting.
 
