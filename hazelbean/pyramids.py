@@ -1418,10 +1418,10 @@ def make_path_global_pyramid(
         L.info('input data_type: ' + str(data_type) + ', input ndv: ' + str(ndv))
         
     correct_ndv = hb.get_correct_ndv_from_dtype_flex(data_type, is_id=is_id_raster)
-    if float(ndv) != float(correct_ndv):
+    if ndv is None or float(ndv) != float(correct_ndv):
         old_ndv = ndv
         ndv = correct_ndv
-        L.critical('rewrite_array triggered because ndv was not 255 and datatype was 1.')
+        L.critical('rewrite_array triggered because the input ndv ' + str(old_ndv) + ' is not the correct ndv ' + str(correct_ndv) + ' for data_type ' + str(data_type) + '.')
         rewrite_array = True
         new_ndv = True
     else:
@@ -1465,7 +1465,8 @@ def make_path_global_pyramid(
         def sanitize_array(x):
             x = x.astype(hb.gdal_number_to_numpy_type[data_type])
 
-            if new_ndv is True:
+            if new_ndv is True and old_ndv is not None:
+                # When the input declares no ndv there is no value to translate: every cell is valid data.
                 x = np.where(np.isclose(x, old_ndv), ndv, x)
             if set_ndv_below_value is not None:
                 x[x < set_ndv_below_value] = ndv
