@@ -6488,7 +6488,10 @@ def find_gdalinfo():
     # Check each possible path
     for path in possible_paths:
         str_path = str(path)
-        if hb.path_exists(str(str_path), verbose=1):
+        # verbose must be a bool or a Logger here: path_exists treats any other truthy value AS
+        # the logger and crashes calling .info on it, which turned a missing candidate path into
+        # an exception that stopped the search before the candidates that exist.
+        if hb.path_exists(str(str_path)):
             # if path.exists():
             return str_path
     
