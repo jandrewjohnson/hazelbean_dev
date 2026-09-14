@@ -1435,7 +1435,10 @@ class ProjectFlow(object):
                     # self.run_in_parallel = True # TODOO Connect to UI
                     MAX_WINDOWS_WORKERS = 58
                     if not getattr(self, 'num_workers', None):
-                        self.num_workers = multiprocessing.cpu_count() - 1
+                        # NOT multiprocessing.cpu_count(): that reports the MACHINE, so inside a
+                        # scheduler allocation or container this oversubscribes the cpuset and
+                        # fills the memory cgroup. See hb.available_cpu_count.
+                        self.num_workers = max(1, hb.available_cpu_count() - 1)
                         #check which os
                         if platform.system() == 'Windows' and self.num_workers > MAX_WINDOWS_WORKERS:
                             self.num_workers = MAX_WINDOWS_WORKERS

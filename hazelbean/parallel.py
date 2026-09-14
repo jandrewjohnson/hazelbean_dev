@@ -117,7 +117,7 @@ def raster_calculator(inputs, op, output_path, n_workers=None, memory_limit=None
     optimal_chunk_size = hb.spatial_utils.check_chunk_sizes_from_list_of_paths([i for c, i in enumerate(inputs) if input_types[c] == 'path'])[0]
 
     if n_workers is None:
-        n_cpus = multiprocessing.cpu_count()
+        n_cpus = hb.available_cpu_count()   # the allocation, not the machine
         n_workers = n_cpus - 1 
 
     if memory_limit is None:
@@ -187,7 +187,7 @@ def rewrite_raster_to_output_path(input_path,
     chunk_size = hb.get_blocksize_from_path(input_path)
 
     if n_workers is None:
-        n_cpus = multiprocessing.cpu_count()
+        n_cpus = hb.available_cpu_count()   # the allocation, not the machine
         n_workers = n_cpus - 1 
 
     if memory_limit is None:
@@ -236,7 +236,7 @@ def as_array(input_path, n_workers=None, memory_limit=None, use_client=False, ve
     chunk_size = hb.get_blocksize_from_path(input_path)
 
     if n_workers is None:
-        n_cpus = multiprocessing.cpu_count()
+        n_cpus = hb.available_cpu_count()   # the allocation, not the machine
         n_workers = n_cpus - 1 
 
     if memory_limit is None:
@@ -285,7 +285,7 @@ def raster_replace_value(input_raster_path, src_value, dst_value, output_path, n
     chunk_size = hb.get_blocksize_from_path(input_raster_path)
 
     if n_workers is None:
-        n_cpus = multiprocessing.cpu_count()
+        n_cpus = hb.available_cpu_count()   # the allocation, not the machine
         n_workers = n_cpus - 1 
 
     if memory_limit is None:
@@ -773,7 +773,7 @@ def cython_raster_calculator(inputs, op, output_path, n_workers=None, memory_lim
     optimal_chunk_size = hb.spatial_utils.check_chunk_sizes_from_list_of_paths([i for c, i in enumerate(inputs) if input_types[c] == 'path'])[0]
 
     if n_workers is None:
-        n_cpus = multiprocessing.cpu_count()
+        n_cpus = hb.available_cpu_count()   # the allocation, not the machine
         n_workers = n_cpus - 1 
 
     if memory_limit is None:
