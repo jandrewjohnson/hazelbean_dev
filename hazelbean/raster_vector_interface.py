@@ -518,25 +518,21 @@ def zonal_statistics_rasterized(zone_ids_raster_path, values_raster_path, zones_
 
             zones_ds = gdal.OpenEx(zone_ids_raster_path)
             values_ds = gdal.OpenEx(values_raster_path)
-            # No idea why, but using **block_offset_new_gdal_api failed, so I unpack it manually here.
-            try:
-                values_array = values_ds.ReadAsArray(block_offset_new_gdal_api['xoff'], block_offset_new_gdal_api['yoff'], block_offset_new_gdal_api['buf_xsize'], block_offset_new_gdal_api['buf_ysize']).astype(np.float64)
-            except:
-                L.critical('unable to load ' + values_raster_path)
-                pass
-            
-            try:
-                zones_array = zones_ds.ReadAsArray(block_offset_new_gdal_api['xoff'], block_offset_new_gdal_api['yoff'], block_offset_new_gdal_api['buf_xsize'], block_offset_new_gdal_api['buf_ysize']).astype(np.int64)
+            # gdal.OpenEx returns None for a path that does not exist or cannot be read. Naming it
+            # here is the difference between a usable error and an UnboundLocalError further down.
+            if values_ds is None:
+                raise NameError('zonal_statistics_rasterized could not open the values raster ' + str(values_raster_path))
+            if zones_ds is None:
+                raise NameError('zonal_statistics_rasterized could not open the zone raster ' + str(zone_ids_raster_path))
 
-            except:
-                L.critical('unable to load ' + zone_ids_raster_path)
-                pass            
-            
-                # zones_array = zones_ds.ReadAsArray(block_offset_new_gdal_api['xoff'], block_offset_new_gdal_api['yoff']).astype(np.int64)
-                # values_array = values_ds.ReadAsArray(block_offset_new_gdal_api['xoff'], block_offset_new_gdal_api['yoff']).astype(np.float64)
+            # No idea why, but using **block_offset_new_gdal_api failed, so I unpack it manually here.
+            values_array = values_ds.ReadAsArray(block_offset_new_gdal_api['xoff'], block_offset_new_gdal_api['yoff'], block_offset_new_gdal_api['buf_xsize'], block_offset_new_gdal_api['buf_ysize']).astype(np.float64)
+            zones_array = zones_ds.ReadAsArray(block_offset_new_gdal_api['xoff'], block_offset_new_gdal_api['yoff'], block_offset_new_gdal_api['buf_xsize'], block_offset_new_gdal_api['buf_ysize']).astype(np.int64)
 
             if zones_array.shape != values_array.shape:
-                L.critical('zones_array.shape != values_array.shape', zones_array.shape, values_array.shape)
+                raise NameError('zonal_statistics_rasterized got mismatched blocks: zones ' + str(zones_array.shape)
+                                + ' from ' + str(zone_ids_raster_path) + ' vs values ' + str(values_array.shape)
+                                + ' from ' + str(values_raster_path))
 
             unique_zone_ids_np = np.asarray(unique_zone_ids, dtype=np.int64)
 

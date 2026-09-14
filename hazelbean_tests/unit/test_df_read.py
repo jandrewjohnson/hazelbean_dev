@@ -54,3 +54,14 @@ def test_a_missing_path_and_a_bad_type_still_raise(tmp_path):
         hb.df_read(str(tmp_path / 'not_here.csv'))
     with pytest.raises(NameError):
         hb.df_read(42)
+
+
+def test_an_unreadable_file_reports_every_encoding_that_was_tried(tmp_path):
+    # The message should say what was attempted, so the reader knows whether to suspect the
+    # encoding, the delimiter or the file itself.
+    path = tmp_path / 'not_a_csv.csv'
+    path.write_bytes(b'\x00\x01\x02\x03\xff\xfe')
+    with pytest.raises(NameError) as raised:
+        hb.df_read(str(path))
+    message = str(raised.value)
+    assert 'utf-8-sig' in message and 'latin1' in message
