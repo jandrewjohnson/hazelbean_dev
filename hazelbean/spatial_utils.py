@@ -6473,7 +6473,7 @@ def find_gdalinfo():
         ]
     else:  # Linux/macOS
         possible_paths = [
-            conda_env_root / 'bin' / 'gdalinfo',
+            python_exe.parent / 'gdalinfo',  # same bin/ as the running python
             conda_parent_env_root / 'bin' / 'gdalinfo',
         ]
         # Homebrew paths on macOS
