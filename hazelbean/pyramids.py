@@ -1,4 +1,5 @@
 import os, logging, math, time, sys
+import re
 import hazelbean as hb
 from decimal import Decimal
 import multiprocessing
@@ -226,22 +227,199 @@ for k, v in pyramid_compatible_geotransforms.copy().items():
 # I decided that there are two types of supported pyramid levels:
 # Main: 1, 3, 10, 300, 900, 1800 arc seconds (soon to add 333msec). All main and secondary must have overviews that represent all of the coarser set of these main levels
 # Secondary: 30, 150. Common as an input, but overviews of OTHER levels aren't generated for these.
+# Overview levels are DERIVED, not chosen: a base resolution's levels are the full chain of coarser
+# supported resolutions, capped at 10 degrees (36000 arcseconds), so every overview of a POG lands
+# exactly on a coarser POG grid. A file that is already 512 pixels or smaller in both dimensions
+# (1 degree and coarser) gets no overviews at all; GDAL's COG validator only asks for them above
+# 512. Formalized 2026-09-15, replacing a hand-written table whose 1-second chain started at an
+# unsupported 3 seconds and whose coarse entries ([2, 4]) overshot to unsupported 8-40 degree levels.
+#   1 sec:    [10, 30, 150, 300, 900, 1800, 3600, 7200, 14400, 36000]
+#   10 sec:   [3, 15, 30, 90, 180, 360, 720, 1440, 3600]
+#   30 sec:   [5, 10, 30, 60, 120, 240, 480, 1200]
+#   150 sec:  [2, 6, 12, 24, 48, 96, 240]
+#   300 sec:  [3, 6, 12, 24, 48, 120]           -> coarsest overview is 36 x 18
+#   900 sec:  [2, 4, 8, 16, 40]
+#   1800 sec: [2, 4, 8, 20]
+#   3600 sec and coarser: []                    -> 360 x 180 or smaller, no overviews
 pyramid_compatible_overview_levels = {}
-pyramid_compatible_overview_levels[1.0] = [3, 10, 30, 150, 300, 900, 1800, 3600]
-pyramid_compatible_overview_levels[10.0] = [3, 15, 30, 90, 180, 360]
-pyramid_compatible_overview_levels[30.0] = [5, 10, 30, 60, 120] 
-pyramid_compatible_overview_levels[150.0] = [2, 6, 12, 24]
-pyramid_compatible_overview_levels[300.0] = [3, 6, 12]
-pyramid_compatible_overview_levels[900.0] = [2, 4]
-pyramid_compatible_overview_levels[1800.0] = [2, 4] # Technically to make it to 3600sec (1deg) you would only need 2, however, the cog spec requires higher, so we keep the additional ones even tho they're not necessary for pyramid spec.
-pyramid_compatible_overview_levels[3600.0] = [2, 4]
-pyramid_compatible_overview_levels[7200.0] = [2, 4]
-pyramid_compatible_overview_levels[14400.0] = [2, 4]
-pyramid_compatible_overview_levels[36000.0] = [2, 4]
+_arcseconds = sorted(k for k in pyramid_compatible_resolutions if isinstance(k, float))  # the dict also carries str/int aliases
+for _base in _arcseconds:
+    if 360 * 3600 / _base <= 512 and 180 * 3600 / _base <= 512:
+        pyramid_compatible_overview_levels[_base] = []
+    else:
+        pyramid_compatible_overview_levels[_base] = [int(_coarser / _base) for _coarser in _arcseconds if _base < _coarser <= 36000]
 for k, v in pyramid_compatible_overview_levels.copy().items():
     pyramid_compatible_overview_levels[str(k)] = v
     pyramid_compatible_overview_levels[int(k)] = v
     pyramid_compatible_overview_levels[str(int(k))] = v
+
+
+# ---------- Subpog tile scheme ----------
+# A subpog is a POG in every respect except extent: its extent is a whole number of cells from the
+# pyramid origin (-180, 90) at its resolution, and its overview levels are the global chain truncated
+# to the levels whose cell divides its extent (see get_pyramid_overview_levels_for_bb). A TILE is a
+# subpog whose extent is exactly one cell of this grid, named by its south-west corner the way SRTM,
+# Copernicus DEM and WorldCover name theirs (N45W120), with the tile edge in degrees in the filename:
+#     <stem>_<arcseconds>sec_<degrees>deg_<corner>.tif        e.g. lulc_esa_2020_10sec_10deg_N40W130.tif
+# Tile edges are chosen so a tile is a few thousand pixels per side; None means the resolution is not
+# tiled (the global POG is small enough to be its own single tile). The scheme is published as an OGC
+# Tile Matrix Set 2.0 document by write_pyramid_tile_matrix_set_json; tile_corner_string_to_tile_matrix_index
+# converts a corner name to that standard's (tileMatrix, tileRow, tileCol) addressing.
+pyramid_tile_degrees = {1.0: 1, 10.0: 10, 30.0: 10, 150.0: None, 300.0: None, 900.0: None, 1800.0: None,
+                        3600.0: None, 7200.0: None, 14400.0: None, 36000.0: None}
+for k, v in pyramid_tile_degrees.copy().items():
+    pyramid_tile_degrees[str(k)] = v
+    pyramid_tile_degrees[int(k)] = v
+    pyramid_tile_degrees[str(int(k))] = v
+
+PYRAMID_TILE_MATRIX_SET_ID = 'EEPyramidCRS84'
+
+
+def get_pyramid_overview_levels_for_bb(arcseconds, bb):
+    """Overview levels for a subpog covering bb: the global chain, keeping only levels whose cell size divides the extent.
+
+    A 1-degree tile of 1-second data keeps levels up to 3600 (the 1-degree level) and drops 7200+; a
+    10-degree tile of 10-second data keeps the full chain. Global bb returns the full chain.
+    """
+    res = pyramid_compatible_resolutions[arcseconds]
+    width, height = bb[2] - bb[0], bb[3] - bb[1]
+    levels = []
+    for level in pyramid_compatible_overview_levels[arcseconds]:
+        cell = level * res
+        if abs(width / cell - round(width / cell)) < 1e-6 and abs(height / cell - round(height / cell)) < 1e-6:
+            levels.append(level)
+    return levels
+
+
+def get_tile_corner_string(lon_sw, lat_sw):
+    """'N40W130' for the tile whose south-west corner is at 40N, 130W. Latitude two digits, longitude three."""
+    lon_sw, lat_sw = int(round(lon_sw)), int(round(lat_sw))
+    return ('N' if lat_sw >= 0 else 'S') + f'{abs(lat_sw):02d}' + ('E' if lon_sw >= 0 else 'W') + f'{abs(lon_sw):03d}'
+
+
+def parse_tile_corner_string(corner):
+    """(lon_sw, lat_sw) from 'N40W130'."""
+    m = re.fullmatch(r'([NS])(\d{2})([EW])(\d{3})', corner)
+    if not m:
+        raise ValueError(f'Not a tile corner string (expected e.g. N40W130): {corner!r}')
+    lat = int(m.group(2)) * (1 if m.group(1) == 'N' else -1)
+    lon = int(m.group(4)) * (1 if m.group(3) == 'E' else -1)
+    return lon, lat
+
+
+def get_tile_bb_from_corner_string(corner, tile_degrees):
+    """[minx, miny, maxx, maxy] of the tile named by corner with the given edge length in degrees."""
+    lon, lat = parse_tile_corner_string(corner)
+    return [lon, lat, lon + tile_degrees, lat + tile_degrees]
+
+
+def list_tile_corner_strings(tile_degrees):
+    """Every tile corner of a global grid with the given edge, west to east within north to south rows (the OGC row/col order)."""
+    return [get_tile_corner_string(lon, lat) for lat in range(90 - tile_degrees, -91, -tile_degrees) for lon in range(-180, 180, tile_degrees)]
+
+
+def get_tile_filename(stem, arcseconds, corner, tile_degrees=None):
+    """'<stem>_<arcseconds>sec_<degrees>deg_<corner>.tif'. tile_degrees defaults to the scheme's edge for that resolution."""
+    if tile_degrees is None:
+        tile_degrees = pyramid_tile_degrees[arcseconds]
+    if tile_degrees is None:
+        raise ValueError(f'{arcseconds} arcseconds is not a tiled resolution in the pyramid tile scheme (pyramid_tile_degrees).')
+    return f'{stem}_{int(arcseconds)}sec_{int(tile_degrees)}deg_{corner}.tif'
+
+
+def parse_tile_filename(filename):
+    """(stem, arcseconds, tile_degrees, corner) from a tile filename; ValueError if the name does not follow the scheme."""
+    m = re.fullmatch(r'(.+)_(\d+)sec_(\d+)deg_([NS]\d{2}[EW]\d{3})\.tif', os.path.basename(filename))
+    if not m:
+        raise ValueError(f'Not a pyramid tile filename (expected <stem>_<sec>sec_<deg>deg_<corner>.tif): {filename!r}')
+    return m.group(1), float(m.group(2)), int(m.group(3)), m.group(4)
+
+
+def tile_corner_string_to_tile_matrix_index(corner, arcseconds, tile_degrees=None):
+    """OGC Tile Matrix Set addressing (tileMatrix id, tileRow, tileCol) for a corner-named tile. Row 0 is the northernmost row."""
+    if tile_degrees is None:
+        tile_degrees = pyramid_tile_degrees[arcseconds]
+    lon, lat = parse_tile_corner_string(corner)
+    return f'{int(arcseconds)}sec', (90 - (lat + tile_degrees)) // tile_degrees, (lon + 180) // tile_degrees
+
+
+def tile_matrix_index_to_tile_corner_string(arcseconds, tile_row, tile_col, tile_degrees=None):
+    """Inverse of tile_corner_string_to_tile_matrix_index."""
+    if tile_degrees is None:
+        tile_degrees = pyramid_tile_degrees[arcseconds]
+    return get_tile_corner_string(-180 + tile_col * tile_degrees, 90 - (tile_row + 1) * tile_degrees)
+
+
+def get_pyramid_tile_matrix_set():
+    """The pyramid tiling scheme as an OGC Two Dimensional Tile Matrix Set 2.0 document (a dict).
+
+    One tile matrix per supported resolution, CRS84 with the origin at the top-left (-180, 90). Tiled
+    resolutions use the edge from pyramid_tile_degrees; the others are published as a single global
+    tile so every resolution is addressable. scaleDenominator follows the standard's convention for
+    geographic CRSs: cell size in degrees * 111319.4907932736 m/degree / 0.00028 m per pixel.
+    """
+    matrices = []
+    for arcseconds in sorted(k for k in pyramid_compatible_resolutions if isinstance(k, float)):
+        res = pyramid_compatible_resolutions[arcseconds]
+        cols, rows = int(round(360 / res)), int(round(180 / res))
+        tile_degrees = pyramid_tile_degrees[arcseconds]
+        if tile_degrees is None:
+            tile_width, tile_height, matrix_width, matrix_height = cols, rows, 1, 1
+        else:
+            tile_width = tile_height = int(round(tile_degrees / res))
+            matrix_width, matrix_height = 360 // tile_degrees, 180 // tile_degrees
+        matrices.append({
+            'id': f'{int(arcseconds)}sec',
+            'scaleDenominator': res * 111319.4907932736 / 0.00028,
+            'cellSize': res,
+            'cornerOfOrigin': 'topLeft',
+            'pointOfOrigin': [-180.0, 90.0],
+            'tileWidth': tile_width,
+            'tileHeight': tile_height,
+            'matrixWidth': matrix_width,
+            'matrixHeight': matrix_height,
+        })
+    return {
+        'id': PYRAMID_TILE_MATRIX_SET_ID,
+        'title': 'Earth-Economy pyramid tiling in CRS84',
+        'description': 'The hazelbean pyramid: global rasters at 1, 10, 30, 150, 300, 900, 1800, 3600, 7200, 14400 and 36000 arcseconds, '
+                       'with the tile edges used for subpog tile sets. Not a quadtree: the scale progression follows the pyramid resolutions.',
+        'crs': 'http://www.opengis.net/def/crs/OGC/1.3/CRS84',
+        'orderedAxes': ['Lon', 'Lat'],
+        'boundingBox': {'lowerLeft': [-180.0, -90.0], 'upperRight': [180.0, 90.0], 'crs': 'http://www.opengis.net/def/crs/OGC/1.3/CRS84'},
+        'tileMatrices': matrices,
+    }
+
+
+def write_pyramid_tile_matrix_set_json(output_path):
+    """Write get_pyramid_tile_matrix_set() as JSON. Returns output_path."""
+    import json
+    with open(output_path, 'w', encoding='utf-8') as f:
+        json.dump(get_pyramid_tile_matrix_set(), f, indent=2)
+    return output_path
+
+
+def validate_tile_matrix_set_json(tile_matrix_set):
+    """Validate a tile matrix set (dict, or path to a JSON file) against the OGC TMS 2.0 schema shipped in hazelbean/ogc_schemas.
+
+    Raises jsonschema.ValidationError on failure; returns True on success. This is the compliance test.
+    """
+    import json
+    import jsonschema
+    from referencing import Registry, Resource
+    if isinstance(tile_matrix_set, str):
+        with open(tile_matrix_set, encoding='utf-8') as f:
+            tile_matrix_set = json.load(f)
+    schema_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ogc_schemas', 'tms_2.0')
+    registry = Registry()
+    for name in os.listdir(schema_dir):
+        if name.endswith('.json'):
+            with open(os.path.join(schema_dir, name), encoding='utf-8') as f:
+                registry = registry.with_resource(name, Resource.from_contents(json.load(f)))
+    with open(os.path.join(schema_dir, 'tileMatrixSet.json'), encoding='utf-8') as f:
+        schema = json.load(f)
+    jsonschema.Draft201909Validator(schema, registry=registry).validate(tile_matrix_set)
+    return True
 
 
 from osgeo import gdal, gdalconst
@@ -289,7 +467,7 @@ ha_per_cell_1800sec_ref_path = os.path.join('pyramids', "ha_per_cell_1800sec.tif
 ha_per_cell_3600sec_ref_path = os.path.join('pyramids', "ha_per_cell_3600sec.tif")
 ha_per_cell_7200sec_ref_path = os.path.join('pyramids', "ha_per_cell_7200sec.tif")
 ha_per_cell_14400sec_ref_path = os.path.join('pyramids', "ha_per_cell_14400sec.tif")
-ha_per_cell_36000sec_ref_path = os.path.join('pyramids', "ha_per_cell_3600s0ec.tif")
+ha_per_cell_36000sec_ref_path = os.path.join('pyramids', "ha_per_cell_36000sec.tif")
 
 
 ha_per_cell_ref_paths = {}
@@ -887,7 +1065,18 @@ def assert_path_global_pyramid(input_path):
         raise NameError('assert_path_global_pyramid failed on ', input_path)
 
 def is_path_global_pyramid(input_path, verbose=False):
-    """Fast method for testing if path is pyramidal."""
+    """Fast method for testing if path is pyramidal (global extent required). See _is_path_pyramid."""
+    return _is_path_pyramid(input_path, require_global=True, verbose=verbose)
+
+
+def is_path_subglobal_pyramid(input_path, verbose=False):
+    """Like is_path_global_pyramid but the extent may be any whole number of cells from the pyramid origin (a subpog's extent)."""
+    return _is_path_pyramid(input_path, require_global=False, verbose=verbose)
+
+
+def _is_path_pyramid(input_path, require_global, verbose=False):
+    """The pyramid checks shared by POGs and subpogs: supported resolution, grid alignment (global if require_global),
+    lzw/deflate, the standard ndv, the prescribed overview levels (truncated to the extent for a subpog), exact stats."""
     to_return = True
     # if verbose:
     #     L.info('Testing if path is global pyramid: ' + str(input_path))
@@ -901,10 +1090,24 @@ def is_path_global_pyramid(input_path, verbose=False):
     shape = hb.get_shape_from_dataset_path(input_path)
     gt = hb.get_geotransform_path(input_path)
 
-    if not pyramid_compatible_geotransforms[pyramid_compatible_resolution_to_arcseconds[res]] == gt:
-        if verbose:
-            hb.log('Not pyramid because geotransform was not pyramidal. Found ' + str(gt) + ' which was not equal to ' + str(pyramid_compatible_geotransforms[pyramid_compatible_resolution_to_arcseconds[res]]) + ' for: '  + str(input_path))
-        to_return = False
+    arcseconds = pyramid_compatible_resolution_to_arcseconds[res]
+    global_gt = pyramid_compatible_geotransforms[arcseconds]
+    if require_global:
+        if global_gt != gt:
+            if verbose:
+                hb.log('Not pyramid because geotransform was not pyramidal. Found ' + str(gt) + ' which was not equal to ' + str(global_gt) + ' for: '  + str(input_path))
+            to_return = False
+    else:
+        # A subpog: same cell size, axis-aligned, origin a whole number of cells from (-180, 90), inside the globe.
+        cells_x, cells_y = (gt[0] + 180) / global_gt[1], (90 - gt[3]) / global_gt[1]
+        aligned = (abs(gt[1] - global_gt[1]) < 1e-9 and abs(gt[5] - global_gt[5]) < 1e-9 and gt[2] == 0 and gt[4] == 0
+                   and abs(cells_x - round(cells_x)) < 1e-6 and abs(cells_y - round(cells_y)) < 1e-6
+                   and gt[0] >= -180 - 1e-9 and gt[3] <= 90 + 1e-9
+                   and gt[0] + shape[1] * gt[1] <= 180 + 1e-6 and gt[3] + shape[0] * gt[5] >= -90 - 1e-6)
+        if not aligned:
+            if verbose:
+                hb.log('Not a subpog because the geotransform is not a whole number of pyramid cells from (-180, 90) at this resolution: ' + str(gt) + ' for: ' + str(input_path))
+            to_return = False
         
     # Interesting bug: If statistics are exact and stored internally to the geotiff but there is ALSO an external .aux.xml file with approximate statistics, 
     # the gdal driver will return approximate statistics. To ensure this doesn't happen, first remove any .aux.xml file that may exist.
@@ -943,7 +1146,11 @@ def is_path_global_pyramid(input_path, verbose=False):
         #     hb.log(f"Overview {i+1}: {ovr.XSize} x {ovr.YSize}")
         levels.append(shape[1] / ovr.XSize)
         
-    correct_levels = hb.pyramid_compatible_overview_levels[pyramid_compatible_resolution_to_arcseconds[res]]
+    if require_global:
+        correct_levels = hb.pyramid_compatible_overview_levels[arcseconds]
+    else:
+        bb = [gt[0], gt[3] + shape[0] * gt[5], gt[0] + shape[1] * gt[1], gt[3]]
+        correct_levels = get_pyramid_overview_levels_for_bb(arcseconds, bb)
     if [int(i) for i in levels] != [int(i) for i in correct_levels]:
         if verbose:
             hb.log(f'Not pyramid because overview levels were not correct: {levels} {correct_levels }' + str(input_path))
@@ -2141,46 +2348,26 @@ def generate_geotransform_of_chunk_from_cr_size_and_larger_path(cr_size, larger_
     res = hb.get_cell_size_from_uri(larger_raster_path)
     return [lon, res, 0., lat, 0., -res]
 
+def snap_bb_to_pyramid(input_bb, arcseconds):
+    """Expand a [minx, miny, maxx, maxy] box outward to the nearest grid lines of a pyramid resolution.
+
+    The grid is anchored at the pyramid origin (-180, 90), not at 0: a 4-degree grid has lines at
+    -2 and 2 near the equator, so floor/ceil against 0 would be wrong there. Edges already on a
+    grid line stay put (a small tolerance absorbs float noise, so 1/360-degree edges do not grow by
+    a whole cell). The result is a subpog-shaped box: a whole number of cells from the origin.
+    """
+    res = pyramid_compatible_resolutions[arcseconds]
+    eps = 1e-9
+    left = math.floor((input_bb[0] + 180) / res + eps) * res - 180
+    right = math.ceil((input_bb[2] + 180) / res - eps) * res - 180
+    top = 90 - math.floor((90 - input_bb[3]) / res + eps) * res
+    bottom = 90 - math.ceil((90 - input_bb[1]) / res - eps) * res
+    return [left, bottom, right, top]
+
+
 def get_pyramid_compatible_bb_from_vector_and_resolution(input_vector, pyramid_resolution):
-    """
-    get a BB expanded outwards to include all of the input vector up to the nearest bounds of pyramid resolution
-
-    :param input_vector: GPKG pointiing to the AOI or other vector needd to calculate inclusive coarse pyramid tiles.
-    :param pyramid_resolution: in arcseconds
-    :return: [r, c, r_size, c_size]
-
-    Note that this is cmore challenging than it seems. For example, with a pyramid resolution of 4, the bounds are -2 to 2 near the equator. This 
-    Makes ceil floor rounding not make sense. Instead need to convert -90 90 to 0 180+ m. This is implemented in bb2, which is different than the incorrect bb.
-    """
-    exact_bb = hb.spatial_projection.get_bounding_box(input_vector)
-
-    pyramid_resolution_degrees = pyramid_compatible_resolutions[pyramid_resolution]
-
-    bb = [0, 0, 0, 0]
-    # a = exact_bb[0] / pyramid_resolution_degrees
-    # b = float(math.floor(exact_bb[0] / pyramid_resolution_degrees))
-    # c = pyramid_resolution_degrees * float(math.floor(exact_bb[0] / pyramid_resolution_degrees))
-    # d = int(pyramid_resolution_degrees * round(float(exact_bb[0])/pyramid_resolution_degrees))
-
-    bb[0] = pyramid_resolution_degrees * float(math.floor(exact_bb[0] / pyramid_resolution_degrees))
-    bb[1] = pyramid_resolution_degrees * float(math.floor(exact_bb[1] / pyramid_resolution_degrees))
-    bb[2] = pyramid_resolution_degrees * float(math.ceil(exact_bb[2] / pyramid_resolution_degrees))
-    bb[3] = pyramid_resolution_degrees * float(math.ceil(exact_bb[3] / pyramid_resolution_degrees))
-    
-    shifted_bb = [0, 0, 0, 0]
-    shifted_bb[0] = exact_bb[0] + 180
-    shifted_bb[1] = -1 * exact_bb[3] + 90
-    shifted_bb[2] = exact_bb[2] + 180
-    shifted_bb[3] = -1 * exact_bb[1] + 90
-
-    bb2 = [0, 0, 0, 0]
-    bb2[0] = pyramid_resolution_degrees * float(math.floor(shifted_bb[0] / pyramid_resolution_degrees)) - 180
-    bb2[3] = -1 * (pyramid_resolution_degrees * float(math.floor(shifted_bb[1] / pyramid_resolution_degrees)) - 90)
-    bb2[2] = pyramid_resolution_degrees * float(math.ceil(shifted_bb[2] / pyramid_resolution_degrees)) - 180
-    bb2[1] = -1 * (pyramid_resolution_degrees * float(math.ceil(shifted_bb[3] / pyramid_resolution_degrees)) - 90)
-
-
-    return bb2
+    """Bounding box of a vector, expanded outward to the pyramid grid at pyramid_resolution (arcseconds). See snap_bb_to_pyramid."""
+    return snap_bb_to_pyramid(hb.spatial_projection.get_bounding_box(input_vector), pyramid_resolution)
 
 def is_path_same_geotransform(input_path, match_path, raise_exception=False, surpress_output=False):
     """Throw exception if input_path is not the same geotransform as the match path."""
