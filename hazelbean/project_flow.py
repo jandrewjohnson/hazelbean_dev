@@ -675,8 +675,16 @@ class ProjectFlow(object):
         No-op on None/empty. Warns on names that match no task so a typo doesn't
         silently leave an expensive task enabled.
         """
+        # A task is found by its NAME in the tree, not only by the '<name>_task' attribute: a
+        # builder may store a task under any attribute (p.get_vars_task for get_all_extended_vars),
+        # and a name that resolves nowhere used to leave that task silently enabled.
+        by_name = {}
+        for node in getattr(self.task_tree, 'descendants', []) or []:
+            by_name.setdefault(getattr(node, 'name', None), node)
         for name in task_names or []:
             task = getattr(self, name + '_task', None)
+            if task is None:
+                task = by_name.get(name)
             if task is not None:
                 task.run = 0
             else:
