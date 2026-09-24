@@ -376,8 +376,17 @@ def zonal_statistics_flex(input_raster,
             sums = sums[unique_ids]
             counts = counts[unique_ids]
         df = pd.DataFrame(index=unique_ids, data={'sums': sums, 'counts': counts})
-        df[df == 0] = np.nan
-        df.dropna(inplace=True)
+        # A zone is empty when nothing was MEASURED in it, which is counts == 0. It is not empty
+        # because the thing measured came to zero: `df[df == 0] = np.nan` followed by dropna also
+        # deleted every zone whose SUM was exactly 0.0, however many valid pixels it held. On the
+        # D19 biomass rasters that silently removed ten forest-free zones from a 470-zone summary --
+        # one of them 3,862,087 valid pixels -- and a measured zero then reached the consumer as an
+        # absent zone, indistinguishable from a zone with no data at all (2026-09-24). A measured
+        # zero is a measurement; only an unmeasured zone is missing.
+        #
+        # The `sums` branch above cannot make this distinction, because without counts a zero sum
+        # and an empty zone are genuinely the same row. It is left as it is rather than guessed at.
+        df = df[df['counts'] > 0]
 
         if vector_columns_to_include_in_output is not None:
             gdf = gpd.read_file(zones_vector_path)
@@ -491,6 +500,12 @@ def zonal_statistics_rasterized(zone_ids_raster_path, values_raster_path, zones_
     # aggregated_sums = np.zeros(len(unique_zone_ids), dtype=np.float64)
     # aggregated_counts = np.zeros(len(unique_zone_ids), dtype=np.int64)
 
+    # See the block-level note below: a non-finite values_ndv cannot mask anything, so the kernel
+    # is given a finite stand-in and the same value is used to rewrite non-finite cells.
+    mask_ndv = values_ndv
+    if mask_ndv is not None and not np.isfinite(mask_ndv):
+        mask_ndv = np.finfo(np.float64).min
+
     last_time = time.time()
     pixels_processed = 0
 
@@ -533,10 +548,18 @@ def zonal_statistics_rasterized(zone_ids_raster_path, values_raster_path, zones_
             # np.isnan guard further down then reads the result as zero -- the zone silently drops
             # out of the sum while its cells stay counted. Mapping non-finite values onto values_ndv
             # here means NaN is masked like any other nodata, wherever the value came from.
-            if values_ndv is not None:
+            #
+            # That mapping is a NO-OP when values_ndv is itself NaN, which is what a raster written
+            # with ndv=np.nan declares: NaN is replaced by NaN, the kernel's `v != values_ndv` still
+            # never matches (NaN compares unequal to everything, itself included), and the block is
+            # lost exactly as described above. The kernel cannot test isnan itself -- measured at
+            # 400x slower, see the note in cython_functions.pyx -- so map non-finite values onto a
+            # FINITE sentinel and have the kernel mask on that instead. float64's minimum is not
+            # representable in float32 raster data, so it cannot collide with a real value.
+            if mask_ndv is not None:
                 non_finite = ~np.isfinite(values_array)
                 if non_finite.any():
-                    values_array = np.where(non_finite, values_ndv, values_array)
+                    values_array = np.where(non_finite, mask_ndv, values_array)
 
             zones_array = zones_ds.ReadAsArray(block_offset_new_gdal_api['xoff'], block_offset_new_gdal_api['yoff'], block_offset_new_gdal_api['buf_xsize'], block_offset_new_gdal_api['buf_ysize']).astype(np.int64)
 
@@ -551,12 +574,12 @@ def zonal_statistics_rasterized(zone_ids_raster_path, values_raster_path, zones_
                 L.debug('Running zonal_statistics_flex with many unique_zone_ids: ' + str(unique_zone_ids_np))
 
             if stats_to_retrieve=='sums':
-                sums = hb.calculation_core.cython_functions.zonal_stats_cythonized(zones_array, values_array, unique_zone_ids_np, zones_ndv=zones_ndv, values_ndv=values_ndv, stats_to_retrieve=stats_to_retrieve)
+                sums = hb.calculation_core.cython_functions.zonal_stats_cythonized(zones_array, values_array, unique_zone_ids_np, zones_ndv=zones_ndv, values_ndv=mask_ndv, stats_to_retrieve=stats_to_retrieve)
                 sums = np.asarray(sums, dtype=float)
                 sums[np.isnan(sums)] = 0.0 
                 aggregated_sums = aggregated_sums + sums
             elif stats_to_retrieve == 'sums_counts':
-                sums, counts = hb.calculation_core.cython_functions.zonal_stats_cythonized(zones_array, values_array, unique_zone_ids_np, zones_ndv=zones_ndv, values_ndv=values_ndv, stats_to_retrieve=stats_to_retrieve)
+                sums, counts = hb.calculation_core.cython_functions.zonal_stats_cythonized(zones_array, values_array, unique_zone_ids_np, zones_ndv=zones_ndv, values_ndv=mask_ndv, stats_to_retrieve=stats_to_retrieve)
                 sums = np.asarray(sums, dtype=float)
                 counts = np.asarray(counts, dtype=int)
 
@@ -579,7 +602,7 @@ def zonal_statistics_rasterized(zone_ids_raster_path, values_raster_path, zones_
                         multiply_raster = multiply_ds.ReadAsArray(block_offset_new_gdal_api['xoff'], block_offset_new_gdal_api['yoff'], block_offset_new_gdal_api['buf_xsize'], block_offset_new_gdal_api['buf_ysize']).astype(np.float64)
                 else:
                     multiply_raster = np.asarray([[1]], dtype=np.float64)
-                enumeration = hb.calculation_core.cython_functions.zonal_stats_cythonized(zones_array, values_array, unique_zone_ids_np, zones_ndv=zones_ndv, values_ndv=values_ndv,
+                enumeration = hb.calculation_core.cython_functions.zonal_stats_cythonized(zones_array, values_array, unique_zone_ids_np, zones_ndv=zones_ndv, values_ndv=mask_ndv,
                                                         stats_to_retrieve=stats_to_retrieve, enumeration_classes=np.asarray(enumeration_classes, dtype=np.int64), multiply_raster=np.asarray(multiply_raster, dtype=np.float64))
 
                 if aggregated_enumeration is None:
