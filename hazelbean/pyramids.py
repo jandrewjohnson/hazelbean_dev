@@ -21,22 +21,46 @@ from hazelbean import config as hb_config
 L = hb_config.get_logger('pyramids', logging_level='info')
 
 # Define the resolutions compatible with pyramid calculation as key = arcseconds, value = resolution in 64 bit notation, precisely defined with the right amount of significant digits.
+from fractions import Fraction
+
+
+def arcseconds_to_token(arcseconds):
+    """The rung's name in filenames and tile-matrix ids: '10' for 10 arcseconds, '3-10' for 3/10 (reduced fraction, lowest terms)."""
+    f = Fraction(arcseconds).limit_denominator(1000000)
+    return str(f.numerator) if f.denominator == 1 else f'{f.numerator}-{f.denominator}'
+
+
+def token_to_arcseconds(token):
+    """Inverse of arcseconds_to_token: '3-10' -> 0.3, '10' -> 10.0."""
+    p, _, q = str(token).partition('-')
+    return float(Fraction(int(p), int(q) if q else 1))
+
+
 pyramid_compatible_arcseconds = [
+    1 / 9,
+    0.3,
+    1 / 3,
+    0.9,
     1.0,
+    3.0,
     10.0,
+    15.0,
     30.0,
     150.0,
     300.0,
     900.0,
     1800.0,
     3600.0,
-    7200.0,
-    14400.0,
+    18000.0,
     36000.0,
+    108000.0,
+    324000.0,
+    648000.0,
     ]
 for i in pyramid_compatible_arcseconds.copy():
     pyramid_compatible_arcseconds.append(str(i))
-    pyramid_compatible_arcseconds.append(int(i))
+    if i == int(i):
+        pyramid_compatible_arcseconds.append(int(i))
     pyramid_compatible_arcseconds.append(str(float(i)))   
     
     
@@ -59,6 +83,12 @@ for i in pyramid_compatible_arcseconds_old.copy():
 
 pyramid_ha_per_cell_ref_paths = {}
 pyramid_ha_per_cell_ref_paths[1.0] = os.path.join('pyramids', 'ha_per_cell_1sec.tif')
+pyramid_ha_per_cell_ref_paths[0.3] = os.path.join('pyramids', 'ha_per_cell_3-10sec.tif')
+pyramid_ha_per_cell_ref_paths[1 / 9] = os.path.join('pyramids', 'ha_per_cell_1-9sec.tif')
+pyramid_ha_per_cell_ref_paths[1 / 3] = os.path.join('pyramids', 'ha_per_cell_1-3sec.tif')
+pyramid_ha_per_cell_ref_paths[0.9] = os.path.join('pyramids', 'ha_per_cell_9-10sec.tif')
+pyramid_ha_per_cell_ref_paths[3.0] = os.path.join('pyramids', 'ha_per_cell_3sec.tif')
+pyramid_ha_per_cell_ref_paths[15.0] = os.path.join('pyramids', 'ha_per_cell_15sec.tif')
 pyramid_ha_per_cell_ref_paths[10.0] = os.path.join('pyramids', 'ha_per_cell_10sec.tif')
 pyramid_ha_per_cell_ref_paths[30.0] = os.path.join('pyramids', 'ha_per_cell_30sec.tif')
 pyramid_ha_per_cell_ref_paths[150.0] = os.path.join('pyramids', 'ha_per_cell_150sec.tif')
@@ -66,17 +96,26 @@ pyramid_ha_per_cell_ref_paths[300.0] = os.path.join('pyramids', 'ha_per_cell_300
 pyramid_ha_per_cell_ref_paths[900.0] = os.path.join('pyramids', 'ha_per_cell_900sec.tif')
 pyramid_ha_per_cell_ref_paths[1800.0] = os.path.join('pyramids', 'ha_per_cell_1800sec.tif')
 pyramid_ha_per_cell_ref_paths[3600.0] = os.path.join('pyramids', 'ha_per_cell_3600sec.tif')
-pyramid_ha_per_cell_ref_paths[7200.0] = os.path.join('pyramids', 'ha_per_cell_7200sec.tif')
-pyramid_ha_per_cell_ref_paths[14400.0] = os.path.join('pyramids', 'ha_per_cell_14400sec.tif')
 pyramid_ha_per_cell_ref_paths[36000.0] = os.path.join('pyramids', 'ha_per_cell_36000sec.tif')
+pyramid_ha_per_cell_ref_paths[18000.0] = os.path.join('pyramids', 'ha_per_cell_18000sec.tif')
+pyramid_ha_per_cell_ref_paths[108000.0] = os.path.join('pyramids', 'ha_per_cell_108000sec.tif')
+pyramid_ha_per_cell_ref_paths[324000.0] = os.path.join('pyramids', 'ha_per_cell_324000sec.tif')
+pyramid_ha_per_cell_ref_paths[648000.0] = os.path.join('pyramids', 'ha_per_cell_648000sec.tif')
 for k, v in pyramid_ha_per_cell_ref_paths.copy().items():
     pyramid_ha_per_cell_ref_paths[str(k)] = v
-    pyramid_ha_per_cell_ref_paths[int(k)] = v
-    pyramid_ha_per_cell_ref_paths[str(int(k))] = v
+    if k == int(k):
+        pyramid_ha_per_cell_ref_paths[int(k)] = v
+        pyramid_ha_per_cell_ref_paths[str(int(k))] = v
 
 
 pyramid_match_ref_paths = {}
 pyramid_match_ref_paths[1.0] = os.path.join('pyramids', 'match_1sec.tif')
+pyramid_match_ref_paths[0.3] = os.path.join('pyramids', 'match_3-10sec.tif')
+pyramid_match_ref_paths[1 / 9] = os.path.join('pyramids', 'match_1-9sec.tif')
+pyramid_match_ref_paths[1 / 3] = os.path.join('pyramids', 'match_1-3sec.tif')
+pyramid_match_ref_paths[0.9] = os.path.join('pyramids', 'match_9-10sec.tif')
+pyramid_match_ref_paths[3.0] = os.path.join('pyramids', 'match_3sec.tif')
+pyramid_match_ref_paths[15.0] = os.path.join('pyramids', 'match_15sec.tif')
 pyramid_match_ref_paths[10.0] = os.path.join('pyramids', 'match_10sec.tif')
 pyramid_match_ref_paths[30.0] = os.path.join('pyramids', 'match_30sec.tif')
 pyramid_match_ref_paths[150.0] = os.path.join('pyramids', 'match_150sec.tif')
@@ -84,16 +123,25 @@ pyramid_match_ref_paths[300.0] = os.path.join('pyramids', 'match_300sec.tif')
 pyramid_match_ref_paths[900.0] = os.path.join('pyramids', 'match_900sec.tif')
 pyramid_match_ref_paths[1800.0] = os.path.join('pyramids', 'match_1800sec.tif')
 pyramid_match_ref_paths[3600.0] = os.path.join('pyramids', 'match_3600sec.tif')
-pyramid_match_ref_paths[7200.0] = os.path.join('pyramids', 'match_7200sec.tif')
-pyramid_match_ref_paths[14400.0] = os.path.join('pyramids', 'match_14400sec.tif')
 pyramid_match_ref_paths[36000.0] = os.path.join('pyramids', 'match_36000sec.tif')
+pyramid_match_ref_paths[18000.0] = os.path.join('pyramids', 'match_18000sec.tif')
+pyramid_match_ref_paths[108000.0] = os.path.join('pyramids', 'match_108000sec.tif')
+pyramid_match_ref_paths[324000.0] = os.path.join('pyramids', 'match_324000sec.tif')
+pyramid_match_ref_paths[648000.0] = os.path.join('pyramids', 'match_648000sec.tif')
 for k, v in pyramid_match_ref_paths.copy().items():
     pyramid_match_ref_paths[str(k)] = v
-    pyramid_match_ref_paths[int(k)] = v
-    pyramid_match_ref_paths[str(int(k))] = v
+    if k == int(k):
+        pyramid_match_ref_paths[int(k)] = v
+        pyramid_match_ref_paths[str(int(k))] = v
 
 
 ha_per_cell_column_1sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_1sec.tif')
+ha_per_cell_column_3_10sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_3-10sec.tif')
+ha_per_cell_column_1_9sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_1-9sec.tif')
+ha_per_cell_column_1_3sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_1-3sec.tif')
+ha_per_cell_column_9_10sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_9-10sec.tif')
+ha_per_cell_column_3sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_3sec.tif')
+ha_per_cell_column_15sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_15sec.tif')
 ha_per_cell_column_10sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_10sec.tif')
 ha_per_cell_column_30sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_30sec.tif')
 ha_per_cell_column_150sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_150sec.tif')
@@ -101,13 +149,21 @@ ha_per_cell_column_300sec_ref_path = os.path.join('pyramids', 'ha_per_cell_colum
 ha_per_cell_column_900sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_900sec.tif')
 ha_per_cell_column_1800sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_1800sec.tif')
 ha_per_cell_column_3600sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_3600sec.tif')
-ha_per_cell_column_7200sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_7200sec.tif')
-ha_per_cell_column_14400sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_14400sec.tif')
 ha_per_cell_column_36000sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_36000sec.tif')
+ha_per_cell_column_18000sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_18000sec.tif')
+ha_per_cell_column_108000sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_108000sec.tif')
+ha_per_cell_column_324000sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_324000sec.tif')
+ha_per_cell_column_648000sec_ref_path = os.path.join('pyramids', 'ha_per_cell_column_648000sec.tif')
 
 
 pyramid_compatible_resolution_to_arcseconds = {}
 pyramid_compatible_resolution_to_arcseconds[0.0002777777777777778] =    1.0
+pyramid_compatible_resolution_to_arcseconds[1 / 12000] = 0.3
+pyramid_compatible_resolution_to_arcseconds[1 / 32400] = 1 / 9
+pyramid_compatible_resolution_to_arcseconds[1 / 10800] = 1 / 3
+pyramid_compatible_resolution_to_arcseconds[1 / 4000] = 0.9
+pyramid_compatible_resolution_to_arcseconds[1 / 1200] = 3.0
+pyramid_compatible_resolution_to_arcseconds[1 / 240] = 15.0
 pyramid_compatible_resolution_to_arcseconds[0.002777777777777778] =    10.0
 pyramid_compatible_resolution_to_arcseconds[0.008333333333333333] =    30.0
 pyramid_compatible_resolution_to_arcseconds[0.008333333333333333 * 5] =    150.0
@@ -115,17 +171,26 @@ pyramid_compatible_resolution_to_arcseconds[0.08333333333333333] =   300.0
 pyramid_compatible_resolution_to_arcseconds[0.25] =   900.0
 pyramid_compatible_resolution_to_arcseconds[0.5] =  1800.0
 pyramid_compatible_resolution_to_arcseconds[1.0] =  3600.0
-pyramid_compatible_resolution_to_arcseconds[2.0] =  7200.0
-pyramid_compatible_resolution_to_arcseconds[4.0] = 14400.0
 pyramid_compatible_resolution_to_arcseconds[10.0] = 36000.0
+pyramid_compatible_resolution_to_arcseconds[5.0] = 18000.0
+pyramid_compatible_resolution_to_arcseconds[30.0] = 108000.0
+pyramid_compatible_resolution_to_arcseconds[90.0] = 324000.0
+pyramid_compatible_resolution_to_arcseconds[180.0] = 648000.0
 for k, v in pyramid_compatible_resolution_to_arcseconds.copy().items():
     pyramid_compatible_resolution_to_arcseconds[str(k)] = v
-    pyramid_compatible_resolution_to_arcseconds[int(k)] = v
-    pyramid_compatible_resolution_to_arcseconds[str(int(k))] = v
+    if k == int(k):
+        pyramid_compatible_resolution_to_arcseconds[int(k)] = v
+        pyramid_compatible_resolution_to_arcseconds[str(int(k))] = v
 
 
 pyramid_compatible_resolutions = {}
 pyramid_compatible_resolutions[1.0] =     0.0002777777777777778 # 0002777777777777778, 0002777777777777777775
+pyramid_compatible_resolutions[0.3] = 1 / 12000
+pyramid_compatible_resolutions[1 / 9] = 1 / 32400
+pyramid_compatible_resolutions[1 / 3] = 1 / 10800
+pyramid_compatible_resolutions[0.9] = 1 / 4000
+pyramid_compatible_resolutions[3.0] = 1 / 1200
+pyramid_compatible_resolutions[15.0] = 1 / 240
 pyramid_compatible_resolutions[10.0] =    0.002777777777777778
 pyramid_compatible_resolutions[30.0] =    0.008333333333333333
 pyramid_compatible_resolutions[150.0] =   0.008333333333333333 * 5
@@ -133,18 +198,27 @@ pyramid_compatible_resolutions[300.0] =   0.08333333333333333
 pyramid_compatible_resolutions[900.0] =   0.25
 pyramid_compatible_resolutions[1800.0] =  0.5
 pyramid_compatible_resolutions[3600.0] =  1.0
-pyramid_compatible_resolutions[7200.0] =  2.0
-pyramid_compatible_resolutions[14400.0] = 4.0
 pyramid_compatible_resolutions[36000.0] = 10.0
+pyramid_compatible_resolutions[18000.0] = 5.0
+pyramid_compatible_resolutions[108000.0] = 30.0
+pyramid_compatible_resolutions[324000.0] = 90.0
+pyramid_compatible_resolutions[648000.0] = 180.0
 for k, v in pyramid_compatible_resolutions.copy().items():
     pyramid_compatible_resolutions[str(k)] = v
-    pyramid_compatible_resolutions[int(k)] = v
-    pyramid_compatible_resolutions[str(int(k))] = v
+    if k == int(k):
+        pyramid_compatible_resolutions[int(k)] = v
+        pyramid_compatible_resolutions[str(int(k))] = v
 
 
 # Define the bounds of what should raise an assertion that the file is close but not exactly matching one of the supported resolutions.
 pyramid_compatible_resolution_bounds = {}
 pyramid_compatible_resolution_bounds[1.0] =    (0.0002777777, 0.0002777778)
+pyramid_compatible_resolution_bounds[0.3] = (8.3332e-05, 8.3335e-05)
+pyramid_compatible_resolution_bounds[1 / 9] = (3.08641e-05, 3.08643e-05)
+pyramid_compatible_resolution_bounds[1 / 3] = (9.25925e-05, 9.25927e-05)
+pyramid_compatible_resolution_bounds[0.9] = (0.00024999, 0.00025001)
+pyramid_compatible_resolution_bounds[3.0] = (0.00083332, 0.00083335)
+pyramid_compatible_resolution_bounds[15.0] = (0.0041666, 0.0041667)
 pyramid_compatible_resolution_bounds[10.0] =    (0.0027777, 0.00277778)
 pyramid_compatible_resolution_bounds[30.0] =    (0.0083333, 0.00833334)
 pyramid_compatible_resolution_bounds[150.0] =    (0.0083333*5, 0.00833334*5)
@@ -152,17 +226,26 @@ pyramid_compatible_resolution_bounds[300.0] =   (0.08333, 0.08334)
 pyramid_compatible_resolution_bounds[900.0] =   (0.24999, 0.25001)
 pyramid_compatible_resolution_bounds[1800.0] =  (0.4999, 0.5001)
 pyramid_compatible_resolution_bounds[3600.0] =  (0.999, 1.001)
-pyramid_compatible_resolution_bounds[7200.0] =  (1.999, 2.001)
-pyramid_compatible_resolution_bounds[14400.0] = (3.999, 4.001)
 pyramid_compatible_resolution_bounds[36000.0] = (9.999, 10.001)
+pyramid_compatible_resolution_bounds[18000.0] = (4.999, 5.001)
+pyramid_compatible_resolution_bounds[108000.0] = (29.999, 30.001)
+pyramid_compatible_resolution_bounds[324000.0] = (89.999, 90.001)
+pyramid_compatible_resolution_bounds[648000.0] = (179.999, 180.001)
 for k, v in pyramid_compatible_resolution_bounds.copy().items():
     pyramid_compatible_resolution_bounds[str(k)] = v
-    pyramid_compatible_resolution_bounds[int(k)] = v
-    pyramid_compatible_resolution_bounds[str(int(k))] = v
+    if k == int(k):
+        pyramid_compatible_resolution_bounds[int(k)] = v
+        pyramid_compatible_resolution_bounds[str(int(k))] = v
 
 
 pyramid_compatable_shapes = {}
 pyramid_compatable_shapes[1.0] = [1296000, 648000]
+pyramid_compatable_shapes[0.3] = [4320000, 2160000]
+pyramid_compatable_shapes[1 / 9] = [11664000, 5832000]
+pyramid_compatable_shapes[1 / 3] = [3888000, 1944000]
+pyramid_compatable_shapes[0.9] = [1440000, 720000]
+pyramid_compatable_shapes[3.0] = [432000, 216000]
+pyramid_compatable_shapes[15.0] = [86400, 43200]
 pyramid_compatable_shapes[10.0] = [129600, 64800]
 pyramid_compatable_shapes[30.0] = [43200, 21600]
 pyramid_compatable_shapes[150.0] = [8640, 4320]
@@ -171,17 +254,26 @@ pyramid_compatable_shapes[600.0] = [2160, 1080]
 pyramid_compatable_shapes[900.0] = [1440, 720]
 pyramid_compatable_shapes[1800.0] = [720, 360]
 pyramid_compatable_shapes[3600.0] = [360, 180]
-pyramid_compatable_shapes[7200.0] = [180, 90]
-pyramid_compatable_shapes[14400.0] = [90, 45]
 pyramid_compatable_shapes[36000.0] = [36, 18]
+pyramid_compatable_shapes[18000.0] = [72, 36]
+pyramid_compatable_shapes[108000.0] = [12, 6]
+pyramid_compatable_shapes[324000.0] = [4, 2]
+pyramid_compatable_shapes[648000.0] = [2, 1]
 for k, v in pyramid_compatable_shapes.copy().items():
     pyramid_compatable_shapes[str(k)] = v
-    pyramid_compatable_shapes[int(k)] = v
-    pyramid_compatable_shapes[str(int(k))] = v
+    if k == int(k):
+        pyramid_compatable_shapes[int(k)] = v
+        pyramid_compatable_shapes[str(int(k))] = v
 
 
 pyramid_compatable_shapes_to_arcseconds = {}
 pyramid_compatable_shapes_to_arcseconds[(1296000, 648000)] = 1.0
+pyramid_compatable_shapes_to_arcseconds[(4320000, 2160000)] = 0.3
+pyramid_compatable_shapes_to_arcseconds[(11664000, 5832000)] = 1 / 9
+pyramid_compatable_shapes_to_arcseconds[(3888000, 1944000)] = 1 / 3
+pyramid_compatable_shapes_to_arcseconds[(1440000, 720000)] = 0.9
+pyramid_compatable_shapes_to_arcseconds[(432000, 216000)] = 3.0
+pyramid_compatable_shapes_to_arcseconds[(86400, 43200)] = 15.0
 pyramid_compatable_shapes_to_arcseconds[(129600, 64800)] = 10.0
 pyramid_compatable_shapes_to_arcseconds[(43200, 21600)] = 30.0
 pyramid_compatable_shapes_to_arcseconds[(8640, 4320)] = 150.0
@@ -190,13 +282,13 @@ pyramid_compatable_shapes_to_arcseconds[(2160, 1080)] = 600.0
 pyramid_compatable_shapes_to_arcseconds[(1440, 720)] = 900.0
 pyramid_compatable_shapes_to_arcseconds[(720, 360)] = 1800
 pyramid_compatable_shapes_to_arcseconds[(360, 180)] = 3600
-pyramid_compatable_shapes_to_arcseconds[(180, 90)] = 7200
-pyramid_compatable_shapes_to_arcseconds[(90, 45)] = 14400
 pyramid_compatable_shapes_to_arcseconds[(36, 18)] = 36000
+pyramid_compatable_shapes_to_arcseconds[(72, 36)] = 18000
+pyramid_compatable_shapes_to_arcseconds[(12, 6)] = 108000
+pyramid_compatable_shapes_to_arcseconds[(4, 2)] = 324000
+pyramid_compatable_shapes_to_arcseconds[(2, 1)] = 648000
 
 geotransform_global_36600sec = (-180.0, 10.0, 0.0, 90.0, 0.0, -10.0)
-geotransform_global_14400sec = (-180.0, 4.0, 0.0, 90.0, 0.0, -4.0)
-geotransform_global_7200sec = (-180.0, 2.0, 0.0, 90.0, 0.0, -2.0)
 geotransform_global_3600sec = (-180.0, 1.0, 0.0, 90.0, 0.0, -1.0)
 geotransform_global_1800sec = (-180.0, 0.5, 0.0, 90.0, 0.0, -0.5)
 geotransform_global_900sec= (-180.0, 0.25, 0.0, 90.0, 0.0, -0.25)
@@ -208,6 +300,12 @@ geotransform_global_1sec = (-180.0, 0.0002777777777777778, 0.0, 90.0, 0.0, -0.00
 
 pyramid_compatible_geotransforms = {}
 pyramid_compatible_geotransforms[1.0] = (-180.0, 0.0002777777777777778, 0.0, 90.0, 0.0, -0.0002777777777777778)
+pyramid_compatible_geotransforms[0.3] = (-180.0, 1 / 12000, 0.0, 90.0, 0.0, -(1 / 12000))
+pyramid_compatible_geotransforms[1 / 9] = (-180.0, 1 / 32400, 0.0, 90.0, 0.0, -(1 / 32400))
+pyramid_compatible_geotransforms[1 / 3] = (-180.0, 1 / 10800, 0.0, 90.0, 0.0, -(1 / 10800))
+pyramid_compatible_geotransforms[0.9] = (-180.0, 1 / 4000, 0.0, 90.0, 0.0, -(1 / 4000))
+pyramid_compatible_geotransforms[3.0] = (-180.0, 1 / 1200, 0.0, 90.0, 0.0, -(1 / 1200))
+pyramid_compatible_geotransforms[15.0] = (-180.0, 1 / 240, 0.0, 90.0, 0.0, -(1 / 240))
 pyramid_compatible_geotransforms[10.0] = (-180.0, 0.002777777777777778, 0.0, 90.0, 0.0, -0.002777777777777778)
 pyramid_compatible_geotransforms[30.0] = (-180.0, 0.008333333333333333, 0.0, 90.0, 0.0, -0.008333333333333333)
 pyramid_compatible_geotransforms[150.0] = (-180.0, 0.008333333333333333*5, 0.0, 90.0, 0.0, -0.008333333333333333*5)
@@ -215,43 +313,66 @@ pyramid_compatible_geotransforms[300.0] = (-180.0, 0.08333333333333333, 0.0, 90.
 pyramid_compatible_geotransforms[900.0] = (-180.0, 0.25, 0.0, 90.0, 0.0, -0.25)
 pyramid_compatible_geotransforms[1800.0] = (-180.0, 0.5, 0.0, 90.0, 0.0, -0.5)
 pyramid_compatible_geotransforms[3600.0] = (-180.0, 1.0, 0.0, 90.0, 0.0, -1.0)
-pyramid_compatible_geotransforms[7200.0] = (-180.0, 2.0, 0.0, 90.0, 0.0, -2.0)
-pyramid_compatible_geotransforms[14400.0] = (-180.0, 4.0, 0.0, 90.0, 0.0, -4.0)
 pyramid_compatible_geotransforms[36000.0] = (-180.0, 10.0, 0.0, 90.0, 0.0, -10.0)
+pyramid_compatible_geotransforms[18000.0] = (-180.0, 5.0, 0.0, 90.0, 0.0, -5.0)
+pyramid_compatible_geotransforms[108000.0] = (-180.0, 30.0, 0.0, 90.0, 0.0, -30.0)
+pyramid_compatible_geotransforms[324000.0] = (-180.0, 90.0, 0.0, 90.0, 0.0, -90.0)
+pyramid_compatible_geotransforms[648000.0] = (-180.0, 180.0, 0.0, 90.0, 0.0, -180.0)
 for k, v in pyramid_compatible_geotransforms.copy().items():
     pyramid_compatible_geotransforms[str(k)] = v
-    pyramid_compatible_geotransforms[int(k)] = v
-    pyramid_compatible_geotransforms[str(int(k))] = v
+    if k == int(k):
+        pyramid_compatible_geotransforms[int(k)] = v
+        pyramid_compatible_geotransforms[str(int(k))] = v
 
 
 # I decided that there are two types of supported pyramid levels:
 # Main: 1, 3, 10, 300, 900, 1800 arc seconds (soon to add 333msec). All main and secondary must have overviews that represent all of the coarser set of these main levels
 # Secondary: 30, 150. Common as an input, but overviews of OTHER levels aren't generated for these.
-# Overview levels are DERIVED, not chosen: a base resolution's levels are the full chain of coarser
-# supported resolutions, capped at 10 degrees (36000 arcseconds), so every overview of a POG lands
-# exactly on a coarser POG grid. A file that is already 512 pixels or smaller in both dimensions
-# (1 degree and coarser) gets no overviews at all; GDAL's COG validator only asks for them above
-# 512. Formalized 2026-09-15, replacing a hand-written table whose 1-second chain started at an
-# unsupported 3 seconds and whose coarse entries ([2, 4]) overshot to unsupported 8-40 degree levels.
-#   1 sec:    [10, 30, 150, 300, 900, 1800, 3600, 7200, 14400, 36000]
-#   10 sec:   [3, 15, 30, 90, 180, 360, 720, 1440, 3600]
-#   30 sec:   [5, 10, 30, 60, 120, 240, 480, 1200]
-#   150 sec:  [2, 6, 12, 24, 48, 96, 240]
-#   300 sec:  [3, 6, 12, 24, 48, 120]           -> coarsest overview is 36 x 18
-#   900 sec:  [2, 4, 8, 16, 40]
-#   1800 sec: [2, 4, 8, 20]
-#   3600 sec and coarser: []                    -> 360 x 180 or smaller, no overviews
-pyramid_compatible_overview_levels = {}
+# The ladder is a SPINE with SIDE RUNGS.
+# The spine is the canonical chain, 1 sec to the 180-degree top rung (a 2 x 1 grid: the two faces of the
+# equirectangular map). Every adjacent spine ratio is an integer (asserted below), so the spine is a chain:
+# below one degree its rungs match product families (SRTM/Copernicus 1 s, ESA CCI 10 s, WorldClim/GPW 30 s,
+# 2.5' and 5' families, quarter/half/one degree grids); above one degree they nest toward the top (5 deg
+# HadCRUT/NOAA, 10 deg zoning and tile edge, then 30, 90, 180 deg structural).
+# A side rung is a supported storage resolution off the spine, admitted when it is a rational cell that
+# divides at least one spine rung (asserted), so every rung has a path to the top. Side rungs today:
+#   1/9 sec (1/32400 deg)  USGS 3DEP 1/9 arc-second DEM (3 m)                   -> joins the spine at 1 s
+#   0.3 sec (1/12000 deg)  the 10 m family: ESA WorldCover, Lang canopy height   -> joins the spine at 30 s
+#   1/3 sec (1/10800 deg)  USGS 3DEP 1/3 arc-second DEM (10 m)                  -> joins the spine at 1 s
+#   0.9 sec (1/4000 deg)   the 30 m lat/lon family: Hansen GFC, JRC GSW, GLAD  -> joins at 900 s (1/4 deg)
+#   3 sec                  the 90 m family: SRTM3, GLO-90, MERIT, HydroSHEDS, WorldPop, GHSL -> joins at 30 s
+#   15 sec                 HydroSHEDS 15s, GEBCO                                -> joins at 30 s
+# Overview levels are DERIVED: a rung's levels are every coarser rung (spine or side) that is an integer
+# multiple of it, all the way to the top, so every overview lands exactly on another rung and a coarser
+# rung can be read out of a finer file by position (validated by dimensions, not by position count).
+# Ratios are tested exactly with Fractions; fractional rungs are named as reduced p-q (3-10sec).
+# Formalized 2026-09-16, replacing a hand-written table (2 and 4 degree rungs, chains stopped at 1 degree).
+#   spine:  1: [3, 10, 15, 30, 150, 300, 900, 1800, 3600, 18000, 36000, 108000, 324000, 648000]
+#          10: [3, 15, 30, 90, 180, 360, 1800, 3600, 10800, 32400, 64800]      ... 324000: [2]   648000: []
+#   side: 0.3: [3, 10, 50, 100, 500, 1000, 3000, 6000, 12000, 60000, ...]   3: [5, 10, 50, 100, 300, 600, 1200, ...]
+def _frac(arcseconds):
+    return Fraction(arcseconds).limit_denominator(1000000)  # 0.3 -> 3/10, not the binary float's exact fraction
+
+
+pyramid_spine_arcseconds = [1.0, 10.0, 30.0, 150.0, 300.0, 900.0, 1800.0, 3600.0, 18000.0, 36000.0, 108000.0, 324000.0, 648000.0]
+pyramid_side_arcseconds = [1 / 9, 0.3, 1 / 3, 0.9, 3.0, 15.0]
 _arcseconds = sorted(k for k in pyramid_compatible_resolutions if isinstance(k, float))  # the dict also carries str/int aliases
+assert sorted(pyramid_spine_arcseconds + pyramid_side_arcseconds) == _arcseconds, 'every rung must be declared spine or side'
+for _a, _b in zip(pyramid_spine_arcseconds, pyramid_spine_arcseconds[1:]):
+    if (_frac(_b) / _frac(_a)).denominator != 1:
+        raise ValueError(f'Spine rungs must nest: {_b} arcseconds is not an integer multiple of {_a}.')
+for _side in pyramid_side_arcseconds:
+    if not any((_frac(_spine) / _frac(_side)).denominator == 1 for _spine in pyramid_spine_arcseconds if _spine > _side):
+        raise ValueError(f'Side rung {_side} arcseconds divides no spine rung, so it has no path to the top.')
+pyramid_compatible_overview_levels = {}
 for _base in _arcseconds:
-    if 360 * 3600 / _base <= 512 and 180 * 3600 / _base <= 512:
-        pyramid_compatible_overview_levels[_base] = []
-    else:
-        pyramid_compatible_overview_levels[_base] = [int(_coarser / _base) for _coarser in _arcseconds if _base < _coarser <= 36000]
+    pyramid_compatible_overview_levels[_base] = [int(_frac(_coarser) / _frac(_base)) for _coarser in _arcseconds
+                                                 if _coarser > _base and (_frac(_coarser) / _frac(_base)).denominator == 1]
 for k, v in pyramid_compatible_overview_levels.copy().items():
     pyramid_compatible_overview_levels[str(k)] = v
-    pyramid_compatible_overview_levels[int(k)] = v
-    pyramid_compatible_overview_levels[str(int(k))] = v
+    if k == int(k):
+        pyramid_compatible_overview_levels[int(k)] = v
+        pyramid_compatible_overview_levels[str(int(k))] = v
 
 
 # ---------- Subpog tile scheme ----------
@@ -265,12 +386,13 @@ for k, v in pyramid_compatible_overview_levels.copy().items():
 # tiled (the global POG is small enough to be its own single tile). The scheme is published as an OGC
 # Tile Matrix Set 2.0 document by write_pyramid_tile_matrix_set_json; tile_corner_string_to_tile_matrix_index
 # converts a corner name to that standard's (tileMatrix, tileRow, tileCol) addressing.
-pyramid_tile_degrees = {1.0: 1, 10.0: 10, 30.0: 10, 150.0: None, 300.0: None, 900.0: None, 1800.0: None,
-                        3600.0: None, 7200.0: None, 14400.0: None, 36000.0: None}
+pyramid_tile_degrees = {1 / 9: 1, 0.3: 1, 1 / 3: 1, 0.9: 1, 1.0: 1, 3.0: 5, 10.0: 10, 15.0: 10, 30.0: 10, 150.0: None, 300.0: None, 900.0: None, 1800.0: None, 3600.0: None,
+                        18000.0: None, 36000.0: None, 108000.0: None, 324000.0: None, 648000.0: None}
 for k, v in pyramid_tile_degrees.copy().items():
     pyramid_tile_degrees[str(k)] = v
-    pyramid_tile_degrees[int(k)] = v
-    pyramid_tile_degrees[str(int(k))] = v
+    if k == int(k):
+        pyramid_tile_degrees[int(k)] = v
+        pyramid_tile_degrees[str(int(k))] = v
 
 PYRAMID_TILE_MATRIX_SET_ID = 'EEPyramidCRS84'
 
@@ -278,7 +400,7 @@ PYRAMID_TILE_MATRIX_SET_ID = 'EEPyramidCRS84'
 def get_pyramid_overview_levels_for_bb(arcseconds, bb):
     """Overview levels for a subpog covering bb: the global chain, keeping only levels whose cell size divides the extent.
 
-    A 1-degree tile of 1-second data keeps levels up to 3600 (the 1-degree level) and drops 7200+; a
+    A 1-degree tile of 1-second data keeps levels up to 3600 (the 1-degree level) and drops 18000+; a
     10-degree tile of 10-second data keeps the full chain. Global bb returns the full chain.
     """
     res = pyramid_compatible_resolutions[arcseconds]
@@ -323,16 +445,18 @@ def get_tile_filename(stem, arcseconds, corner, tile_degrees=None):
     if tile_degrees is None:
         tile_degrees = pyramid_tile_degrees[arcseconds]
     if tile_degrees is None:
-        raise ValueError(f'{arcseconds} arcseconds is not a tiled resolution in the pyramid tile scheme (pyramid_tile_degrees).')
-    return f'{stem}_{int(arcseconds)}sec_{int(tile_degrees)}deg_{corner}.tif'
+        raise ValueError(f'{arcseconds_to_token(arcseconds)} arcseconds is not a tiled resolution in the pyramid tile scheme (pyramid_tile_degrees).')
+    return f'{stem}_{arcseconds_to_token(arcseconds)}sec_{int(tile_degrees)}deg_{corner}.tif'
 
 
 def parse_tile_filename(filename):
     """(stem, arcseconds, tile_degrees, corner) from a tile filename; ValueError if the name does not follow the scheme."""
-    m = re.fullmatch(r'(.+)_(\d+)sec_(\d+)deg_([NS]\d{2}[EW]\d{3})\.tif', os.path.basename(filename))
+    # The rung token is <p>sec or, for a fractional rung, the reduced fraction <p>-<q>sec (e.g. 1-3sec for 1/3 arcsecond).
+    # Anchored as a whole underscore-delimited token, so hyphens in the stem cannot confuse it.
+    m = re.fullmatch(r'(.+)_(\d+)(?:-(\d+))?sec_(\d+)deg_([NS]\d{2}[EW]\d{3})\.tif', os.path.basename(filename))
     if not m:
         raise ValueError(f'Not a pyramid tile filename (expected <stem>_<sec>sec_<deg>deg_<corner>.tif): {filename!r}')
-    return m.group(1), float(m.group(2)), int(m.group(3)), m.group(4)
+    return m.group(1), token_to_arcseconds(m.group(2) + ('-' + m.group(3) if m.group(3) else '')), int(m.group(4)), m.group(5)
 
 
 def tile_corner_string_to_tile_matrix_index(corner, arcseconds, tile_degrees=None):
@@ -340,7 +464,7 @@ def tile_corner_string_to_tile_matrix_index(corner, arcseconds, tile_degrees=Non
     if tile_degrees is None:
         tile_degrees = pyramid_tile_degrees[arcseconds]
     lon, lat = parse_tile_corner_string(corner)
-    return f'{int(arcseconds)}sec', (90 - (lat + tile_degrees)) // tile_degrees, (lon + 180) // tile_degrees
+    return f'{arcseconds_to_token(arcseconds)}sec', (90 - (lat + tile_degrees)) // tile_degrees, (lon + 180) // tile_degrees
 
 
 def tile_matrix_index_to_tile_corner_string(arcseconds, tile_row, tile_col, tile_degrees=None):
@@ -369,7 +493,7 @@ def get_pyramid_tile_matrix_set():
             tile_width = tile_height = int(round(tile_degrees / res))
             matrix_width, matrix_height = 360 // tile_degrees, 180 // tile_degrees
         matrices.append({
-            'id': f'{int(arcseconds)}sec',
+            'id': f'{arcseconds_to_token(arcseconds)}sec',
             'scaleDenominator': res * 111319.4907932736 / 0.00028,
             'cellSize': res,
             'cornerOfOrigin': 'topLeft',
@@ -382,8 +506,8 @@ def get_pyramid_tile_matrix_set():
     return {
         'id': PYRAMID_TILE_MATRIX_SET_ID,
         'title': 'Earth-Economy pyramid tiling in CRS84',
-        'description': 'The hazelbean pyramid: global rasters at 1, 10, 30, 150, 300, 900, 1800, 3600, 7200, 14400 and 36000 arcseconds, '
-                       'with the tile edges used for subpog tile sets. Not a quadtree: the scale progression follows the pyramid resolutions.',
+        'description': 'The hazelbean pyramid: global rasters at 1, 10, 30, 150, 300, 900, 1800, 3600, 18000, 36000, 108000, 324000 and 648000 arcseconds (1 second to the 180-degree, 2 x 1 top), '
+                       'with the tile edges used for subpog tile sets, plus the side rungs 1/9, 3/10, 1/3, 9/10, 3 and 15 arcseconds for the 3DEP 3 m and 10 m, WorldCover 10 m, 30 m lat/lon, 90 m and 500 m product families. Not a quadtree: the scale progression follows the pyramid resolutions.',
         'crs': 'http://www.opengis.net/def/crs/OGC/1.3/CRS84',
         'orderedAxes': ['Lon', 'Lat'],
         'boundingBox': {'lowerLeft': [-180.0, -90.0], 'upperRight': [180.0, 90.0], 'crs': 'http://www.opengis.net/def/crs/OGC/1.3/CRS84'},
@@ -458,6 +582,12 @@ pyramid_resampling_algorithms_by_data_type[np.int64] = 'average'
 
 ### It is it ref_path NOT refpath. These are correct
 ha_per_cell_1sec_ref_path = os.path.join('pyramids', "ha_per_cell_1sec.tif")
+ha_per_cell_3_10sec_ref_path = os.path.join('pyramids', "ha_per_cell_3-10sec.tif")
+ha_per_cell_1_9sec_ref_path = os.path.join('pyramids', "ha_per_cell_1-9sec.tif")
+ha_per_cell_1_3sec_ref_path = os.path.join('pyramids', "ha_per_cell_1-3sec.tif")
+ha_per_cell_9_10sec_ref_path = os.path.join('pyramids', "ha_per_cell_9-10sec.tif")
+ha_per_cell_3sec_ref_path = os.path.join('pyramids', "ha_per_cell_3sec.tif")
+ha_per_cell_15sec_ref_path = os.path.join('pyramids', "ha_per_cell_15sec.tif")
 ha_per_cell_10sec_ref_path = os.path.join('pyramids', "ha_per_cell_10sec.tif")
 ha_per_cell_30sec_ref_path = os.path.join('pyramids', "ha_per_cell_30sec.tif")
 ha_per_cell_150sec_ref_path = os.path.join('pyramids', "ha_per_cell_150sec.tif")
@@ -465,13 +595,21 @@ ha_per_cell_300sec_ref_path = os.path.join('pyramids', "ha_per_cell_300sec.tif")
 ha_per_cell_900sec_ref_path = os.path.join('pyramids', "ha_per_cell_900sec.tif")
 ha_per_cell_1800sec_ref_path = os.path.join('pyramids', "ha_per_cell_1800sec.tif")
 ha_per_cell_3600sec_ref_path = os.path.join('pyramids', "ha_per_cell_3600sec.tif")
-ha_per_cell_7200sec_ref_path = os.path.join('pyramids', "ha_per_cell_7200sec.tif")
-ha_per_cell_14400sec_ref_path = os.path.join('pyramids', "ha_per_cell_14400sec.tif")
 ha_per_cell_36000sec_ref_path = os.path.join('pyramids', "ha_per_cell_36000sec.tif")
+ha_per_cell_18000sec_ref_path = os.path.join('pyramids', "ha_per_cell_18000sec.tif")
+ha_per_cell_108000sec_ref_path = os.path.join('pyramids', "ha_per_cell_108000sec.tif")
+ha_per_cell_324000sec_ref_path = os.path.join('pyramids', "ha_per_cell_324000sec.tif")
+ha_per_cell_648000sec_ref_path = os.path.join('pyramids', "ha_per_cell_648000sec.tif")
 
 
 ha_per_cell_ref_paths = {}
 ha_per_cell_ref_paths[1.0] = ha_per_cell_1sec_ref_path
+ha_per_cell_ref_paths[0.3] = ha_per_cell_3_10sec_ref_path
+ha_per_cell_ref_paths[1 / 9] = ha_per_cell_1_9sec_ref_path
+ha_per_cell_ref_paths[1 / 3] = ha_per_cell_1_3sec_ref_path
+ha_per_cell_ref_paths[0.9] = ha_per_cell_9_10sec_ref_path
+ha_per_cell_ref_paths[3.0] = ha_per_cell_3sec_ref_path
+ha_per_cell_ref_paths[15.0] = ha_per_cell_15sec_ref_path
 ha_per_cell_ref_paths[10.0] = ha_per_cell_10sec_ref_path
 ha_per_cell_ref_paths[30.0] = ha_per_cell_30sec_ref_path
 ha_per_cell_ref_paths[150.0] = ha_per_cell_150sec_ref_path
@@ -479,17 +617,26 @@ ha_per_cell_ref_paths[300.0] = ha_per_cell_300sec_ref_path
 ha_per_cell_ref_paths[900.0] = ha_per_cell_900sec_ref_path
 ha_per_cell_ref_paths[1800.0] = ha_per_cell_1800sec_ref_path
 ha_per_cell_ref_paths[3600.0] = ha_per_cell_3600sec_ref_path
-ha_per_cell_ref_paths[7200.0] = ha_per_cell_7200sec_ref_path
-ha_per_cell_ref_paths[14400.0] = ha_per_cell_14400sec_ref_path
 ha_per_cell_ref_paths[36000.0] = ha_per_cell_36000sec_ref_path
+ha_per_cell_ref_paths[18000.0] = ha_per_cell_18000sec_ref_path
+ha_per_cell_ref_paths[108000.0] = ha_per_cell_108000sec_ref_path
+ha_per_cell_ref_paths[324000.0] = ha_per_cell_324000sec_ref_path
+ha_per_cell_ref_paths[648000.0] = ha_per_cell_648000sec_ref_path
 for k, v in ha_per_cell_ref_paths.copy().items():
     ha_per_cell_ref_paths[str(k)] = v
-    ha_per_cell_ref_paths[int(k)] = v
-    ha_per_cell_ref_paths[str(int(k))] = v
+    if k == int(k):
+        ha_per_cell_ref_paths[int(k)] = v
+        ha_per_cell_ref_paths[str(int(k))] = v
 
 
 
 ha_per_cell_column_ref_paths = {}
+ha_per_cell_column_ref_paths[0.3] = ha_per_cell_column_3_10sec_ref_path
+ha_per_cell_column_ref_paths[1 / 9] = ha_per_cell_column_1_9sec_ref_path
+ha_per_cell_column_ref_paths[1 / 3] = ha_per_cell_column_1_3sec_ref_path
+ha_per_cell_column_ref_paths[0.9] = ha_per_cell_column_9_10sec_ref_path
+ha_per_cell_column_ref_paths[3.0] = ha_per_cell_column_3sec_ref_path
+ha_per_cell_column_ref_paths[15.0] = ha_per_cell_column_15sec_ref_path
 ha_per_cell_column_ref_paths[10.0] = ha_per_cell_column_10sec_ref_path
 ha_per_cell_column_ref_paths[30.0] = ha_per_cell_column_30sec_ref_path
 ha_per_cell_column_ref_paths[150.0] = ha_per_cell_column_150sec_ref_path
@@ -497,13 +644,16 @@ ha_per_cell_column_ref_paths[300.0] = ha_per_cell_column_300sec_ref_path
 ha_per_cell_column_ref_paths[900.0] = ha_per_cell_column_900sec_ref_path
 ha_per_cell_column_ref_paths[1800.0] = ha_per_cell_column_1800sec_ref_path
 ha_per_cell_column_ref_paths[3600.0] = ha_per_cell_column_3600sec_ref_path
-ha_per_cell_column_ref_paths[7200.0] = ha_per_cell_column_7200sec_ref_path
-ha_per_cell_column_ref_paths[14400.0] = ha_per_cell_column_14400sec_ref_path
 ha_per_cell_column_ref_paths[36000.0] = ha_per_cell_column_36000sec_ref_path
+ha_per_cell_column_ref_paths[18000.0] = ha_per_cell_column_18000sec_ref_path
+ha_per_cell_column_ref_paths[108000.0] = ha_per_cell_column_108000sec_ref_path
+ha_per_cell_column_ref_paths[324000.0] = ha_per_cell_column_324000sec_ref_path
+ha_per_cell_column_ref_paths[648000.0] = ha_per_cell_column_648000sec_ref_path
 for k, v in ha_per_cell_column_ref_paths.copy().items():
     ha_per_cell_column_ref_paths[str(k)] = v
-    ha_per_cell_column_ref_paths[int(k)] = v
-    ha_per_cell_column_ref_paths[str(int(k))] = v
+    if k == int(k):
+        ha_per_cell_column_ref_paths[int(k)] = v
+        ha_per_cell_column_ref_paths[str(int(k))] = v
 
 
 global_bounding_box = [-180.0, -90.0, 180.0, 90.0]
@@ -515,8 +665,11 @@ mollweide_compatible_resolutions[300.0] = 309.2208077590933 * (300.0 / 10.0)
 mollweide_compatible_resolutions[900.0] = 309.2208077590933 * (900.0 / 10.0)
 mollweide_compatible_resolutions[1800.0] = 309.2208077590933 * (1800.0 / 10.0)
 mollweide_compatible_resolutions[3600.0] = 309.2208077590933 * (3600.0 / 10.0)
-mollweide_compatible_resolutions[7200.0] = 309.2208077590933 * (7200.0 / 10.0)
-mollweide_compatible_resolutions[14400.0] = 309.2208077590933 * (14400.0 / 10.0)
+mollweide_compatible_resolutions[18000.0] = 309.2208077590933 * (18000.0 / 10.0)
+mollweide_compatible_resolutions[36000.0] = 309.2208077590933 * (36000.0 / 10.0)
+mollweide_compatible_resolutions[108000.0] = 309.2208077590933 * (108000.0 / 10.0)
+mollweide_compatible_resolutions[324000.0] = 309.2208077590933 * (324000.0 / 10.0)
+mollweide_compatible_resolutions[648000.0] = 309.2208077590933 * (648000.0 / 10.0)
 
 
 
@@ -1137,23 +1290,20 @@ def _is_path_pyramid(input_path, require_global, verbose=False):
         to_return = False
 
     # Check if the overview levels are correct
-    levels = []
+    # Overviews are validated by DIMENSIONS, exactly: the prescribed factors imply the size of every overview
+    # (GDAL rounds up), and a coarser rung is read out of the file by position, so a superset, a subset, or a
+    # near-miss factor all fail. (The old check truncated measured ratios with int(), which could pass by accident.)
     band = ds.GetRasterBand(1)
-    overview_count = band.GetOverviewCount()
-    for i in range(overview_count):
-        ovr = band.GetOverview(i)
-        # if verbose:
-        #     hb.log(f"Overview {i+1}: {ovr.XSize} x {ovr.YSize}")
-        levels.append(shape[1] / ovr.XSize)
-        
+    actual_dims = [(band.GetOverview(i).XSize, band.GetOverview(i).YSize) for i in range(band.GetOverviewCount())]
     if require_global:
         correct_levels = hb.pyramid_compatible_overview_levels[arcseconds]
     else:
         bb = [gt[0], gt[3] + shape[0] * gt[5], gt[0] + shape[1] * gt[1], gt[3]]
         correct_levels = get_pyramid_overview_levels_for_bb(arcseconds, bb)
-    if [int(i) for i in levels] != [int(i) for i in correct_levels]:
+    expected_dims = [(-(-shape[1] // f), -(-shape[0] // f)) for f in correct_levels]
+    if actual_dims != expected_dims:
         if verbose:
-            hb.log(f'Not pyramid because overview levels were not correct: {levels} {correct_levels }' + str(input_path))
+            hb.log(f'Not pyramid because overview dimensions were not correct: found {actual_dims}, expected {expected_dims} for levels {correct_levels}: ' + str(input_path))
         to_return = False
 
 

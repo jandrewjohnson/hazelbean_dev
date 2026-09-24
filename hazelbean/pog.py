@@ -53,6 +53,8 @@ def _worker_make_path_pog_starmap(input_file_path, specific_output_path, common_
             verbose=common_pog_options_dict.get('verbose_hb_call', False),
             include_displaced_and_temp_files=common_pog_options_dict.get('include_displaced_and_temp_files', False),
             expand_to_global_extent=common_pog_options_dict.get('expand_to_global_extent', True),
+            remove_intermediate_files=common_pog_options_dict.get('remove_intermediate_files', True),
+            remove_displaced_files=common_pog_options_dict.get('remove_displaced_files', False),
         )
         output_msg_part = f" (output: {os.path.basename(specific_output_path)})" if specific_output_path else " (output: in-place/default)"
         return (input_file_path, True, f"Successfully processed by {process_name}{output_msg_part}")
@@ -83,6 +85,8 @@ def make_paths_pogs_in_parallel(
     verbose_pog_check=0, 
     include_displaced_and_temp_files=False,
     expand_to_global_extent=True,
+    remove_intermediate_files=True,
+    remove_displaced_files=False,
 ):
     """
     Lists raster files (input_folder_or_list is a folder to scan, or an explicit list of file paths),
@@ -188,6 +192,8 @@ def make_paths_pogs_in_parallel(
         'verbose_hb_call': verbose_hb_call,
         'include_displaced_and_temp_files': include_displaced_and_temp_files,
         'expand_to_global_extent': expand_to_global_extent,
+        'remove_intermediate_files': remove_intermediate_files,
+        'remove_displaced_files': remove_displaced_files,
     }
 
     # Prepare the arguments for starmap: a list of tuples,
@@ -202,7 +208,7 @@ def make_paths_pogs_in_parallel(
     )
 
     if max_workers is None:
-        max_workers = os.cpu_count() - 2
+        max_workers = os.cpu_count() - 1
     max_workers = min(max_workers, len(starmap_iterable)) # Don't use more processes than tasks
 
     results = []
@@ -296,6 +302,10 @@ def _write_cog_with_pyramid_overviews(current_path, output_raster_path, overview
         # f"OVERVIEWS=IGNORE_EXISTING",
         f"OVERVIEW_RESAMPLING={overview_resampling_method}",
     ]
+    if not overview_levels:
+        # The COG driver adds its own 2, 4, 8... overviews to any source larger than a block when the source has
+        # none; a rung with no levels (the 180-degree top, or a subpog extent no coarser rung divides) must get none.
+        creation_options.append("OVERVIEWS=NONE")
 
     cog_driver = gdal.GetDriverByName('COG')
     if cog_driver is None:
@@ -355,9 +365,9 @@ def tile_pog_to_tileset(pog_path, output_dir=None, tile_degrees=None, skip_empty
     if tile_degrees is None:
         tile_degrees = hb.pyramid_tile_degrees[arcseconds]
     if tile_degrees is None:
-        raise ValueError(f'{int(arcseconds)} arcseconds is not a tiled resolution (see hb.pyramid_tile_degrees); pass tile_degrees to force a tiling.')
+        raise ValueError(f'{hb.arcseconds_to_token(arcseconds)} arcseconds is not a tiled resolution (see hb.pyramid_tile_degrees); pass tile_degrees to force a tiling.')
     stem = os.path.splitext(os.path.basename(pog_path))[0]
-    tileset_name = f'{stem}_{int(arcseconds)}sec_{int(tile_degrees)}deg'
+    tileset_name = f'{stem}_{hb.arcseconds_to_token(arcseconds)}sec_{int(tile_degrees)}deg'
     if output_dir is None:
         output_dir = os.path.join(os.path.dirname(os.path.abspath(pog_path)), tileset_name)
     os.makedirs(output_dir, exist_ok=True)
@@ -388,7 +398,7 @@ def build_pog_tileset_vrt(tile_dir, vrt_path=None):
     res = hb.pyramid_compatible_resolutions[arcseconds]
     ndv = hb.no_data_values_by_gdal_type[hb.get_datatype_from_uri(tiles[0])][0]
     if vrt_path is None:
-        vrt_path = os.path.join(os.path.dirname(os.path.abspath(tile_dir)), f'{stem}_{int(arcseconds)}sec_{int(tile_degrees)}deg.vrt')
+        vrt_path = os.path.join(os.path.dirname(os.path.abspath(tile_dir)), f'{stem}_{hb.arcseconds_to_token(arcseconds)}sec_{int(tile_degrees)}deg.vrt')
     gdal.BuildVRT(vrt_path, tiles, options=gdal.BuildVRTOptions(outputBounds=(-180, -90, 180, 90), xRes=res, yRes=res, VRTNodata=ndv, srcNodata=ndv)).FlushCache()
     return vrt_path
 
@@ -427,6 +437,77 @@ def is_path_pog_tileset(vrt_path, verbose=False):
             if verbose: hb.log(f'Not a POG tileset: {tile} is not a subpog')
             return False
     return True
+
+
+def _explain_unsupported_resolution(input_raster_path):
+    """Error text for a raster whose output resolution make_path_pog cannot infer: says whether the CRS is WGS84,
+    what the native cell size is in arcseconds, which supported resolution to pass as output_arcseconds, and where."""
+    from osgeo import osr
+    ds = gdal.Open(input_raster_path)
+    gt = ds.GetGeoTransform()
+    srs = osr.SpatialReference(wkt=ds.GetProjection()) if ds.GetProjection() else None
+    ds = None
+    crs_name = (srs.GetName() if srs is not None else None) or ''
+    if crs_name in ('', 'unknown') and srs is not None:
+        crs_name = srs.GetAttrValue('PROJECTION') or 'unknown'
+    supported = sorted(k for k in hb.pyramid_compatible_resolutions if isinstance(k, float))
+    supported_text = ', '.join(str(int(k)) for k in supported)
+    meters_per_arcsecond = 2 * np.pi * 6378137 / (360 * 3600)  # equatorial
+
+    if srs is None or srs.ExportToWkt() == '':
+        crs_text = 'has no projection defined'
+        native_arcseconds = None
+    elif srs.IsGeographic():
+        is_wgs84 = srs.GetAuthorityCode(None) == '4326' or 'WGS 84' in (srs.GetName() or '')
+        crs_text = f"is in geographic CRS {crs_name}" + ('' if is_wgs84 else ', which is not WGS84 (EPSG:4326)')
+        native_arcseconds = abs(gt[1]) * 3600.0
+        cell_text = f"{abs(gt[1]):.8g} degrees ({native_arcseconds:.4g} arcseconds)"
+    else:
+        cell_meters = abs(gt[1]) * srs.GetLinearUnits()
+        native_arcseconds = cell_meters / meters_per_arcsecond
+        crs_text = f"is in projected CRS {crs_name}, not WGS84 (EPSG:4326)"
+        cell_text = f"{abs(gt[1]):.8g} {srs.GetLinearUnitsName()} ({native_arcseconds:.4g} arcseconds at the equator)"
+
+    lines = [f"make_path_pog cannot infer an output resolution for {input_raster_path}.",
+             f"The raster {crs_text}" + (f" and its cell size is {cell_text}, which is not one of the supported pyramid "
+                                         f"resolutions ({supported_text} arcseconds)." if native_arcseconds is not None else '.')]
+    if native_arcseconds is not None:
+        coarser = [k for k in supported if k >= native_arcseconds * 0.999]
+        suggested = int(coarser[0]) if coarser else int(supported[-1])
+        finer = [k for k in supported if k < native_arcseconds * 0.999]
+        lines.append(f"Suggested output_arcseconds={suggested}: the closest supported resolution at or coarser than the native "
+                     f"cell, so no detail is invented." + (f" Use {int(finer[-1])} to upsample instead." if finer else ''))
+    else:
+        suggested = 30
+        lines.append(f"Fix the projection first, then pass output_arcseconds explicitly (for example {suggested}).")
+    lines.append(f"Pass it as the output_arcseconds argument: hb.make_path_pog(path, output_arcseconds={suggested}) for one file, or "
+                 f"hb.make_paths_pogs_in_parallel(paths, output_arcseconds={suggested}) for a batch (it applies to every file in "
+                 f"that call, so give files needing a different resolution their own call). The input is reprojected to "
+                 f"WGS84 and resampled to that resolution on the way." if native_arcseconds is not None else
+                 f"Pass it as the output_arcseconds argument of hb.make_path_pog or hb.make_paths_pogs_in_parallel.")
+    return ' '.join(lines)
+
+
+def write_pyramid_frame_raster(output_path, arcseconds, bb=None, data_type=None, ndv=None):
+    """Write a sparse (all-nodata, near-zero bytes) raster with the pyramid geotransform at arcseconds over bb (global if None).
+
+    Used as the geometry-only match for resampling onto the pyramid: any rung, spine or side, any aligned extent,
+    without needing a data file at that rung. Returns output_path."""
+    res = hb.pyramid_compatible_resolutions[arcseconds]
+    if bb is None:
+        bb = [-180.0, -90.0, 180.0, 90.0]
+    cols, rows = int(round((bb[2] - bb[0]) / res)), int(round((bb[3] - bb[1]) / res))
+    if data_type is None:
+        data_type = gdal.GDT_Byte
+    # Large blocks: a sparse file costs only its tile directory, and at 512-pixel tiles a global 3/10-second frame
+    # would carry 36 million tile entries (1.7 GB); at 8192-pixel tiles it is a few megabytes.
+    ds = gdal.GetDriverByName('GTiff').Create(output_path, cols, rows, 1, data_type, options=['TILED=YES', 'BLOCKXSIZE=8192', 'BLOCKYSIZE=8192', 'SPARSE_OK=TRUE', 'BIGTIFF=YES'])
+    ds.SetGeoTransform((bb[0], res, 0.0, bb[3], 0.0, -res))
+    ds.SetProjection(hb.wgs_84_wkt)
+    if ndv is not None:
+        ds.GetRasterBand(1).SetNoDataValue(ndv)
+    ds = None
+    return output_path
 
 
 def make_path_pog(input_raster_path,
@@ -474,7 +555,7 @@ def make_path_pog(input_raster_path,
 
     if output_arcseconds is not None and output_arcseconds not in hb.pyramid_compatible_resolutions:
         raise ValueError(f"output_arcseconds {output_arcseconds} is not a supported pyramid resolution. "
-                         f"Supported values (arcseconds): 1, 10, 30, 150, 300, 900, 1800, 3600, 7200, 14400, 36000.")
+                         f"Supported values (arcseconds): spine 1, 10, 30, 150, 300, 900, 1800, 3600, 18000, 36000, 108000, 324000, 648000; side rungs 1/9, 3/10, 1/3, 9/10, 3, 15.")
 
     # Do a fast check to see if it's pog (or, when not expanding, subpog).
     is_path_requested_kind = is_path_pog if expand_to_global_extent else is_path_subpog
@@ -513,12 +594,25 @@ def make_path_pog(input_raster_path,
                 hb.log(f"Raster is already a POG: {input_raster_path}")
             return
         
+    # Get the resolution of the output: explicit if output_arcseconds was given, otherwise snapped from the input.
+    # Done before any copying so an unsupported input fails without first duplicating it.
+    if output_arcseconds is not None:
+        arcseconds = output_arcseconds
+        degrees = hb.pyramid_compatible_resolutions[output_arcseconds]
+    else:
+        try:
+            degrees = hb.get_cell_size_from_path(input_raster_path, force_to_pyramid=True)
+            arcseconds = hb.get_cell_size_from_path_in_arcseconds(input_raster_path, force_to_pyramid=True)
+        except ValueError as e:
+            raise ValueError(_explain_unsupported_resolution(input_raster_path)) from e
+
     # Make a local copy at a temp file to process on to avoid corrupting the original.
     # Intermediates are named <input stem>_<step>_<stamp>.tif so they sort beside their source.
     input_dir = os.path.dirname(input_raster_path)
     input_stem = os.path.splitext(os.path.basename(input_raster_path))[0]
     temp_copy_path = hb.temp('.tif', input_stem + '_copy', remove_intermediate_files, folder=input_dir, tag_along_file_extensions=['.aux.xml'])
     temp_translate_path = hb.temp('.tif', input_stem + '_translate', remove_intermediate_files, folder=input_dir, tag_along_file_extensions=['.aux.xml'])
+    intermediate_paths = [temp_copy_path, temp_translate_path]  # deleted at the end when remove_intermediate_files
     
     # Ensure output directory exists
     try:
@@ -559,20 +653,6 @@ def make_path_pog(input_raster_path,
         hb.path_copy(input_raster_path, temp_copy_path) # Can just copy it direclty without accessing the raster.        
         current_path = temp_copy_path
 
-    # Get the resolution of the output: explicit if output_arcseconds was given, otherwise snapped from the input.
-    if output_arcseconds is not None:
-        arcseconds = output_arcseconds
-        degrees = hb.pyramid_compatible_resolutions[output_arcseconds]
-    else:
-        try:
-            degrees = hb.get_cell_size_from_path(current_path, force_to_pyramid=True)
-            arcseconds = hb.get_cell_size_from_path_in_arcseconds(current_path, force_to_pyramid=True)
-        except ValueError as e:
-            raise ValueError(f"Input raster {input_raster_path} is not close to any supported pyramid resolution, so "
-                             f"make_path_pog cannot infer which canonical match to use. Pass output_arcseconds to choose "
-                             f"the output resolution explicitly (supported: 1, 10, 30, 150, 300, 900, 1800, 3600, 7200, "
-                             f"14400, 36000).") from e
-
     original_output_raster_path = output_raster_path
     if output_raster_path is None:        
         output_raster_path = hb.temp('.tif', input_stem + '_pog', remove_at_exit=False, folder=os.path.dirname(input_raster_path), tag_along_file_extensions=['.aux.xml'])
@@ -609,10 +689,14 @@ def make_path_pog(input_raster_path,
             hb.log(f"make_path_pog: subpog extent {target_bb} (input extent {[round(i, 6) for i in input_bb]})")
 
     if needs_reframing:
-        # Resolve the canonical match raster for the output resolution through the get_path ladder
-        # (project dirs, base_data, shared data roots, cloud download) rather than a hardcoded location.
-        match_path = hb.get_path(hb.ha_per_cell_ref_paths[arcseconds])
+        # The target frame is synthesized from the pyramid tables (a sparse raster with the exact pyramid
+        # geotransform, WGS84 and the standard nodata) rather than fetched: resample_to_match only reads
+        # geometry from its match, and a fetched ha_per_cell raster cannot exist for every rung (a global
+        # 3/10-arcsecond one would be 9 trillion cells; the coarse rungs are not in the bucket yet).
+        match_path = hb.temp('.tif', input_stem + '_frame', remove_intermediate_files, tag_along_file_extensions=['.aux.xml'])
+        write_pyramid_frame_raster(match_path, arcseconds, target_bb, output_data_type, ndv)
         resample_temp_path = hb.temp('.tif', input_stem + '_resample', remove_intermediate_files, folder=os.path.dirname(input_raster_path), tag_along_file_extensions=['.aux.xml'])
+        intermediate_paths.append(resample_temp_path)
         if verbose:
             hb.log(f"Resampling {current_path} to match {match_path}. Saving at {resample_temp_path}.")
         hb.resample_to_match(
@@ -638,6 +722,7 @@ def make_path_pog(input_raster_path,
     
     if (ndv_above is not None or ndv_below is not None) and needs_censoring:
         censor_temp_path = hb.temp('.tif', input_stem + '_censor', remove_intermediate_files, folder=os.path.dirname(input_raster_path), tag_along_file_extensions=['.aux.xml'])
+        intermediate_paths.append(censor_temp_path)
         if ndv_above and not ndv_below:
             def op(x):
                 return np.where(x > ndv_above, ndv, x)
@@ -653,10 +738,12 @@ def make_path_pog(input_raster_path,
         current_path = censor_temp_path
     
     if value_reclassification_dict is not None:
-        reclassify_temp_path = hb.temp('.tif', input_stem + '_reclassify', remove_intermediate_files, '.', tag_along_file_extensions=['.aux.xml'])
+        reclassify_temp_path = hb.temp('.tif', input_stem + '_reclassify', remove_intermediate_files, folder=os.path.dirname(input_raster_path), tag_along_file_extensions=['.aux.xml'])
+        intermediate_paths.append(reclassify_temp_path)
 
-        hb.log(f"Reclassifying {current_path} with {value_reclassification_dict}. Saving at")
-        hb.reclassify_raster_hb(current_path, value_reclassification_dict, reclassify_temp_path)
+        hb.log(f"Reclassifying {current_path} with {value_reclassification_dict}. Saving at {reclassify_temp_path}.")
+        hb.reclassify_raster_hb(current_path, value_reclassification_dict, reclassify_temp_path, output_data_type=output_data_type, output_ndv=ndv)
+        current_path = reclassify_temp_path
      
     overview_levels = hb.pyramid_compatible_overview_levels[arcseconds] if expand_to_global_extent else hb.get_pyramid_overview_levels_for_bb(arcseconds, target_bb)
     _write_cog_with_pyramid_overviews(current_path, output_raster_path, overview_levels,
@@ -677,6 +764,14 @@ def make_path_pog(input_raster_path,
                 else:
                     os.rename(input_raster_path + ext, displaced_path + ext)
         hb.displace_file(output_raster_path, input_raster_path, displaced_path=displaced_path, delete_original=remove_displaced_files)
+
+    if remove_intermediate_files:
+        # hb.temp only registers these for deletion at interpreter exit, and that hook rarely runs inside a
+        # multiprocessing pool worker (the pool terminates its workers), so delete them here explicitly.
+        for path in intermediate_paths:
+            for sidecar in (path, path + '.aux.xml'):
+                if os.path.exists(sidecar):
+                    os.remove(sidecar)
 
 
     
@@ -739,40 +834,11 @@ def write_pog_of_value_from_scratch(output_path, value, arcsecond_resolution, ou
         
     # Build Overviews
     tmp_ds.GetRasterBand(1).SetNoDataValue(ndv)    
-    tmp_ds.BuildOverviews(None, []) # Remove existing overviews (if any) 
-    
-    resampling_algorithm = hb.pyramid_resampling_algorithms_by_data_type[output_data_type]    
-    if overview_resampling_method is None:
-        overview_resampling_method = resampling_algorithm
-    
-    # Set the overview levels based on the pyramid arcseconds
-    overview_levels = hb.pyramid_compatible_overview_levels[arcsecond_resolution]
-    tmp_ds.BuildOverviews(overview_resampling_method.upper(), overview_levels, callback=hb.make_gdal_callback('Building overviews for ' + str(output_path)))
-    
+    tmp_ds.GetRasterBand(1).SetNoDataValue(ndv)
     tmp_ds.FlushCache()
     del tmp_ds  # Close temp dataset
-    
-    # Add statistics to the temp dataset
-    hb.add_stats_to_geotiff_with_gdal(temp_path, approx_ok=False, force=True, verbose=verbose)
-
-    # Step 2: Convert temporary GTiff to COG using CreateCopy
-    cog_driver = gdal.GetDriverByName('COG')
-    cog_creation_options = [
-        f'COMPRESS={compression}',
-        f'BLOCKSIZE={blocksize}',
-        'BIGTIFF=YES',
-        # 'OVERVIEWS=IGNORE_EXISTING'
-    ]
-
-    tmp_ds = gdal.Open(temp_path)
-    cog_ds = cog_driver.CreateCopy(output_path, tmp_ds, options=cog_creation_options)
-
-    if cog_ds is None:
-        raise RuntimeError('Failed to create COG dataset.')
-
-    # Cleanup
-    del cog_ds
-    del tmp_ds
+    # The shared POG finishing sequence: exact stats written into the file, the rung's overview chain, COG copy.
+    _write_cog_with_pyramid_overviews(temp_path, output_path, hb.pyramid_compatible_overview_levels[arcsecond_resolution], overview_resampling_method, output_data_type, ndv, compression, blocksize, verbose)
 
 
 def write_pog_of_value_from_match(output_path, match_path, value, output_data_type=None, ndv=None, overview_resampling_method=None, compression='DEFLATE', blocksize='512', verbose=False):
@@ -844,40 +910,10 @@ def write_pog_of_value_from_match(output_path, match_path, value, output_data_ty
         
     # Build Overviews
     tmp_ds.GetRasterBand(1).SetNoDataValue(ndv)    
-    tmp_ds.BuildOverviews(None, []) # Remove existing overviews (if any) 
-    
-    resampling_algorithm = hb.pyramid_resampling_algorithms_by_data_type[output_data_type]    
-    if overview_resampling_method is None:
-        overview_resampling_method = resampling_algorithm
-    
-    # Set the overview levels based on the pyramid arcseconds
-    overview_levels = hb.pyramid_compatible_overview_levels[arcseconds]
-    tmp_ds.BuildOverviews(overview_resampling_method.upper(), overview_levels, callback=hb.make_gdal_callback('Building overviews for ' + str(output_path)))
-    
+    tmp_ds.GetRasterBand(1).SetNoDataValue(ndv)
     tmp_ds.FlushCache()
     del tmp_ds  # Close temp dataset
-
-    # Set statistics, ensuring they are not approximate
-    hb.add_stats_to_geotiff_with_gdal(temp_path, approx_ok=False, force=True, verbose=verbose)
-    
-    # Step 2: Convert temporary GTiff to COG using CreateCopy
-    cog_driver = gdal.GetDriverByName('COG')
-    cog_creation_options = [
-        f'COMPRESS={compression}',
-        f'BLOCKSIZE={blocksize}',
-        'BIGTIFF=YES',
-        'NUM_THREADS=ALL_CPUS',
-        # 'OVERVIEWS=IGNORE_EXISTING'
-    ]
-
-    tmp_ds = gdal.Open(temp_path)
-    cog_ds = cog_driver.CreateCopy(output_path, tmp_ds, options=cog_creation_options)
-
-    if cog_ds is None:
-        raise RuntimeError('Failed to create COG dataset.')
-
-    # Cleanup
-    del cog_ds
-    del tmp_ds
+    # The shared POG finishing sequence: exact stats written into the file, the rung's overview chain, COG copy.
+    _write_cog_with_pyramid_overviews(temp_path, output_path, hb.pyramid_compatible_overview_levels[arcseconds], overview_resampling_method, output_data_type, ndv, compression, blocksize, verbose)
     del src_ds
 
