@@ -527,6 +527,17 @@ def zonal_statistics_rasterized(zone_ids_raster_path, values_raster_path, zones_
 
             # No idea why, but using **block_offset_new_gdal_api failed, so I unpack it manually here.
             values_array = values_ds.ReadAsArray(block_offset_new_gdal_api['xoff'], block_offset_new_gdal_api['yoff'], block_offset_new_gdal_api['buf_xsize'], block_offset_new_gdal_api['buf_ysize']).astype(np.float64)
+
+            # A raster whose real nodata is NaN, whatever it declares. The cython kernel masks on
+            # values_ndv, so a NaN it cannot match propagates into that zone's total and the
+            # np.isnan guard further down then reads the result as zero -- the zone silently drops
+            # out of the sum while its cells stay counted. Mapping non-finite values onto values_ndv
+            # here means NaN is masked like any other nodata, wherever the value came from.
+            if values_ndv is not None:
+                non_finite = ~np.isfinite(values_array)
+                if non_finite.any():
+                    values_array = np.where(non_finite, values_ndv, values_array)
+
             zones_array = zones_ds.ReadAsArray(block_offset_new_gdal_api['xoff'], block_offset_new_gdal_api['yoff'], block_offset_new_gdal_api['buf_xsize'], block_offset_new_gdal_api['buf_ysize']).astype(np.int64)
 
             if zones_array.shape != values_array.shape:

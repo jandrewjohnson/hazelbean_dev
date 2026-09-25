@@ -675,8 +675,16 @@ class ProjectFlow(object):
         No-op on None/empty. Warns on names that match no task so a typo doesn't
         silently leave an expensive task enabled.
         """
+        # A task is found by its NAME in the tree, not only by the '<name>_task' attribute: a
+        # builder may store a task under any attribute (p.get_vars_task for get_all_extended_vars),
+        # and a name that resolves nowhere used to leave that task silently enabled.
+        by_name = {}
+        for node in getattr(self.task_tree, 'descendants', []) or []:
+            by_name.setdefault(getattr(node, 'name', None), node)
         for name in task_names or []:
             task = getattr(self, name + '_task', None)
+            if task is None:
+                task = by_name.get(name)
             if task is not None:
                 task.run = 0
             else:
@@ -1435,7 +1443,10 @@ class ProjectFlow(object):
                     # self.run_in_parallel = True # TODOO Connect to UI
                     MAX_WINDOWS_WORKERS = 58
                     if not getattr(self, 'num_workers', None):
-                        self.num_workers = multiprocessing.cpu_count() - 1
+                        # NOT multiprocessing.cpu_count(): that reports the MACHINE, so inside a
+                        # scheduler allocation or container this oversubscribes the cpuset and
+                        # fills the memory cgroup. See hb.available_cpu_count.
+                        self.num_workers = max(1, hb.available_cpu_count() - 1)
                         #check which os
                         if platform.system() == 'Windows' and self.num_workers > MAX_WINDOWS_WORKERS:
                             self.num_workers = MAX_WINDOWS_WORKERS
