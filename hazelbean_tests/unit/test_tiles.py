@@ -116,7 +116,7 @@ def test_tile_pog_to_tileset_and_vrt(half_empty_pog):
     assert np.array_equal(src.ReadAsArray(), vds.ReadAsArray())
     original = src.ReadAsArray(); src = vds = None
 
-    # Sparse tile sets are legitimate: a missing tile reads as zero (a POG carries no nodata), everything else is unchanged.
+    # Sparse tile sets are legitimate: a missing tile reads as zero (no cell of a non-covariate POG holds nodata), everything else is unchanged.
     os.remove(os.path.join(tile_dir, 'gradient_900sec_0N_90E_90_90.tif'))
     vds = gdal.Open(hb.build_pog_tileset_vrt(tile_dir)); sparse = vds.ReadAsArray(); vds = None
     assert np.all(sparse[0:360, 1080:1440] == 0)
