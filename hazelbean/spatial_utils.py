@@ -1198,6 +1198,7 @@ def save_array_as_geotiff(array, out_uri, geotiff_uri_to_match=None, ds_to_match
         projection = ds_to_match.GetProjection()
     else:
         match_data_type = None
+        match_ndv = None
 
     # If no DS, cause loading from array, just use array size
     if n_cols is None:
@@ -1219,8 +1220,9 @@ def save_array_as_geotiff(array, out_uri, geotiff_uri_to_match=None, ds_to_match
     if ndv is None:
         if match_ndv is not None:
             ndv = match_ndv
-        else:
-            raise NameError('ndv not given and match_data_type not understood.')
+        elif not (ds_to_match and band_to_match):
+            raise NameError('ndv not given and there is no raster to match it from.')
+        # else: the match declares no nodata (as extensive, intensive and categorical POGs need not), so neither does the output.
     else:
         if type(ndv) not in [float, int]:
             raise NameError('ndv not processed correctly.')
@@ -1333,6 +1335,8 @@ def save_array_as_geotiff(array, out_uri, geotiff_uri_to_match=None, ds_to_match
             # Another possibility is to use gdalwarp without compression and then follow up with gdal_translate with compression:
 
     if set_inf_to_no_data_value:
+        if ndv is None:
+            raise ValueError('set_inf_to_no_data_value needs a nodata value: pass ndv, since the match declares none.')
         array[(array==np.inf) | (np.isneginf(array))] = ndv
 
     if execute_in_python:
@@ -1341,7 +1345,8 @@ def save_array_as_geotiff(array, out_uri, geotiff_uri_to_match=None, ds_to_match
         dst_ds = driver.Create(processed_out_uri, n_cols, n_rows, 1, data_type, dst_options)
         dst_ds.SetGeoTransform(geotransform)
         dst_ds.SetProjection(projection)
-        dst_ds.GetRasterBand(1).SetNoDataValue(ndv)
+        if ndv is not None:
+            dst_ds.GetRasterBand(1).SetNoDataValue(ndv)
         dst_ds.GetRasterBand(1).WriteArray(array)
     # else:
     #     command_line_gdal_translate(array, processed_out_uri, tiled=True, compression_method=compression_method)
