@@ -71,7 +71,7 @@ def test_intensive_overviews_are_area_weighted_and_observed_area_is_derived(grad
     base = gdal.Open(pog).ReadAsArray().astype(np.float64)
     assert gdal.Open(pog).GetRasterBand(1).GetNoDataValue() == -9999 and np.all(base[:40] == 0)  # declared; nodata cells became zero
     area = gdal.Open(observed).ReadAsArray()
-    ha = hb.ha_per_cell_rows(90.0, 0.25, 720)
+    ha = hb.ha_per_cell_rows(900.0, 0, 720)
     assert np.all(area[:40] == 0) and np.allclose(area[40:], ha[40:, None])
     # A 2 x 2 parent is the area-weighted mean of its children, not the plain mean (they differ where latitude varies).
     parent = _overview(pog, 0).astype(np.float64)
@@ -166,7 +166,7 @@ def test_exact_aggregation_between_rungs(tmp_path):
     assert hb.is_path_pog(coarse, verbose=True)
     assert np.isclose(gdal.Open(coarse).ReadAsArray().sum(), counts[30:].sum(), rtol=1e-12)
     observed = gdal.Open(str(tmp_path / 'coarse_observed_area.tif')).ReadAsArray()
-    assert np.isclose(observed.sum(), hb.ha_per_cell_rows(90.0, 1 / 12, 2160)[30:].sum() * 4320, rtol=1e-12)
+    assert np.isclose(observed.sum(), hb.ha_per_cell_rows(300.0, 0, 2160)[30:].sum() * 4320, rtol=1e-12)
     assert np.all(observed[9] < observed[11])  # the 900 s row holding the nodata edge is only partly observed
 
 
@@ -216,5 +216,30 @@ def test_ha_per_cell_pog_is_additive_across_rungs(tmp_path):
     path = hb.write_ha_per_cell_pog(str(tmp_path / 'ha_per_cell_900sec.tif'), 900)
     assert hb.is_path_pog(path, verbose=True)
     top = _overview(path, len(hb.pyramid_compatible_overview_levels[900.0]) - 1)
-    assert top.shape == (1, 2) and np.allclose(top, hb.ha_per_cell_rows(90.0, 180.0, 1)[0], rtol=1e-12)  # each 180 x 180 degree face
+    assert top.shape == (1, 2) and np.allclose(top, hb.ha_per_cell_rows(648000.0, 0, 1)[0], rtol=1e-12)  # each 180 x 180 degree face
     assert np.isclose(top.sum(), 5.10065621e10, rtol=1e-8)  # the WGS84 authalic area, in hectares
+
+
+def test_ha_per_cell_rows_is_one_definition_by_global_row():
+    """Areas depend only on the rung and the global row, never on how a raster is split: any chunking of the rows gives the
+    same bits, and an edge shared by two rungs is the same double, so 10 s rows sum to their 900 s row."""
+    for arcseconds in (1 / 9, 0.3, 1.0, 10.0, 600.0, 900.0):
+        n_rows = hb.pyramid_compatable_shapes[arcseconds][1]
+        start = n_rows // 3
+        whole = hb.ha_per_cell_rows(arcseconds, start, 1000)
+        pieces = np.concatenate([hb.ha_per_cell_rows(arcseconds, start + r0, min(1000, r0 + 246) - r0) for r0 in range(0, 1000, 246)])
+        assert np.array_equal(whole, pieces), arcseconds
+    fine = hb.ha_per_cell_rows(10.0, 0, 64800).reshape(720, 90).sum(axis=1) * 90  # 90 x 90 children per 900 s cell
+    coarse = hb.ha_per_cell_rows(900.0, 0, 720)
+    assert np.max(np.abs(fine - coarse) / coarse) < 1e-12
+
+
+def test_ha_per_cell_tile_holds_exactly_the_rows_of_the_global_pog(tmp_path):
+    """A tile written on its own and the same window of the global POG are bit-identical, and both equal the column values."""
+    whole = hb.write_ha_per_cell_pog(str(tmp_path / 'ha_per_cell_900sec.tif'), 900)
+    tile = hb.write_ha_per_cell_pog(str(tmp_path / 'ha_per_cell_900sec_40N_130W_10_10.tif'), 900, bb=[-130, 40, -120, 50])
+    assert hb.is_path_subpog(tile, verbose=True)
+    ds = gdal.Open(whole); window = ds.ReadAsArray(200, 160, 40, 40); ds = None  # 130W = column 200, 50N = row 160 at 900 s
+    ds = gdal.Open(tile); tile_values = ds.ReadAsArray(); ds = None
+    assert np.array_equal(tile_values, window)
+    assert np.array_equal(tile_values[:, 0], hb.ha_per_cell_rows(900.0, 160, 40))

@@ -67,19 +67,37 @@ def _pog_reference_for(pog_path, reference_path):
     return os.path.relpath(os.path.abspath(reference_path), os.path.dirname(os.path.abspath(pog_path)))
 
 
-def ha_per_cell_rows(top_lat, cell_degrees, n_rows):
-    """Hectares per cell for n_rows rows of a geographic grid of square cell_degrees cells whose top edge is top_lat.
+def ha_per_cell_rows(arcseconds, first_row, n_rows):
+    """Hectares per cell for rows first_row to first_row + n_rows - 1 of a rung's global grid (row 0 touches 90N).
 
-    WGS84 ellipsoid, the formula of hb.get_area_of_pixel_column_from_center_lats (and so of the ha_per_cell POGs).
-    Each row's area is a difference of one cumulative function at the row's edges, so the areas of the rows inside a
-    coarser row sum to its area: the additivity that makes area-weighted aggregation exact on the lattice."""
+    The single definition of ha_per_cell: every POG, subpog, tile, column file and aggregation takes its areas from
+    here, by GLOBAL row index, so a row has the same bits however a raster is split into strips or tiles. Row k's top
+    edge is the exact rational (324000 - k * arcseconds) / 3600 degrees, rounded to a double once, so an edge shared by
+    two rungs (a 900 s row boundary that is also a 10 s one) is the same double on both.
+
+    WGS84 ellipsoid, the formula of hb.get_area_of_pixel_column_from_center_lats. Each row's area is a difference of one
+    cumulative function at its edges, so the rows inside a coarser row sum to its area to within rounding: the
+    additivity that makes area-weighted aggregation exact on the lattice."""
+    step = Fraction(arcseconds).limit_denominator(1000000)  # 3/10, not the binary double nearest 0.3
+    k = np.arange(first_row, first_row + n_rows + 1, dtype=np.int64)
+    # Integer numerator and denominator (both far below 2**53), so the division is the one correctly rounded step.
+    edges = (324000 * step.denominator - k * step.numerator) / (3600 * step.denominator)
     a, b = 6378137.0, 6356752.3142
     e = math.sqrt(1 - (b / a) ** 2)
-    edges = np.clip(top_lat - cell_degrees * np.arange(n_rows + 1, dtype=np.float64), -90.0, 90.0)
     sin = np.sin(np.radians(edges))
     zm, zp = 1 - e * sin, 1 + e * sin
     cumulative = np.pi * b ** 2 * (np.log(zp / zm) / (2 * e) + sin / (zp * zm))
-    return cell_degrees / 360.0 * (cumulative[:-1] - cumulative[1:]) / 10000.0
+    return hb.pyramid_compatible_resolutions[arcseconds] / 360.0 * (cumulative[:-1] - cumulative[1:]) / 10000.0
+
+
+def _rung_and_first_row(gt):
+    """(arcseconds, global index of the top row) of a raster aligned on the lattice, from its geotransform. The cell
+    size is matched to its rung within 1e-9 relative, which also admits the cell sizes computed for overview levels."""
+    arcseconds = min((a for a in hb.pyramid_compatible_resolutions if isinstance(a, float)),
+                     key=lambda a: abs(hb.pyramid_compatible_resolutions[a] - gt[1]))
+    if abs(hb.pyramid_compatible_resolutions[arcseconds] - gt[1]) > gt[1] * 1e-9:
+        raise ValueError(f'Cell size {gt[1]} degrees is not a rung of the lattice.')
+    return arcseconds, int(round((90.0 - gt[3]) / gt[1]))
 
 
 def _cascade_block_sums(read_rows, n_rows, n_cols, factors, emit, max_strip_bytes=256e6):
@@ -149,7 +167,8 @@ def _class_block_quantities(variable_class, intensive_weighting, denominator_pat
     elif denominator_path not in (None, 'ha_per_cell'):
         weights = lambda r0, r1: _read_window_at_cell_size(denominator_path, gt[1], gt[0], gt[3] - r0 * gt[1], n_cols, r1 - r0)
     else:
-        weights = lambda r0, r1: np.broadcast_to(ha_per_cell_rows(gt[3] - r0 * gt[1], gt[1], r1 - r0)[:, None], (r1 - r0, n_cols))
+        arcseconds, first_row = _rung_and_first_row(gt)
+        weights = lambda r0, r1: np.broadcast_to(ha_per_cell_rows(arcseconds, first_row + r0, r1 - r0)[:, None], (r1 - r0, n_cols))
 
     def quantities(v, r0, r1):
         w = weights(r0, r1)
@@ -248,6 +267,8 @@ def _apply_pog_nodata_rule(input_path, output_path, variable_class, output_data_
         dsts.append(dst)
     dsts[0].SetMetadata(src.GetMetadata())
     np_type = gdal_array.GDALTypeCodeToNumericTypeCode(output_data_type)
+    if observed_area_output_path:
+        arcseconds, first_row = _rung_and_first_row(gt)
     strip = max(1, int(max_strip_bytes / (8 * n_cols)))
     for r0 in range(0, n_rows, strip):
         r1 = min(n_rows, r0 + strip)
@@ -257,7 +278,7 @@ def _apply_pog_nodata_rule(input_path, output_path, variable_class, output_data_
             valid &= np.isfinite(values)
         dsts[0].GetRasterBand(1).WriteArray(np.where(valid, values, fill_value if dst_ndv is None else dst_ndv).astype(np_type), 0, r0)
         if observed_area_output_path:
-            dsts[1].GetRasterBand(1).WriteArray(valid * ha_per_cell_rows(gt[3] - r0 * gt[1], gt[1], r1 - r0)[:, None], 0, r0)
+            dsts[1].GetRasterBand(1).WriteArray(valid * ha_per_cell_rows(arcseconds, first_row + r0, r1 - r0)[:, None], 0, r0)
     dsts = src = None
     return output_path
 
@@ -287,11 +308,12 @@ def _aggregate_on_lattice(input_path, output_path, output_arcseconds, variable_c
         dsts.append(dst)
     np_type = gdal_array.GDALTypeCodeToNumericTypeCode(output_data_type)
     area_weighted = variable_class == 'intensive' and intensive_weighting == 'area'
+    input_arcseconds, first_row = _rung_and_first_row(gt)
 
     def read(r0, r1):
         values = band.ReadAsArray(0, r0, n_cols, r1 - r0).astype(np.float64)
         valid = np.isfinite(values) if src_ndv is None else (values != src_ndv) & np.isfinite(values)
-        ha = np.broadcast_to(ha_per_cell_rows(gt[3] - r0 * gt[1], gt[1], r1 - r0)[:, None], values.shape)
+        ha = np.broadcast_to(ha_per_cell_rows(input_arcseconds, first_row + r0, r1 - r0)[:, None], values.shape)
         weight = valid * (ha if area_weighted else 1.0)
         return {'observed': valid * ha, 'numerator': np.where(valid, values, 0.0) * (weight if variable_class == 'intensive' else 1.0), 'denominator': weight}
 
@@ -354,10 +376,11 @@ def write_ha_per_cell_pog(output_path, arcseconds, bb=None, compression='DEFLATE
     ds = gdal.GetDriverByName('GTiff').Create(temp_path, n_cols, n_rows, 1, gdal.GDT_Float64, options=hb.globals.PRECOG_GTIFF_CREATION_OPTIONS_LIST)
     ds.SetGeoTransform((bb[0], res, 0.0, bb[3], 0.0, -res))
     ds.SetProjection(hb.wgs_84_wkt)
+    first_row = int(round((90.0 - bb[3]) / res))  # global row index, so a tile holds exactly the rows of the global POG
     strip = max(1, int(256e6 / (8 * n_cols)))
     for r0 in range(0, n_rows, strip):
         r1 = min(n_rows, r0 + strip)
-        ds.GetRasterBand(1).WriteArray(np.repeat(ha_per_cell_rows(bb[3] - r0 * res, res, r1 - r0)[:, None], n_cols, axis=1), 0, r0)
+        ds.GetRasterBand(1).WriteArray(np.repeat(ha_per_cell_rows(arcseconds, first_row + r0, r1 - r0)[:, None], n_cols, axis=1), 0, r0)
     ds = None
     levels = hb.pyramid_compatible_overview_levels[arcseconds] if bb == [-180.0, -90.0, 180.0, 90.0] else hb.get_pyramid_overview_levels_for_bb(arcseconds, bb)
     _write_cog_with_pyramid_overviews(temp_path, output_path, levels, None, gdal.GDT_Float64, None, compression, blocksize, verbose, variable_class='extensive')
