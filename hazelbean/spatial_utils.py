@@ -1220,14 +1220,10 @@ def save_array_as_geotiff(array, out_uri, geotiff_uri_to_match=None, ds_to_match
     if ndv is None:
         if match_ndv is not None:
             ndv = match_ndv
-        elif not (ds_to_match and band_to_match):
-            raise NameError('ndv not given and there is no raster to match it from.')
-        # else: the match declares no nodata (as extensive, intensive and categorical POGs need not), so neither does the output.
-    else:
-        if type(ndv) not in [float, int]:
-            raise NameError('ndv not processed correctly.')
-        else:
-            'okay cool'
+        # Otherwise ndv stays None and the output declares no nodata: the match declares none (as extensive, intensive and
+        # categorical POGs need not), or the caller passed the nodata of a source that has none (the chunk loaders do).
+    elif type(ndv) not in [float, int]:
+        raise NameError('ndv not processed correctly.')
 
     # PERFORMANCE and MEMORY CHOKEPOINT, this creates a copy if reassigned.
     if array.dtype != hb.gdal_number_to_numpy_type[int(data_type)]:
