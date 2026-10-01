@@ -49,7 +49,7 @@ def test_extensive_sums_overviews_and_promotes_integers(tmp_path):
     assert hb.is_path_pog(pog, verbose=True)
     ds = gdal.Open(pog)
     assert ds.GetRasterBand(1).DataType == gdal.GDT_Int64  # cannot overflow at the top rung
-    assert ds.GetRasterBand(1).GetNoDataValue() is None
+    assert ds.GetRasterBand(1).GetNoDataValue() == -9999  # declared, held by no cell
     assert hb.get_pog_metadata(pog) == {'POG_VARIABLE_CLASS': 'extensive'}
     ds = None
     total = int(counts.astype(np.int64).sum())
@@ -69,7 +69,7 @@ def test_intensive_overviews_are_area_weighted_and_observed_area_is_derived(grad
                     'POG_DENOMINATOR': 'share_observed_area.tif', 'POG_OBSERVED_AREA': 'share_observed_area.tif'}
     assert hb.get_pog_metadata(observed)['POG_VARIABLE_CLASS'] == 'extensive'
     base = gdal.Open(pog).ReadAsArray().astype(np.float64)
-    assert gdal.Open(pog).GetRasterBand(1).GetNoDataValue() is None and np.all(base[:40] == 0)  # nodata became zero
+    assert gdal.Open(pog).GetRasterBand(1).GetNoDataValue() == -9999 and np.all(base[:40] == 0)  # declared; nodata cells became zero
     area = gdal.Open(observed).ReadAsArray()
     ha = hb.ha_per_cell_rows(90.0, 0.25, 720)
     assert np.all(area[:40] == 0) and np.allclose(area[40:], ha[40:, None])
@@ -103,7 +103,7 @@ def test_categorical_and_covariate_nodata_conventions(tmp_path):
     cat = str(tmp_path / 'lulc_pog.tif')
     hb.make_path_pog(_write(str(tmp_path / 'lulc.tif'), lulc, 900.0, ndv=255), cat, variable_class='categorical', categorical_none_value=9)
     ds = gdal.Open(cat)
-    assert ds.GetRasterBand(1).GetNoDataValue() is None and set(np.unique(ds.ReadAsArray())) == {3, 9}  # nodata became the none class
+    assert ds.GetRasterBand(1).GetNoDataValue() == 255 and set(np.unique(ds.ReadAsArray())) == {3, 9}  # declared; nodata cells became the none class
     ds = None
     elevation = np.linspace(-100, 4000, 720 * 1440, dtype=np.float32).reshape(720, 1440); elevation[:10] = -32768
     cov = str(tmp_path / 'elevation_pog.tif')
@@ -112,6 +112,23 @@ def test_categorical_and_covariate_nodata_conventions(tmp_path):
     ds = gdal.Open(cov); arr = ds.ReadAsArray()
     assert ds.GetRasterBand(1).GetNoDataValue() == -9999 and np.all(arr[:10] == -9999) and not np.any(arr == -32768)  # per-type nodata, values converted
     ds = None
+
+
+def test_a_cell_holding_the_declared_nodata_is_refused(tmp_path):
+    """Every class declares the per-type nodata value, but outside a covariate no cell may hold it: the writer refuses
+    such a raster, and the validator rejects a POG whose cell was later set to it."""
+    lulc = np.full((720, 1440), 3, dtype=np.uint8); lulc[0, 0] = 255  # a real class with the Byte nodata value, not declared nodata
+    with pytest.raises(ValueError, match='nodata value of its type'):
+        hb.make_path_pog(_write(str(tmp_path / 'lulc.tif'), lulc, 900.0), str(tmp_path / 'lulc_pog.tif'), variable_class='categorical')
+    # The validator (the pyramid checks, not the COG layout, which an in-place write breaks).
+    pog = str(tmp_path / 'lulc_ok_pog.tif')
+    hb.make_path_pog(_write(str(tmp_path / 'lulc_ok.tif'), np.full((720, 1440), 3, dtype=np.uint8), 900.0), pog, variable_class='categorical')
+    assert hb.is_path_global_pyramid(pog, verbose=True)
+    ds = gdal.OpenEx(pog, gdal.OF_UPDATE, open_options=['IGNORE_COG_LAYOUT_BREAK=YES'])
+    ds.GetRasterBand(1).WriteArray(np.array([[255]], dtype=np.uint8), 5, 5)
+    ds.GetRasterBand(1).SetMetadataItem('STATISTICS_MAXIMUM', '255')  # what an exact recompute over every cell gives
+    ds = None
+    assert not hb.is_path_global_pyramid(pog, verbose=True)
 
 
 def test_undeclared_input_is_classed_by_data_type(tmp_path):
