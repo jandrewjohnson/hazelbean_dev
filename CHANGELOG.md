@@ -1,6 +1,33 @@
 # Hazelbean Changelog
 
-## v2.0.0 (2026-07-30)
+## v2.1.0 (2026-10-01)
+
+#### New Features
+
+* add output_arcseconds parameter to make_path_pog for explicit resolution control
+* add skip marker for tests requiring base_data when absent
+* add functions to resolve definitions paths and initialize parameters and scenarios from CSVs
+#### Fixes
+
+* update resolution comparison to use arcseconds keys for accuracy
+* update documentation links to reflect new structure
+* df_read's encoding fallbacks were unreachable
+#### Refactorings
+
+* streamline temporary directory management and deprecate old config globals
+* update documentation links and remove unused unittest configuration
+#### Docs
+
+* get_area_of_pixel_column_from_center_lats returns m2, not ha
+* update version in changelog to v2.0.0
+* update changelog for v2.0.0
+#### Others
+
+* bump action-download-artifact past the artifact-poisoning advisory
+
+Full set of changes: [`v2.0.0...v2.1.0`](https://github.com/jandrewjohnson/hazelbean_dev/compare/v2.0.0...v2.1.0)
+
+## v2.0.0 (2026-07-31)
 
 #### New Features
 
