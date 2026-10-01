@@ -518,25 +518,32 @@ def zonal_statistics_rasterized(zone_ids_raster_path, values_raster_path, zones_
 
             zones_ds = gdal.OpenEx(zone_ids_raster_path)
             values_ds = gdal.OpenEx(values_raster_path)
-            # No idea why, but using **block_offset_new_gdal_api failed, so I unpack it manually here.
-            try:
-                values_array = values_ds.ReadAsArray(block_offset_new_gdal_api['xoff'], block_offset_new_gdal_api['yoff'], block_offset_new_gdal_api['buf_xsize'], block_offset_new_gdal_api['buf_ysize']).astype(np.float64)
-            except:
-                L.critical('unable to load ' + values_raster_path)
-                pass
-            
-            try:
-                zones_array = zones_ds.ReadAsArray(block_offset_new_gdal_api['xoff'], block_offset_new_gdal_api['yoff'], block_offset_new_gdal_api['buf_xsize'], block_offset_new_gdal_api['buf_ysize']).astype(np.int64)
+            # gdal.OpenEx returns None for a path that does not exist or cannot be read. Naming it
+            # here is the difference between a usable error and an UnboundLocalError further down.
+            if values_ds is None:
+                raise NameError('zonal_statistics_rasterized could not open the values raster ' + str(values_raster_path))
+            if zones_ds is None:
+                raise NameError('zonal_statistics_rasterized could not open the zone raster ' + str(zone_ids_raster_path))
 
-            except:
-                L.critical('unable to load ' + zone_ids_raster_path)
-                pass            
-            
-                # zones_array = zones_ds.ReadAsArray(block_offset_new_gdal_api['xoff'], block_offset_new_gdal_api['yoff']).astype(np.int64)
-                # values_array = values_ds.ReadAsArray(block_offset_new_gdal_api['xoff'], block_offset_new_gdal_api['yoff']).astype(np.float64)
+            # No idea why, but using **block_offset_new_gdal_api failed, so I unpack it manually here.
+            values_array = values_ds.ReadAsArray(block_offset_new_gdal_api['xoff'], block_offset_new_gdal_api['yoff'], block_offset_new_gdal_api['buf_xsize'], block_offset_new_gdal_api['buf_ysize']).astype(np.float64)
+
+            # A raster whose real nodata is NaN, whatever it declares. The cython kernel masks on
+            # values_ndv, so a NaN it cannot match propagates into that zone's total and the
+            # np.isnan guard further down then reads the result as zero -- the zone silently drops
+            # out of the sum while its cells stay counted. Mapping non-finite values onto values_ndv
+            # here means NaN is masked like any other nodata, wherever the value came from.
+            if values_ndv is not None:
+                non_finite = ~np.isfinite(values_array)
+                if non_finite.any():
+                    values_array = np.where(non_finite, values_ndv, values_array)
+
+            zones_array = zones_ds.ReadAsArray(block_offset_new_gdal_api['xoff'], block_offset_new_gdal_api['yoff'], block_offset_new_gdal_api['buf_xsize'], block_offset_new_gdal_api['buf_ysize']).astype(np.int64)
 
             if zones_array.shape != values_array.shape:
-                L.critical('zones_array.shape != values_array.shape', zones_array.shape, values_array.shape)
+                raise NameError('zonal_statistics_rasterized got mismatched blocks: zones ' + str(zones_array.shape)
+                                + ' from ' + str(zone_ids_raster_path) + ' vs values ' + str(values_array.shape)
+                                + ' from ' + str(values_raster_path))
 
             unique_zone_ids_np = np.asarray(unique_zone_ids, dtype=np.int64)
 
@@ -1061,7 +1068,7 @@ def vector_super_simplify(input_vector_path, id_column_label, blur_size, output_
     
     base_data_dir = 'data'
     match_raster_path = os.path.join(base_data_dir, match_raster_refpath)
-    cloud_utils.download_gdrive_refpath(match_raster_path, base_data_dir)
+    cloud_utils.download_bucket_refpath(match_raster_path, base_data_dir)
     
     # Rasterize on id_column
     output_raster_path = os.path.splitext(output_path)[0] + '_raster_ids.tif'

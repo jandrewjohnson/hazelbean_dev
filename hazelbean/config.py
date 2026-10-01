@@ -1,6 +1,6 @@
 # coding=utf-8
 
-import os, sys, time, tempfile
+import os, sys, time
 import logging
 import traceback
 from collections import OrderedDict
@@ -39,22 +39,6 @@ def _default_external_base():
     return USER_HOME
 
 
-# ---------- Config file location (per-OS convention) ----------
-def _default_config_dir():
-    if IS_WINDOWS:
-        appdata = os.environ.get('APPDATA', os.path.join(USER_HOME, 'AppData', 'Roaming'))
-        return os.path.join(appdata, 'hazelbean')
-    if IS_MACOS:
-        return os.path.join(USER_HOME, 'Library', 'Application Support', 'hazelbean')
-    # Linux / other POSIX: respect XDG
-    xdg = os.environ.get('XDG_CONFIG_HOME', os.path.join(USER_HOME, '.config'))
-    return os.path.join(xdg, 'hazelbean')
-
-
-HAZELBEAN_CONFIG_DIR = _default_config_dir()
-default_hazelbean_config_uri = os.path.join(HAZELBEAN_CONFIG_DIR, 'config.txt')
-local_hazelbean_config_uri   = default_hazelbean_config_uri  # back-compat alias
-
 # Kept for back-compat with callers that probe drive listings.
 mounted_drives = list_mounted_drive_paths()
 
@@ -62,61 +46,32 @@ mounted_drives = list_mounted_drive_paths()
 # ---------- Defaults (overridden below if a config file exists) ----------
 PRIMARY_DRIVE                       = _default_primary_base()
 EXTERNAL_BULK_DATA_DRIVE            = _default_external_base()
-HAZELBEAN_WORKING_DIRECTORY         = os.path.dirname(os.path.abspath(__file__))
-CONFIGURED_FOR_CYTHON_COMPILATION   = 1.0
 
 # Drive-letter form is meaningful only on Windows; empty string on POSIX.
 PRIMARY_DRIVE_LETTER            = PRIMARY_DRIVE[0] if IS_WINDOWS else ''
 EXTERNAL_BULK_DATA_DRIVE_LETTER = EXTERNAL_BULK_DATA_DRIVE[0] if IS_WINDOWS else ''
 
 
-# ---------- Read config file if present ----------
-if os.path.exists(default_hazelbean_config_uri):
-    with open(default_hazelbean_config_uri) as f:
-        for line in f:
-            if '=' not in line:
-                continue
-            key, _, val = line.strip().partition('=')
-            if key == 'primary_drive_letter' and IS_WINDOWS:
-                PRIMARY_DRIVE_LETTER = val[0]
-                PRIMARY_DRIVE = PRIMARY_DRIVE_LETTER + ':/'
-            elif key == 'primary_base':
-                PRIMARY_DRIVE = val
-            elif key == 'external_bulk_data_drive' and IS_WINDOWS:
-                EXTERNAL_BULK_DATA_DRIVE_LETTER = val[0]
-                EXTERNAL_BULK_DATA_DRIVE = EXTERNAL_BULK_DATA_DRIVE_LETTER + ':/'
-            elif key == 'external_bulk_data_base':
-                EXTERNAL_BULK_DATA_DRIVE = val
-            elif key == 'hazelbean_working_directory':
-                HAZELBEAN_WORKING_DIRECTORY = val
-            elif key == 'configured_for_cython_compilation':
-                CONFIGURED_FOR_CYTHON_COMPILATION = float(val)
-
-
-def write_default_config():
-    """Opt-in: write a starter config file at the per-OS conventional location."""
-    os.makedirs(HAZELBEAN_CONFIG_DIR, exist_ok=True)
-    lines = [
-        'primary_base=' + PRIMARY_DRIVE,
-        'external_bulk_data_base=' + EXTERNAL_BULK_DATA_DRIVE,
-        'hazelbean_working_directory=' + HAZELBEAN_WORKING_DIRECTORY,
-        'configured_for_cython_compilation=' + str(CONFIGURED_FOR_CYTHON_COMPILATION),
-    ]
-    with open(default_hazelbean_config_uri, 'w', encoding='utf-8') as f:
-        f.write('\n'.join(lines) + '\n')
-
+# config.txt was retired 2026-09-03. There is exactly one per-machine file, and it is
+# ~/.config/hazelbean/machine.env (loaded by hazelbean/machine_env.py at import):
+#   HB_SHARED_DATA_DIRS  read-only base_data mirrors searched by get_path
+#   HB_TEMP_DIR          root for every hazelbean temp file (see hb.get_temp_dir)
+# Where the package is installed is a fact, not a setting: code that needs it uses its
+# own __file__. Temp files go through hb.get_temp_dir() / hb.temp() / p.temporary_dir.
 
 # ---------- HAZELBEAN SETUP GLOBALS ----------
-# tempfile.gettempdir() respects $TMPDIR on POSIX, %TEMP% on Windows.
-TEMPORARY_DIR = os.path.join(tempfile.gettempdir(), 'hazelbean_temp')
-
+# DEPRECATED (2026-09-03): the absolute-path globals below (BASE_DATA_DIR, *_BASE_DATA_DIR,
+# BULK_DATA_DIR, EXTERNAL_BULK_DATA_DIR, PROJECTS_DIR, luh_data_dir) describe a directory
+# layout that no current machine has, and nothing in the live stack should read them.
+# Convention: config holds ref_paths only (paths relative to base_data's layout). Per-machine
+# roots live in ~/.config/hazelbean/machine.env (HB_SHARED_DATA_DIRS); a run resolves paths
+# with p.base_data_dir / p.get_path(ref_path) on a ProjectFlow. Kept so old code imports.
 _research_root = os.path.join(PRIMARY_DRIVE, 'Files', 'Research')
 BASE_DATA_DIR              = os.path.join(_research_root, 'base_data')
 SEALS_BASE_DATA_DIR        = os.path.join(_research_root, 'cge', 'seals', 'base_data')
 GTAP_INVEST_BASE_DATA_DIR  = os.path.join(_research_root, 'cge', 'gtap_invest', 'base_data')
 BULK_DATA_DIR              = os.path.join(PRIMARY_DRIVE, 'bulk_data')
 EXTERNAL_BULK_DATA_DIR     = os.path.join(EXTERNAL_BULK_DATA_DRIVE, 'bulk_data')
-TEST_DATA_DIR              = os.path.join(HAZELBEAN_WORKING_DIRECTORY, '..', 'tests', 'data')
 PROJECTS_DIR               = os.path.join(PRIMARY_DRIVE, 'OneDrive', 'Projects')
 
 

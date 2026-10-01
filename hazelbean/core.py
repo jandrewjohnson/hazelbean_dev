@@ -150,12 +150,9 @@ def path_exists(path, minimum_size_check=0, dir_must_have_content=False, verbose
     # if verbose:
     #     L.info('  Checking to see if ' + str(path) + ' exists.')
     path = str(path)
-    # If verbose is a Logger object, use it. Otherwise create it.
-    if verbose is not False:
-        if verbose is not True:
-            L = verbose
-        else:
-            L = hb.get_logger('hb.core')
+    # If verbose is a Logger object, use it. Otherwise create it (verbose=1 is truthy, not a logger).
+    if verbose:
+        L = verbose if hasattr(verbose, 'info') else hb.get_logger('hb.core')
             
     if path is None:
         if verbose:
@@ -205,7 +202,8 @@ def path_exists(path, minimum_size_check=0, dir_must_have_content=False, verbose
                 else:
                     if verbose:
                         hb.log('Path DOES NOT exist: ' + str(path) + ',\n Absolute path is: ' + str(os.path.abspath(path)) + ',\n Normalized path is: ' + str(os.path.normpath(path)))
-                        hb.log(' Othre files in folder: ' + str(os.listdir(os.path.split(path)[0])))
+                        if os.path.isdir(os.path.split(path)[0]):
+                            hb.log(' Othre files in folder: ' + str(os.listdir(os.path.split(path)[0])))
                         hb.log('  Minimum size check was: ' + str(minimum_size_check) + ', but the file size was: ' + str(os.path.getsize(path)))
                     return False                
                 

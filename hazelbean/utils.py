@@ -851,54 +851,59 @@ def df_merge_quick(
     return merged_df
 
 def df_read(input_path, delimiter=','):
-    """Read an input path to a Pandas DataFram
-    
+    """Read an input path to a Pandas DataFrame.
+
     Args:
-        input_path (str): Path string to the file. Currently only implements CSV.
-    
+        input_path (str, os.PathLike or pd.DataFrame): Path to the file, currently CSV only. A
+            DataFrame is returned unchanged, so a caller can hold a path and load it lazily. A
+            pathlib.Path is accepted and converted.
+        delimiter (str): The column delimiter, passed through to pandas.
+
     Returns:
         The Pandas DataFrame read from the CSV file.
 
     Raises:
-        NameError: If anything fails.
-    
+        NameError: if the input is neither a DataFrame nor a path, if the path does not exist, or
+            if the file cannot be read under any of the encodings tried.
+
     Examples:
         Basic usage:
         ```python
         df = df_read('path/to/your/file.csv')
         ```
     """
-    
-    # If the input is already a df, just return it
-    # Thhis allows optimization by just initializing it as a string and only loading it when needed, and not reloading it subsequent times.
+    # If the input is already a df, just return it. This allows optimization by just initializing
+    # it as a string and only loading it when needed, and not reloading it subsequent times.
     if isinstance(input_path, pd.DataFrame):
         return input_path
-        
+
+    if isinstance(input_path, os.PathLike):
+        input_path = str(input_path)
     if not type(input_path) is str:
-        raise NameError(f'df_read only accepts a string path. You passed in {str(input_path)} of type {str(type(input_path))} which is not a string.')
+        raise NameError(f'df_read only accepts a string or os.PathLike path. You passed in {str(input_path)} of type {str(type(input_path))} which is neither.')
     if not os.path.exists(input_path):
         raise NameError(f'Path does not exist, so df_read cannot read it\n    Inputted: {input_path}\n    Abspath:  {os.path.abspath(input_path)} \n    Normpath: {os.path.normpath(input_path)}')
-    
-    try:
-        df = pd.read_csv(input_path, delimiter=delimiter)
-    except:
-        encoding = 'utf-8'
+
+    # Pandas' own default first, which handles a UTF-8 byte-order mark. Then utf-8-sig, which the
+    # EE spec names for CSVs that carry one, then the two single-byte encodings international
+    # datasets most often arrive in. The first that reads wins.
+    #
+    # A fallback's result is checked before it is accepted, because ISO-8859-1 and latin1 decode
+    # ANY byte sequence: without the check a binary file comes back as a frame with one column
+    # called 'Unnamed: 0' and no rows, which is worse than the error it replaced. A real CSV has
+    # at least one named column in its header.
+    for encoding in (None, 'utf-8-sig', 'ISO-8859-1', 'latin1'):
         try:
-            df = pd.read_csv(input_path, delimiter=delimiter, encoding=encoding)
-        except:
-            encoding = 'ISO-8859-1'
-            try:
+            if encoding is None:
+                df = pd.read_csv(input_path, delimiter=delimiter)
+            else:
                 df = pd.read_csv(input_path, delimiter=delimiter, encoding=encoding)
-            except:
-                encoding = 'latin1'
-                try:
-                    df = pd.read_csv(input_path, delimiter=delimiter, encoding=encoding)
-                except:
-                    raise NameError(f'Unable to read {input_path} as a csv. It may not be a csv or it may be malformed.\n    Abspath: {os.path.abspath(input_path)}. \n    Normpath: {os.path.normpath(input_path)}')
-                raise NameError(f'Unable to read {input_path} as a csv. It may not be a csv or it may be malformed. \n     Abspath: {os.path.abspath(input_path)}. \n     Normpath: {os.path.normpath(input_path)}')
-            raise NameError(f'Unable to read {input_path} as a csv. It may not be a csv or it may be malformed.  \n    Abspath: {os.path.abspath(input_path)}. \n     Normpath: {os.path.normpath(input_path)}')
-        raise NameError(f'Unable to read {input_path} as a csv. It may not be a csv or it may be malformed.  \n    Abspath: {os.path.abspath(input_path)}.  \n    Normpath: {os.path.normpath(input_path)}')
-    return df
+        except Exception:
+            continue
+        if any(not str(column).startswith('Unnamed:') for column in df.columns):
+            return df
+    raise NameError(f'Unable to read {input_path} as a csv under any of utf-8, utf-8-sig, ISO-8859-1 or latin1. It may not be a csv, it may use a different delimiter than {delimiter!r}, or it may be malformed.\n    Abspath: {os.path.abspath(input_path)}\n    Normpath: {os.path.normpath(input_path)}')
+
 
 def df_write(df, output_path, index=False, handle_quotes='auto'):
     """Write a Pandas DataFrame to a CSV or XLSX file.
@@ -2781,3 +2786,42 @@ def split_respecting_nesting(s, delimiter):
     parts.append(s[start_index:].strip()) 
     
     return parts
+
+
+def available_cpu_count():
+    """The number of CPUs this PROCESS may use, which is not the machine's core count.
+
+    os.cpu_count() and multiprocessing.cpu_count() report the MACHINE. Inside a scheduler
+    allocation, a container, or any cpuset cgroup, the process is confined to a subset of that, and
+    a worker pool sized from the machine count oversubscribes the allocation.
+
+    The failure is not a crash. On a 128-core cluster node with 8 CPUs and 64 GiB granted, a pool
+    sized from cpu_count spawned 127 workers, filled the memory cgroup to 62.2 of 64.0 GiB (failcnt
+    210), and every worker slept at 0% CPU. The job held its allocation for hours having produced
+    nothing, and nothing in the logs said why.
+
+    Resolution order, most specific first:
+      1. SLURM_CPUS_PER_TASK   -- what the scheduler says it gave this task. Often unset, so it
+                                  cannot be the only source.
+      2. sched_getaffinity     -- the cpuset the kernel actually confines us to. This is what
+                                  reflects a SLURM allocation or a container cpuset. POSIX-only.
+      3. os.cpu_count()        -- the machine, the honest fallback on platforms without affinity.
+
+    Returns:
+        int: at least 1.
+    """
+    value = os.environ.get('SLURM_CPUS_PER_TASK')
+    if value:
+        try:
+            if int(value) > 0:
+                return int(value)
+        except ValueError:
+            pass
+    if hasattr(os, 'sched_getaffinity'):
+        try:
+            count = len(os.sched_getaffinity(0))
+            if count > 0:
+                return count
+        except OSError:
+            pass
+    return os.cpu_count() or 1

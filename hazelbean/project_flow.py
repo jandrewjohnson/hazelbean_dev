@@ -25,6 +25,12 @@ L = hb.get_logger('project_flow')
 L.setLevel(logging.INFO)
 initial_logging_level = L.getEffectiveLevel()
 
+# get_path's possible_dirs list holds plain directory strings plus a few sentinels for
+# roots that need more than a path join. 'input_bucket_name' is the long-standing one
+# (the cloud bucket); this marks a read-only shared data root, whose path follows the
+# prefix. Not a valid path prefix on any platform, so it can never collide with a dir.
+SHARED_ROOT_SENTINEL_PREFIX = 'shared_data_root::'
+
 # module level get_path. Usually you want to use the project_level version
 def get_path(relative_path, *join_path_args, possible_dirs='default', prepend_possible_dirs=None, create_shortcut=False, download_destination_dir=None, strip_relative_paths_for_output=False, leave_ref_path_if_fail=False, verbose=False):
     # SUPER DANGEROUS TO USE IF YOU ACTUALLY WANT TO USE A PROJECT FLOW OBJECT.
@@ -308,6 +314,12 @@ class ProjectFlow(object):
         except:
             L.debug('Could not identify a calling script.')
 
+        # The tracked definition files beside the run file. get_path searches this
+        # right after input_dir, so a run reads the template in place and input/
+        # holds only per-machine overrides (nothing is copied into input/).
+        self.input_template_dir = os.path.join(self.script_dir, 'input_template') if getattr(self, 'script_dir', None) else None
+        self.stale_input_paths = []  # input/ files that shadow a newer, different template (see _warn_if_input_copy_is_stale)
+
         user_dir = os.path.expanduser('~')
         self.user_dir = user_dir
         default_extra_dirs = ['Files']
@@ -330,16 +342,38 @@ class ProjectFlow(object):
         else:
             self.set_project_dir(project_dir, project_name, run_mode, extra_dirs)
 
-        if hb.path_exists(hb.config.BASE_DATA_DIR):
-            self.base_data_dir = hb.config.BASE_DATA_DIR
-        else:
-            self.base_data_dir = os.path.join(user_dir, os.sep.join(default_extra_dirs), 'base_data')
+        # Local base_data is the devstack-standard ~/Files/base_data. Paths are never
+        # read from hb.config globals (config holds ref_paths only); per-machine
+        # roots come from machine.env (HB_SHARED_DATA_DIRS, below).
+        self.base_data_dir = os.path.join(user_dir, os.sep.join(default_extra_dirs), 'base_data')
 
+        # Read-only roots that mirror base_data's ref_path layout: a mounted lab drive
+        # (Google Drive for Desktop, Dropbox), a group scratch dir, an external disk.
+        # get_path searches them after base_data_dir and before the cloud bucket, and
+        # copies any hit into base_data_dir so later runs resolve locally.
+        #
+        # Configured per machine, because the mount path is a property of the machine
+        # (a Drive mount embeds the signed-in account) rather than of any project:
+        #   HB_SHARED_DATA_DIRS=/path/to/drive/base_data   in ~/.config/hazelbean/machine.env
+        # os.pathsep-separated for more than one. Unset (the default) means no shared
+        # roots and get_path behaves exactly as it did before this existed.
+        #
+        # A run file may also set p.shared_data_dirs = [...] directly.
+        self.shared_data_dirs = [i.strip() for i in os.environ.get('HB_SHARED_DATA_DIRS', '').split(os.pathsep) if i.strip()]
+        L.info('base_data_dir: ' + self.base_data_dir + '; shared data roots: ' + str(self.shared_data_dirs)
+               + ' from HB_SHARED_DATA_DIRS ' + hb.machine_env.describe_source('HB_SHARED_DATA_DIRS'))
 
-        if hb.path_exists(hb.config.EXTERNAL_BULK_DATA_DIR):
-            self.external_bulk_data_dir = hb.config.EXTERNAL_BULK_DATA_DIR
-        else:
-            self.external_bulk_data_dir = None
+        # Every temp file of this run goes in one per-run folder under hb.get_temp_dir()
+        # (HB_TEMP_DIR in machine.env, else the OS temp dir's hazelbean_temp_<user>).
+        # Created when execute() starts and removed at exit; the name says which run made
+        # it, so a crashed run's leftovers are attributable. Tasks: hb.temp(folder=p.temporary_dir).
+        self.run_string = hb.pretty_time()  # unique time-stamp string for run-specific identifications
+        self.temporary_dir = os.path.join(hb.get_temp_dir(), str(self.project_name) + '_' + self.run_string)
+
+        # Availability is cached per ProjectFlow: parallel iterators call get_path
+        # thousands of times per run, and stat-ing a network filesystem on each call is
+        # the performance trap that would make people turn this off.
+        self._shared_root_availability = {}
 
 
         # args is used by UI elements.
@@ -533,13 +567,14 @@ class ProjectFlow(object):
         self._project_dirs_materialized = False
 
     def _materialize_project_dirs(self):
-        """Create the project dir on disk and seed input/ from input_template/.
+        """Create the project dir on disk.
 
         Split out from _resolve_project_dir so that merely constructing a
         ProjectFlow writes nothing: a run file that constructs bare and then calls
         set_project_dir(project_name=...) would otherwise leave an orphan dir tree
-        (with a copied input_template) under the derived default name. Idempotent,
-        and called both by set_project_dir and at the top of execute().
+        under the derived default name. Idempotent, and called both by
+        set_project_dir and at the top of execute(). input_template/ is NOT copied
+        here (or anywhere): get_path reads it in place, after input/.
         """
         if getattr(self, '_project_dirs_materialized', False):
             return
@@ -549,11 +584,13 @@ class ProjectFlow(object):
         except:
             raise NotADirectoryError('A Project Flow object is based on defining a project_dir as its base, but we were unable to create the dir at the given path: ' + self.project_dir + '. It is possible that you do not have write access to this directory or that you are working on a virtual machine with some weird setup.')
 
-        self.copy_input_template()
+        # input/ always exists (empty until the user copies an override into it);
+        # before 2026-09-03 it was created only as a side effect of the template copy.
+        hb.create_directories(self.input_dir)
         self._project_dirs_materialized = True
 
     def set_project_dir(self, project_dir=None, project_name=None, run_mode=None, extra_dirs=None):
-        """Point the project at a directory, creating it and seeding input/.
+        """Point the project at a directory, creating it.
 
         The single directory-setup entry point. Run files that pass project_name
         and run_mode to hb.ProjectFlow() do not need to call this at all; call it
@@ -562,13 +599,16 @@ class ProjectFlow(object):
         _resolve_project_dir.
         """
         self._resolve_project_dir(project_dir, project_name, run_mode, extra_dirs)
+        # Re-pointing renames the run's temp folder too, unless execute() already made it.
+        if getattr(self, 'run_string', None) and not os.path.isdir(getattr(self, 'temporary_dir', '')):
+            self.temporary_dir = os.path.join(hb.get_temp_dir(), str(self.project_name) + '_' + self.run_string)
         self._materialize_project_dirs()
 
         if run_mode == 'fresh_intermediate':
             # Delete in place (rather than timestamping a new dir) so any path derived
             # from project_dir still resolves to the fresh results. input/ is kept: it
-            # holds per-machine values (e.g. parameters.csv connection settings) that a
-            # freshly seeded template would leave blank.
+            # holds the per-machine override copies (e.g. a parameters.csv with
+            # connection settings filled in) that the tracked template leaves blank.
             import shutil
             for stale_dir in [self.intermediate_dir, self.output_dir]:
                 if os.path.exists(stale_dir):
@@ -583,24 +623,47 @@ class ProjectFlow(object):
         self.set_project_dir(project_name=project_name, run_mode=run_mode, extra_dirs=extra_dirs)
 
     def copy_input_template(self):
-        # Check for any input_template in the repository and copy anything not
-        # already present into the project's input_dir. Strictly skip-existing:
-        # the input/ working copy holds per-machine values (e.g. parameters.csv
-        # connection settings) and user edits that a re-run must never clobber.
-        # (hb.path_copy's overwrite flag is ignored for directory sources, so we
-        # walk the tree ourselves.)
-        template_dir = os.path.join(getattr(self, 'script_dir', ''), 'input_template')
-        if getattr(self, 'script_dir', None) and hb.path_exists(template_dir, verbose=True):
-            import shutil
-            for walk_root, _, walk_files in os.walk(template_dir):
-                rel = os.path.relpath(walk_root, template_dir)
-                dst_root = self.input_dir if rel == '.' else os.path.join(self.input_dir, rel)
-                os.makedirs(dst_root, exist_ok=True)
-                for filename in walk_files:
-                    dst = os.path.join(dst_root, filename)
-                    if not os.path.exists(dst):
-                        shutil.copy2(os.path.join(walk_root, filename), dst)
-            hb.log(f'Found {template_dir} in the input_template dir of this project. Copied missing items to {self.input_dir}')
+        """DEPRECATED (2026-09-03): input_template/ is no longer copied into input/.
+
+        get_path searches input_template_dir right after input_dir, so the tracked
+        files are read in place and input/ holds only the files you deliberately
+        copied there to override (e.g. a parameters.csv with connection settings
+        filled in). Kept as a no-op so old callers do not crash.
+        """
+        hb.log('copy_input_template is deprecated and does nothing: get_path reads input_template/ in place '
+               '(after input/). Copy a single file into ' + str(self.input_dir) + ' by hand to override it.')
+
+    def _warn_if_input_copy_is_stale(self, input_path):
+        """Warn once when an input/ file shadows an input_template/ file that is newer AND different.
+
+        mtime is only the trigger, because a git checkout restamps every file: the
+        two files are then compared by size and content, and only a real difference
+        warns. Records the path on self.stale_input_paths so callers (and tests) can
+        see what was flagged. Never raises.
+        """
+        template_dir = getattr(self, 'input_template_dir', None)
+        if not template_dir or input_path in self.stale_input_paths:
+            return
+        try:
+            template_path = os.path.join(template_dir, os.path.relpath(input_path, self.input_dir))
+            if not os.path.isfile(template_path) or os.path.getmtime(template_path) <= os.path.getmtime(input_path):
+                return
+            if os.path.getsize(template_path) == os.path.getsize(input_path):
+                import hashlib
+                digests = []
+                for path in (template_path, input_path):
+                    h = hashlib.sha256()
+                    with open(path, 'rb') as f:
+                        for chunk in iter(lambda: f.read(1024 * 1024), b''):
+                            h.update(chunk)
+                    digests.append(h.hexdigest())
+                if digests[0] == digests[1]:
+                    return
+        except OSError:
+            return
+        self.stale_input_paths.append(input_path)
+        hb.log('WARNING: ' + str(input_path) + ' shadows a newer, different tracked template at ' + str(template_path)
+               + '. Merge the template change into your input/ copy, or delete the copy to read the template in place.')
 
     def skip_tasks(self, task_names):
         """Set run=0 on the named tasks (function names, without the '_task' suffix).
@@ -612,12 +675,43 @@ class ProjectFlow(object):
         No-op on None/empty. Warns on names that match no task so a typo doesn't
         silently leave an expensive task enabled.
         """
+        # A task is found by its NAME in the tree, not only by the '<name>_task' attribute: a
+        # builder may store a task under any attribute (p.get_vars_task for get_all_extended_vars),
+        # and a name that resolves nowhere used to leave that task silently enabled.
+        by_name = {}
+        for node in getattr(self.task_tree, 'descendants', []) or []:
+            by_name.setdefault(getattr(node, 'name', None), node)
         for name in task_names or []:
             task = getattr(self, name + '_task', None)
+            if task is None:
+                task = by_name.get(name)
             if task is not None:
                 task.run = 0
             else:
                 hb.log(f'skip_tasks: no task named {name!r} in this task tree — check spelling.')
+
+    def shared_root_is_available(self, shared_root):
+        """True if a configured shared root is present on this machine, cached per ProjectFlow.
+
+        A shared root is opportunistic by design: it is a mounted lab drive or group
+        scratch dir that some machines have and others cannot. Google Drive for Desktop
+        has no Linux client at all, so an absent root is the NORMAL state on the cluster,
+        not an error — get_path skips it and falls through to the cloud bucket.
+
+        Cached because get_path is called thousands of times per run inside parallel
+        iterators, and each check may hit a network filesystem.
+        """
+        if shared_root not in self._shared_root_availability:
+            try:
+                available = os.path.isdir(shared_root)
+            except OSError:
+                # A stale or unauthenticated mount can raise rather than return False.
+                available = False
+            self._shared_root_availability[shared_root] = available
+            if not available:
+                hb.log('Shared data root not available on this machine (skipping it in get_path): '
+                       + str(shared_root))
+        return self._shared_root_availability[shared_root]
 
     def set_base_data_dir(self, input_base_data_dir=None, match_string='seals/default_inputs'):
                 
@@ -724,7 +818,7 @@ class ProjectFlow(object):
         relative_joined_path = relative_path
 
         if possible_dirs == 'default':
-            possible_dirs = [self.cur_dir, self.intermediate_dir, self.input_dir, caller_dir, cwd, self.base_data_dir]
+            possible_dirs = [self.cur_dir, self.intermediate_dir, self.input_dir, self.input_template_dir, caller_dir, cwd, self.base_data_dir]
             # possible_dirs = [self.cur_dir, self.input_dir, self.base_data_dir]
             
             # I Just changed this to be cur_dir instead of intermeiate_dir for base_data_promotion to work
@@ -735,8 +829,16 @@ class ProjectFlow(object):
         # if len(join_path_args) > 1:
         #     to_insert = os.path.join(self.intermediate_dir, os.sep.join([path_as_inputted] + list(join_path_args)[:-1]))
         #     possible_dirs.insert(0, to_insert)
-        
-            # Check if self has google_drive_path attribute and if so, add it to the possible_dirs
+
+        # Shared data roots (a mounted lab drive, a group scratch dir) go after the local
+        # dirs and before the cloud bucket: local disk is fastest, a mount is free but
+        # slower, the bucket is slowest and costs egress. They are marked with a sentinel
+        # rather than added as plain dirs because a hit must be COPIED to base_data and the
+        # local path returned -- handing GDAL a path on a streaming filesystem is the thing
+        # this tier exists to avoid. No roots configured means nothing is appended and the
+        # ladder is exactly what it was.
+        for shared_root in getattr(self, 'shared_data_dirs', []):
+            possible_dirs.append(SHARED_ROOT_SENTINEL_PREFIX + shared_root)
 
         if not hasattr(self, 'input_bucket_name'):
             self.input_bucket_name = default_bucket
@@ -807,18 +909,39 @@ class ProjectFlow(object):
                         else:
                             pass
 
+                elif possible_dir.startswith(SHARED_ROOT_SENTINEL_PREFIX):
+                    # A read-only root mirroring base_data's ref_path layout. Copy any hit
+                    # into base_data and return the LOCAL path, which is what makes this a
+                    # cache rather than a symlink: the next run resolves at base_data and
+                    # never touches the shared root again.
+                    shared_root = possible_dir[len(SHARED_ROOT_SENTINEL_PREFIX):]
+                    if not self.shared_root_is_available(shared_root):
+                        continue
+
+                    shared_path = os.path.join(shared_root, relative_path)
+                    if os_utils.is_google_native_file(shared_path):
+                        # A Drive .gsheet/.gdoc is a ~100-byte JSON pointer, not data.
+                        continue
+
+                    if hb.path_exists(shared_path, verbose=verbose):
+                        local_path = os.path.join(self.base_data_dir, relative_path)
+                        os_utils.cache_file_from_shared_root(shared_path, local_path, verbose=verbose)
+                        hb.log('get_path: cached ' + str(relative_path) + ' from shared root '
+                               + str(shared_root) + ' to ' + str(local_path))
+                        if create_shortcut:
+                            os_utils.create_shortcut(destination_file_name, intermediate_path_override)
+                        return local_path
+
                 else:
 
                     path = os.path.join(possible_dir, relative_path)
 
 
-                    
-                    
-
                     if hb.path_exists(path, verbose=verbose):
                         if create_shortcut:
                             os_utils.create_shortcut(destination_file_name, intermediate_path_override)
-
+                        if possible_dir == self.input_dir:
+                            self._warn_if_input_copy_is_stale(path)
                         return path
                     
                     # HACK IUCN RUSH. Also check filepath against possible dir
@@ -827,21 +950,38 @@ class ProjectFlow(object):
                     # incorrectly impli9ed by the cur_dir structure.
                     split_path = os.path.join(possible_dir, os.path.split(path)[1])
                     if hb.path_exists(split_path, verbose=verbose):
+                        if possible_dir == self.input_dir:
+                            self._warn_if_input_copy_is_stale(split_path)
                         return split_path
                     
 
 
         # It wasnt found anywhere, so do some final checks and then use the default
         def _not_found_message():
-            searched = [i for i in possible_dirs if isinstance(i, str) and i != 'input_bucket_name']
+            searched = [i for i in possible_dirs if isinstance(i, str)
+                        and i != 'input_bucket_name'
+                        and not i.startswith(SHARED_ROOT_SENTINEL_PREFIX)]
             lines = ['get_path could not resolve a ref_path.',
                      '  ref_path as given: ' + str(path_as_inputted)]
             if relative_path != path_as_inputted:
                 lines.append('  resolved relative path: ' + str(relative_path))
             lines.append('  searched these roots in order (not found in any):')
             lines += ['    - ' + str(i) for i in searched]
+            # Mark each shared root available or not: without this, "the drive is not
+            # mounted" and "the file does not exist" produce an identical message.
+            for i in possible_dirs:
+                if isinstance(i, str) and i.startswith(SHARED_ROOT_SENTINEL_PREFIX):
+                    shared_root = i[len(SHARED_ROOT_SENTINEL_PREFIX):]
+                    state = 'available' if self.shared_root_is_available(shared_root) else 'NOT AVAILABLE on this machine'
+                    lines.append('    - shared data root (' + state + '): ' + str(shared_root))
             if 'input_bucket_name' in possible_dirs:
                 lines.append('    - cloud bucket: ' + str(self.input_bucket_name))
+            # Lands in front of someone at the moment they need it, rather than in a
+            # doc they would have to know to look for.
+            if not getattr(self, 'shared_data_dirs', None):
+                lines.append('  No shared data roots are configured. If this file lives on a lab drive or')
+                lines.append('  shared disk, run  hb-setup-machine-env  to detect and record one, or set')
+                lines.append('  HB_SHARED_DATA_DIRS by hand in ~/.config/hazelbean/machine.env.')
             lines.append('  If you expected this file to exist, check the ref_path spelling against base_data.')
             lines.append('  If a task generates this file, call get_path with raise_error_if_fail=False '
                          '(returns the would-be path under the first searched root).')
@@ -903,7 +1043,10 @@ class ProjectFlow(object):
         # current task is skipped and this call is only publishing a path. Return the
         # would-be path under the first root and log the assumption so a typo'd
         # ref_path leaves a diagnostic trail instead of silently producing a phantom path.
-        possible_dirs = [i for i in possible_dirs if i is not None and i != 'input_bucket_name']
+        # Drop the sentinels: what follows joins possible_dirs[0] as an actual directory,
+        # and neither the bucket nor a shared root is one.
+        possible_dirs = [i for i in possible_dirs if i is not None and i != 'input_bucket_name'
+                         and not (isinstance(i, str) and i.startswith(SHARED_ROOT_SENTINEL_PREFIX))]
         path = os.path.join(possible_dirs[0], relative_path)
         if in_skipped_task:
             hb.log('get_path (skipped task): ' + str(path_as_inputted) + ' was not found in any searched root; '
@@ -1148,7 +1291,7 @@ class ProjectFlow(object):
                 # # TODOO NYI, but I want to implement task-level logging conditionals.
                 # L.setLevel(task.logging_level)
 
-
+                # NOTE: HUGE FLAW, I started to implement this, decided i didn't like it, but haven't deleted it, yet it still pollutes the repo.
                 if task.type in ['task', 'input_task', 'output_task']:
                     if self.run_this:
                         if task.creates_dir:
@@ -1300,7 +1443,10 @@ class ProjectFlow(object):
                     # self.run_in_parallel = True # TODOO Connect to UI
                     MAX_WINDOWS_WORKERS = 58
                     if not getattr(self, 'num_workers', None):
-                        self.num_workers = multiprocessing.cpu_count() - 1
+                        # NOT multiprocessing.cpu_count(): that reports the MACHINE, so inside a
+                        # scheduler allocation or container this oversubscribes the cpuset and
+                        # fills the memory cgroup. See hb.available_cpu_count.
+                        self.num_workers = max(1, hb.available_cpu_count() - 1)
                         #check which os
                         if platform.system() == 'Windows' and self.num_workers > MAX_WINDOWS_WORKERS:
                             self.num_workers = MAX_WINDOWS_WORKERS
@@ -1508,9 +1654,14 @@ class ProjectFlow(object):
         self.project_base_data_dir = os.path.join(self.project_dir, 'project_base_data')  # Data that must be redistributed with this project for it to work. Do not put actual base data here that might be used across many projects.
 
         L.debug('self.project_base_data_dir set to ' + str(self.project_base_data_dir))
-        self.temporary_dir = getattr(self, 'temporary_dir', os.path.join(hb.config.PRIMARY_DRIVE, 'temp'))  # Generates new run_dirs here. Useful also to set the numdal temporary_dir to here for the run.
-
-        self.run_string = hb.pretty_time()  # unique string with time-stamp. To be used on run_specific identifications.
+        # p.temporary_dir and p.run_string were set at construction. Materialize the
+        # per-run temp folder now and remove it (only it) at exit.
+        if not os.path.isdir(self.temporary_dir):
+            hb.create_directories(self.temporary_dir)
+            import atexit, shutil
+            atexit.register(shutil.rmtree, self.temporary_dir, ignore_errors=True)
+        L.info('temporary_dir: ' + self.temporary_dir + ' (root from HB_TEMP_DIR '
+               + hb.machine_env.describe_source('HB_TEMP_DIR') + ')')
         self.basis_name = ''  # Specify a manually-created dir that contains a subset of results that you want to use. For any input that is not created fresh this run, it will instead take the equivilent file from here. Default is '' because you may not want any subsetting.
         self.basis_dir = os.path.join(self.intermediate_dir, self.basis_name)  # Specify a manually-created dir that contains a subset of results that you want to use. For any input that is not created fresh this run, it will instead take the equivilent file from here. Default is '' because you may not want any subsetting.
 

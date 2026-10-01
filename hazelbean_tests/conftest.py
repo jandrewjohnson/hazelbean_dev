@@ -153,6 +153,15 @@ def pytest_collection_modifyitems(config, items):
         if "benchmark" in item.name.lower() or "performance" in item.name.lower():
             item.add_marker(pytest.mark.slow)
 
+    # Devstack-standard tier split: requires_base_data tests skip cleanly when the
+    # local base_data store is absent (e.g. on a CI runner) instead of failing.
+    base_data_dir = os.path.join(os.path.expanduser('~'), 'Files', 'base_data')
+    if not os.path.isdir(base_data_dir):
+        skip_marker = pytest.mark.skip(reason="requires base_data; expected %s" % base_data_dir)
+        for item in items:
+            if "requires_base_data" in item.keywords:
+                item.add_marker(skip_marker)
+
 
 # Custom markers for better test organization
 def pytest_configure(config):
@@ -174,6 +183,9 @@ def pytest_configure(config):
     )
     config.addinivalue_line(
         "markers", "slow: Tests that take longer to run"
+    )
+    config.addinivalue_line(
+        "markers", "requires_base_data: needs the shared base_data tree; skipped when absent (devstack-standard marker)"
     )
     config.addinivalue_line(
         "markers", "benchmark: Benchmark tests (requires pytest-benchmark)"

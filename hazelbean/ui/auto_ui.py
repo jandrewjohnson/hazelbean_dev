@@ -101,7 +101,7 @@ class AutoUI(model.InVESTModel):
         # TODOO Could pull this into a separately define HazelbeanUI class and have it automatically add it as hidden options.
         # Two special values are the run_dir and the basis_dir. By default, all intermediate files are saved to the intermediate_dir, but if run_dir is specified, newly-created files will be saved there. If a file is not created on a particular run, the UI will look for it in the intermedaite dir, unless a different basis_dir is specified.
         if self.run_dir.value() == 'temp':
-            self.p.args[self.run_dir.args_key] = hb.make_run_dir(hb.TEMPORARY_DIR, 'seals', just_return_string=True)
+            self.p.args[self.run_dir.args_key] = hb.make_run_dir(hb.get_temp_dir(), 'seals', just_return_string=True)
             self.run_dir.textfield.setText(self.p.args[self.run_dir.args_key])
         elif not self.run_dir.value():
             self.p.args[self.run_dir.args_key] = os.path.join(self.p.args[self.workspace.args_key], 'intermediate')

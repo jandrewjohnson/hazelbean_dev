@@ -84,6 +84,10 @@ def merge_hydrosheds_data_by_tile_ids(hydrosheds_dir, output_tif_uri, furthest_w
     os.system(gdal_command)
 
 def clip_hydrosheds_dem_from_aoi(output_uri, aoi_uri, match_uri):
+    import warnings
+    warnings.warn('clip_hydrosheds_dem_from_aoi reads hb.BULK_DATA_DIR, a deprecated hb.config path global that points at no real '
+                  'directory. Resolve the hydrosheds dir with p.get_path(ref_path) from a ProjectFlow instead; config holds ref_paths only.',
+                  DeprecationWarning, stacklevel=2)
     hydrosheds_dir = os.path.join(hb.BULK_DATA_DIR, 'hydrosheds/3s/hydrologically_conditioned_dem')
     temp_uri = hb.temp('.tif', remove_at_exit=True)
     merge_hydrosheds_by_aoi(hydrosheds_dir, temp_uri, aoi_uri)

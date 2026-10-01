@@ -21,9 +21,9 @@ Our integrated documentation system provides comprehensive guides and examples:
 Hazelbean's user documentation is published as the Hazelbean section of the
 Earth-Economy Devstack site:
 
-- [Overview](https://justinandrewjohnson.com/earth_economy_devstack/hazelbean_overview.html)
+- [Overview](https://justinandrewjohnson.com/earth_economy_devstack/hazelbean.html)
 - [Learning path](https://justinandrewjohnson.com/earth_economy_devstack/hazelbean_learning_path.html)
-- [Tutorial examples](https://justinandrewjohnson.com/earth_economy_devstack/hazelbean_examples.html)
+- [Tutorial examples](https://justinandrewjohnson.com/earth_economy_devstack/hazelbean_tutorials.html)
 - [Troubleshooting](https://justinandrewjohnson.com/earth_economy_devstack/hazelbean_troubleshooting.html)
 - [ProjectFlow](https://justinandrewjohnson.com/earth_economy_devstack/project_flow.html)
 

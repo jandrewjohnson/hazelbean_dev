@@ -107,7 +107,7 @@ def get_area_of_pixel_from_center_lat(pixel_size, center_lat):
 
 
 def get_area_of_pixel_column_from_center_lats(pixel_size, center_lat_column):
-    """Calculate a column of ha per cell in wgs84 of square pixel in a vertical column.
+    """Calculate a column of m^2 per cell in wgs84 of square pixel in a vertical column.
 
     Adapted from: https://gis.stackexchange.com/a/127327/2397
 
@@ -515,8 +515,8 @@ def resample_to_match(input_path,
     if output_data_type is None:
         output_data_type = hb.get_datatype_from_uri(match_path)
 
-    if src_ndv is None:
-        src_ndv = hb.get_ndv_from_path(match_path)
+    # src_ndv=None is left as None: warp_raster_hb then reads the nodata of input_path itself. Taking it from
+    # match_path here made the warp treat the input's real nodata (e.g. -32768) as valid data whenever the two differed.
 
     if ndv is None:
         dst_ndv = hb.get_ndv_from_path(match_path)

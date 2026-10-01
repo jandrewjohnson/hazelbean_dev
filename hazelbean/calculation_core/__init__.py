@@ -1,8 +1,6 @@
 import os, sys, warnings
 
 import hazelbean as hb
-# hazelbean_working_directory = '../hazelbean'
-hazelbean_working_directory = hb.config.HAZELBEAN_WORKING_DIRECTORY
 """
 TO COMPILE on windows 10, need to install proper Visual Studio tools: See::
 https://stackoverflow.com/questions/29846087/microsoft-visual-c-14-0-is-required-unable-to-find-vcvarsall-bat

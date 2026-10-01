@@ -204,35 +204,63 @@ class TestRunModes:
         assert r['project_dir_kept'] is True
 
 
-class TestInputTemplateSeeding:
-    def test_template_copied_into_input_dir(self, tmp_path):
-        r = run_in_repo(tmp_path, """
-            template_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                        'input_template')
-            os.makedirs(template_dir, exist_ok=True)
-            open(os.path.join(template_dir, 'parameters.csv'), 'w').write('key,value\\nndv,-9999\\n')
+class TestInputTemplateResolution:
+    """input_template/ is read in place via get_path; input/ holds only overrides."""
 
-            p = hb.ProjectFlow(project_name='templated', run_mode='check')
-            emit({'copied': os.path.exists(os.path.join(p.input_dir, 'parameters.csv'))})
-        """)
-        assert r['copied'] is True
+    TEMPLATE_SETUP = """
+        template_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                    'input_template')
+        os.makedirs(template_dir, exist_ok=True)
+        template = os.path.join(template_dir, 'parameters.csv')
+        open(template, 'w').write('key,value\\ncred,\\n')
+        p = hb.ProjectFlow(project_name='templated', run_mode='check')
+        local = os.path.join(p.input_dir, 'parameters.csv')
+    """
 
-    def test_existing_input_file_is_never_overwritten(self, tmp_path):
-        """input/ is the per-machine working copy; re-runs must not clobber edits."""
-        r = run_in_repo(tmp_path, """
-            template_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                        'input_template')
-            os.makedirs(template_dir, exist_ok=True)
-            open(os.path.join(template_dir, 'parameters.csv'), 'w').write('key,value\\ncred,\\n')
+    def test_template_is_resolved_in_place_not_copied(self, tmp_path):
+        r = run_in_repo(tmp_path, textwrap.dedent(self.TEMPLATE_SETUP) + textwrap.dedent("""
+            resolved = p.get_path('parameters.csv')
+            emit({'copied': os.path.exists(local),
+                  'resolved_is_template': os.path.samefile(resolved, template),
+                  'input_template_dir': p.input_template_dir == template_dir})
+        """))
+        assert r['copied'] is False, 'nothing is copied into input/ any more'
+        assert r['resolved_is_template'] is True
+        assert r['input_template_dir'] is True
 
-            p = hb.ProjectFlow(project_name='templated', run_mode='check')
-            local = os.path.join(p.input_dir, 'parameters.csv')
+    def test_input_copy_shadows_template(self, tmp_path):
+        """A file the user copied into input/ (the per-machine override) wins."""
+        r = run_in_repo(tmp_path, textwrap.dedent(self.TEMPLATE_SETUP) + textwrap.dedent("""
             open(local, 'w').write('key,value\\ncred,/my/machine/path\\n')
+            os.utime(template, (1, 1))  # template older than the copy: no warning
+            resolved = p.get_path('parameters.csv')
+            emit({'resolved_is_local': os.path.samefile(resolved, local),
+                  'stale': p.stale_input_paths})
+        """))
+        assert r['resolved_is_local'] is True
+        assert r['stale'] == []
 
-            hb.ProjectFlow(project_name='templated', run_mode='check')
-            emit({'contents': open(local).read()})
-        """)
-        assert '/my/machine/path' in r['contents']
+    def test_newer_different_template_warns(self, tmp_path):
+        r = run_in_repo(tmp_path, textwrap.dedent(self.TEMPLATE_SETUP) + textwrap.dedent("""
+            open(local, 'w').write('key,value\\ncred,/my/machine/path\\n')
+            os.utime(local, (1, 1))
+            open(template, 'w').write('key,value\\ncred,\\nnew_key,1\\n')  # newer AND different
+            p.get_path('parameters.csv')
+            p.get_path('parameters.csv')  # warns once, not per call
+            emit({'stale': p.stale_input_paths, 'local': local})
+        """))
+        assert r['stale'] == [r['local']]
+
+    def test_newer_but_identical_template_does_not_warn(self, tmp_path):
+        """A git checkout restamps mtimes; identical content must stay quiet."""
+        r = run_in_repo(tmp_path, textwrap.dedent(self.TEMPLATE_SETUP) + textwrap.dedent("""
+            import shutil
+            shutil.copyfile(template, local)
+            os.utime(local, (1, 1))  # template is now 'newer' but byte-identical
+            p.get_path('parameters.csv')
+            emit({'stale': p.stale_input_paths})
+        """))
+        assert r['stale'] == []
 
 
 class TestLegacyCallShapes:

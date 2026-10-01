@@ -29,10 +29,31 @@ from typing import Callable, Dict, List, Optional, Union
 import hazelbean as hb
 import zipfile
 import stat
+import tempfile
 from hazelbean import globals
 
-def make_run_dir(base_folder=hb.config.TEMPORARY_DIR, run_name='', just_return_string=False):
-    """Create a directory in a preconfigured location. Does not delete by default. Returns path of dir."""
+def get_temp_dir():
+    """The one root every hazelbean temp file goes under, created if needed.
+
+    HB_TEMP_DIR in ~/.config/hazelbean/machine.env (or the real environment) wins and is
+    used as given -- set it to point a cluster run at scratch space. Otherwise the OS temp
+    dir (tempfile.gettempdir() respects $TMPDIR / %TEMP%) gets a hazelbean-owned, per-user
+    subfolder, so nothing hazelbean writes mixes with other programs' temp files and two
+    users sharing a /tmp never collide. A ProjectFlow puts each run in its own subfolder
+    of this (p.temporary_dir); hb.temp() and hb.temporary_dir() default here.
+    """
+    root = os.environ.get('HB_TEMP_DIR', '').strip()
+    if not root:
+        user = os.environ.get('USER') or os.environ.get('USERNAME') or 'user'
+        root = os.path.join(tempfile.gettempdir(), 'hazelbean_temp_' + user)
+    os.makedirs(root, exist_ok=True)
+    return root
+
+
+def make_run_dir(base_folder=None, run_name='', just_return_string=False):
+    """Create a directory under base_folder (default hb.get_temp_dir()). Does not delete by default. Returns path of dir."""
+    if base_folder is None:
+        base_folder = get_temp_dir()
     run_dir = os.path.join(base_folder, ruri(run_name))
     if not os.path.exists(run_dir):
         if not just_return_string:
@@ -77,16 +98,9 @@ def temp(ext=None, filename_start=None, remove_at_exit=True, folder=None, suffix
         else:
             filename = ruri('tmp.tif')
 
-    if folder is not None:
-        uri = os.path.join(folder, filename)
-    else:
-        user_home = pathlib.Path.home()
-        temp_dir = user_home/'temp'
-        if not os.path.exists(temp_dir):
-            os.makedirs(temp_dir)
-            
-        # Get the user dir
-        uri = os.path.join(temp_dir, filename)
+    if folder is None:
+        folder = get_temp_dir()
+    uri = os.path.join(folder, filename)
 
     if remove_at_exit:
         remove_uri_at_exit(uri)
@@ -128,9 +142,7 @@ def temporary_dir(dir_root=None, dir_name='tmpdir', dirname_prefix=None, dirname
     """
     
     if dir_root is None:
-        # Set as users home temp dir
-        user_home = pathlib.Path.home()
-        dir_root = str(user_home/'temp')
+        dir_root = get_temp_dir()
 
             
     pre_post_string = dir_name
@@ -969,6 +981,140 @@ def list_filtered_paths_recursively(input_folder, include_strings=None, include_
 
 
 # TODOO get rid of all uris
+# Step names make_path_pog inserts into the files it leaves beside an input, as <stem>_<keyword>_<hb timestamp>.tif.
+TEMP_FILE_KEYWORDS = ('displaced', 'copy', 'translate', 'pog', 'resample', 'censor', 'reclassify', 'b4_cog')
+
+
+def remove_temp_files_recursively(input_dir, keywords=None, dry_run=False, verbose=True):
+    """Delete files under input_dir whose name carries _<keyword>_<hb timestamp> (what make_path_pog leaves behind).
+
+    The timestamp is hb.random_string()'s YYYYMMDD_HHMMSS_mmm plus three letters, so a real raster that merely
+    contains a word like _copy_ is left alone. Sidecars of a match (.aux.xml, .ovr) match too, since the stamp
+    is in their name. keywords defaults to TEMP_FILE_KEYWORDS. dry_run only reports. Returns the matched paths.
+    """
+    if keywords is None:
+        keywords = TEMP_FILE_KEYWORDS
+    pattern = re.compile('_(' + '|'.join(re.escape(k) for k in keywords) + r')_\d{8}_\d{6}_\d{3}[a-z{]{3}')
+    matched = [i for i in list_filtered_paths_recursively(input_dir) if pattern.search(os.path.basename(i))]
+    for path in matched:
+        if verbose:
+            hb.log(('Would remove ' if dry_run else 'Removing ') + path)
+        if not dry_run:
+            os.remove(path)
+    return matched
+
+
+def rename_files_recursively(input_dir, old, new='', use_regex=False, include_extensions=None, depth=None, dry_run=False, verbose=True):
+    """Rename files under input_dir by replacing old with new in each basename (folders are never renamed).
+
+    old is a plain substring unless use_regex=True, in which case it is a regex and new may use groups (\\1).
+    Files whose name does not contain old are untouched. A rename whose target already exists is skipped
+    and logged, never overwritten. Sidecars (.aux.xml, .ovr, shapefile parts) rename with their raster as
+    long as include_extensions does not exclude them. depth limits how many folder levels below
+    input_dir are visited: 0 is input_dir only (not recursive), None (default) is unlimited.
+    dry_run only reports. Returns [(old_path, new_path)].
+
+    rename_files_recursively(d, '_masked')       # stringbean_calories_per_ha_masked.tif -> stringbean_calories_per_ha.tif
+    rename_files_recursively(d, r'_v(\\d+)', r'_version\\1', use_regex=True)
+    """
+    pattern = re.compile(old if use_regex else re.escape(old))
+    if isinstance(include_extensions, str):
+        include_extensions = [include_extensions]
+    renamed = []
+    for folder, subfolders, names in os.walk(input_dir):
+        if depth is not None and os.path.relpath(folder, input_dir).count(os.sep) + (folder != input_dir) > depth:
+            subfolders[:] = []
+            continue
+        for name in names:
+            if include_extensions and os.path.splitext(name)[1] not in include_extensions:
+                continue
+            new_name = pattern.sub(new, name)
+            if new_name == name:
+                continue
+            path, new_path = os.path.join(folder, name), os.path.join(folder, new_name)
+            if os.path.exists(new_path):
+                hb.log('Skipping ' + path + ': target exists ' + new_path)
+                continue
+            if verbose:
+                hb.log(('Would rename ' if dry_run else 'Renaming ') + path + ' -> ' + new_path)
+            if not dry_run:
+                os.rename(path, new_path)
+            renamed.append((path, new_path))
+    return renamed
+
+
+def show_dir_tree(input_dir, max_depth=None, skip_hidden=True, collapse_repeats=True, print_it=True):
+    """Print the folder tree under input_dir (ProjectFlow's RenderTree style) as aligned columns of per-folder stats.
+
+    Columns: files (in this folder), dirs (immediate subfolders), nested_dirs (all descendant folders),
+    size_mb (files in this folder), total_mb (all files beneath). Sizes are always in MB, right-aligned, so
+    a column compares by eye without reading units; 4 significant digits, so a tiny folder still shows nonzero.
+    max_depth limits how many levels are shown (the stats still count everything beneath); skip_hidden
+    ignores dot-folders like .git. collapse_repeats folds a run of sibling folders with the same shape
+    (the same subfolder layout, all the way down; file counts and sizes may differ) into the first 8, a
+    vertical ellipsis line carrying the SUM of the skipped folders' stats, and the last. Returns the text.
+    """
+    import anytree
+
+    def mb(n):
+        return f'{hb.round_significant_n(n / 1024 ** 2, 4):,.10f}'.rstrip('0').rstrip('.')  # plain decimals, never exponent notation
+
+    # Bottom-up pass so every folder's recursive totals are known before its parent needs them.
+    stats = {}
+    for folder, subfolders, files in os.walk(input_dir, topdown=False):
+        if skip_hidden:
+            subfolders = [i for i in subfolders if not i.startswith('.')]
+            files = [i for i in files if not i.startswith('.')]
+        size = sum(os.path.getsize(os.path.join(folder, i)) for i in files if os.path.isfile(os.path.join(folder, i)))
+        children = [stats[os.path.join(folder, i)] for i in subfolders if os.path.join(folder, i) in stats]
+        stats[folder] = {'files': len(files), 'dirs': len(subfolders), 'subfolders': subfolders,
+                         'nested_dirs': len(subfolders) + sum(c['nested_dirs'] for c in children),
+                         'size': size, 'total': size + sum(c['total'] for c in children)}
+
+    def shape(folder):
+        # What makes two sibling folders "the same": the subfolder layout, all the way down. File counts
+        # and sizes are deliberately ignored (a crop folder with 12 files instead of 11 is still a crop
+        # folder), otherwise every small variation breaks the run into random-looking pieces. Memoized.
+        st = stats[folder]
+        if 'shape' not in st:
+            st['shape'] = tuple((i, shape(os.path.join(folder, i))) for i in sorted(st['subfolders']))
+        return st['shape']
+
+    def node(folder, parent=None):
+        n = anytree.Node(os.path.basename(folder) or folder, parent=parent, folder=folder)
+        subs = sorted(stats[folder]['subfolders'])
+        i = 0
+        while i < len(subs):
+            run = [subs[i]]
+            while collapse_repeats and i + len(run) < len(subs) and shape(os.path.join(folder, subs[i + len(run)])) == shape(os.path.join(folder, run[0])):
+                run.append(subs[i + len(run)])
+            shown = run if len(run) <= 9 else run[:8] + [None] + run[-1:]
+            for sub in shown:
+                if sub is None:
+                    hidden = [stats[os.path.join(folder, i)] for i in run[8:-1]]
+                    summed = {k: sum(h[k] for h in hidden) for k in ('files', 'dirs', 'nested_dirs', 'size', 'total')}
+                    anytree.Node(f'\u22ee  ({len(hidden)} more folders shaped like these, summed)', parent=n, folder=None, summed=summed)
+                else:
+                    node(os.path.join(folder, sub), n)
+            i += len(run)
+        return n
+
+    # Rows first, then widths, so every column lines up regardless of tree depth or name length.
+    columns = ('files', 'dirs', 'nested_dirs', 'size_mb', 'total_mb')
+    rows = []
+    for pre, _, n in anytree.RenderTree(node(input_dir), maxlevel=None if max_depth is None else max_depth + 1):
+        st = stats[n.folder] if n.folder is not None else n.summed
+        rows.append([pre + n.name, str(st['files']), str(st['dirs']), str(st['nested_dirs']), mb(st['size']), mb(st['total'])])
+    widths = [max(len(r[i]) for r in [['folder', *columns]] + rows) for i in range(6)]
+    gap = '    '
+    lines = ['folder'.ljust(widths[0]) + gap + gap.join(c.rjust(widths[i + 1]) for i, c in enumerate(columns))]
+    lines += [(r[0].ljust(widths[0]) + gap + gap.join(r[i + 1].rjust(widths[i + 1]) for i in range(5))).rstrip() for r in rows]
+    text = '\n'.join(lines)
+    if print_it:
+        print(text)
+    return text
+
+
 def unzip_file(input_uri, output_folder=None, verbose=True):
     'Unzip file in place. If no output folder specified, place in input_uris folder'
     if not output_folder:
@@ -1481,6 +1627,82 @@ def path_abs(input_relative_path):
         return "Failed path_abs on " + str(input_relative_path)
 
 
+# Files GDAL and OGR write beside a dataset. Copying a raster without these silently
+# drops statistics, overviews and georeferencing -- a performance and rendering
+# regression rather than an error, so it is easy to miss.
+GDAL_SIDECAR_SUFFIXES = ('.aux.xml', '.ovr', '.tfw', '.wld', '.prj', '.msk', '.vat.dbf', '.xml')
+
+# Google Drive stores its native documents as ~100-byte JSON pointers with these
+# extensions. They look like files on a mounted drive but contain no data.
+GOOGLE_NATIVE_EXTENSIONS = ('.gdoc', '.gsheet', '.gslides', '.gform', '.gdraw', '.gmap', '.gsite')
+
+
+def is_google_native_file(path):
+    """True for Drive's placeholder documents (.gsheet, .gdoc, ...), which hold no data."""
+    return os.path.splitext(str(path))[1].lower() in GOOGLE_NATIVE_EXTENSIONS
+
+
+def cache_file_from_shared_root(src, dst, verbose=False):
+    """Copy src to dst atomically, bringing any sidecars, and return dst.
+
+    Used by ProjectFlow.get_path to pull a ref_path off a read-only shared root (a
+    mounted lab drive, a group scratch dir) into the local base_data dir, so that
+    every later run resolves it locally and never touches the shared root again.
+
+    Atomic on purpose: the copy lands on '<dst>.partial.<pid>', is size-verified, and
+    is then os.replace()d onto the final name. A run killed mid-copy must never leave
+    a truncated file behind, because a truncated file passes hb.path_exists() forever
+    afterwards and silently poisons every subsequent run. The pid in the temp name
+    keeps two parallel workers requesting the same file from colliding; os.replace is
+    atomic, so last-writer-wins is harmless.
+
+    Never writes to the source. Shared roots are read-only by contract.
+    """
+    if not os.path.isfile(src):
+        raise NameError('cache_file_from_shared_root needs an existing source file, got: ' + str(src))
+
+    dst_dir = os.path.dirname(dst)
+    if dst_dir and not os.path.exists(dst_dir):
+        hb.create_directories(dst_dir)
+
+    def _atomic_copy(one_src, one_dst):
+        tmp = one_dst + '.partial.' + str(os.getpid())
+        try:
+            shutil.copyfile(one_src, tmp)
+            src_size = os.path.getsize(one_src)
+            tmp_size = os.path.getsize(tmp)
+            if src_size != tmp_size:
+                raise IOError('Short read copying ' + str(one_src) + ': expected ' + str(src_size)
+                              + ' bytes, got ' + str(tmp_size)
+                              + '. The shared root may have stalled mid-stream.')
+            os.replace(tmp, one_dst)
+        except BaseException:
+            # Leave nothing half-written for a later run to mistake for a good file.
+            if os.path.exists(tmp):
+                try:
+                    os.remove(tmp)
+                except OSError:
+                    pass
+            raise
+
+    _atomic_copy(src, dst)
+    if verbose:
+        hb.log('Cached ' + str(src) + ' to ' + str(dst))
+
+    # Sidecars. A shapefile's siblings share the file root rather than extending the
+    # full filename, so they are handled separately from the GDAL suffix set.
+    if os.path.splitext(src)[1].lower() == '.shp':
+        for extension in ('.dbf', '.shx', '.prj', '.cpg', '.sbn', '.sbx', '.qix', '.shp.xml'):
+            sidecar_src = path_replace_extension(src, extension)
+            if os.path.isfile(sidecar_src):
+                _atomic_copy(sidecar_src, path_replace_extension(dst, extension))
+    for suffix in GDAL_SIDECAR_SUFFIXES:
+        if os.path.isfile(src + suffix):
+            _atomic_copy(src + suffix, dst + suffix)
+
+    return dst
+
+
 def path_copy(src, dst, copy_tree=True, displace_overwrites=False, overwrite=True, verbose=False):
     copy_shutil_flex(src, dst, copy_tree=copy_tree, displace_overwrites=displace_overwrites, overwrite=overwrite, verbose=verbose)
 
@@ -1637,7 +1859,11 @@ def get_existing_path_from_nested_sources(input_path, project_flow_object=None, 
         elif hb.path_exists(hb.path_rename_change_dir_at_depth(input_path, project_flow_object.model_base_data_dir, depth_to_keep, verbose=verbose), verbose=verbose):
             return hb.path_rename_change_dir_at_depth(input_path, project_flow_object.model_base_data_dir, depth_to_keep, verbose=verbose)
     else:
-
+        import warnings
+        warnings.warn('get_existing_path_from_nested_sources without a ProjectFlow searches the deprecated hb.config path globals '
+                      '(BASE_DATA_DIR, BULK_DATA_DIR, EXTERNAL_BULK_DATA_DIR), which point at no real directory on current machines. '
+                      'Pass project_flow_object, or resolve a ref_path with p.get_path (input/ -> input_template/ -> base_data -> '
+                      'shared roots from machine.env -> bucket). Config holds ref_paths only.', DeprecationWarning, stacklevel=2)
         if hb.path_exists(hb.path_rename_change_dir_at_depth(input_path, hb.BASE_DATA_DIR, depth_to_keep, verbose=verbose), verbose=verbose):
             return hb.path_rename_change_dir_at_depth(input_path, hb.BASE_DATA_DIR, depth_to_keep, verbose=verbose)
         elif hb.path_exists(hb.path_rename_change_dir_at_depth(input_path, hb.BULK_DATA_DIR, depth_to_keep, verbose=verbose), verbose=verbose):

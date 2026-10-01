@@ -90,10 +90,10 @@ python step_1_project_setup.py
 
 Hazelbean's published documentation lives on the Earth-Economy Devstack site:
 
-**🌐 [Visit Full Documentation](https://justinandrewjohnson.com/earth_economy_devstack/hazelbean_overview.html)**
+**🌐 [Visit Full Documentation](https://justinandrewjohnson.com/earth_economy_devstack/hazelbean.html)**
 
 - **📖 [Learning Path](https://justinandrewjohnson.com/earth_economy_devstack/hazelbean_learning_path.html)** - step-by-step route through the library
-- **🧪 [Tutorial Examples](https://justinandrewjohnson.com/earth_economy_devstack/hazelbean_examples.html)** - worked usage patterns
+- **🧪 [Tutorial Examples](https://justinandrewjohnson.com/earth_economy_devstack/hazelbean_tutorials.html)** - worked usage patterns
 - **🔧 [Troubleshooting](https://justinandrewjohnson.com/earth_economy_devstack/hazelbean_troubleshooting.html)** - common setup and runtime problems
 - **🔍 Search** - available from the search box on any page of the site
 
@@ -137,7 +137,7 @@ hazelbean_dev/
 
 1.  **Complete development setup** (Option A)
 2.  **Review the test suite** in `hazelbean_tests/` to understand patterns
-3.  **Read [How to Contribute](https://justinandrewjohnson.com/earth_economy_devstack/how_to_contribute.html)** for the branching and PR workflow
+3.  **Read [How to Contribute](https://justinandrewjohnson.com/earth_economy_devstack/version_control.html)** for the branching and PR workflow
 
 ### For Power Users
 
@@ -269,7 +269,7 @@ pip install -e . --no-deps --force-reinstall
 
 ### Getting Help
 
-1.  **Check the [Documentation Site](https://justinandrewjohnson.com/earth_economy_devstack/hazelbean_overview.html)** for comprehensive guides
+1.  **Check the [Documentation Site](https://justinandrewjohnson.com/earth_economy_devstack/hazelbean.html)** for comprehensive guides
 2.  **Review the [Troubleshooting Guide](https://justinandrewjohnson.com/earth_economy_devstack/hazelbean_troubleshooting.html)** for common problems
 3.  **Search documentation** using the site search functionality
 4.  **Check [GitHub Issues](https://github.com/jandrewjohnson/hazelbean_dev/issues)** for known problems
@@ -286,7 +286,7 @@ pip install -e . --no-deps --force-reinstall
 
 ### Continued Learning
 
--   **Study the [Tutorial Examples](https://justinandrewjohnson.com/earth_economy_devstack/hazelbean_examples.html)** for advanced patterns
+-   **Study the [Tutorial Examples](https://justinandrewjohnson.com/earth_economy_devstack/hazelbean_tutorials.html)** for advanced patterns
 -   **Review ProjectFlow architecture** to understand task management
 -   **Experiment with performance benchmarking** tools
 
@@ -300,4 +300,4 @@ pip install -e . --no-deps --force-reinstall
 
 **Welcome to the Hazelbean community!** 🌿
 
-*This getting-started guide reflects the current project structure as of the latest version. For the most up-to-date information, always refer to the [comprehensive documentation site](https://justinandrewjohnson.com/earth_economy_devstack/hazelbean_overview.html).*
+*This getting-started guide reflects the current project structure as of the latest version. For the most up-to-date information, always refer to the [comprehensive documentation site](https://justinandrewjohnson.com/earth_economy_devstack/hazelbean.html).*

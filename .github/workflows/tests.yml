@@ -196,7 +196,10 @@ jobs:
       # Download baseline from main branch
       - name: Download baseline from main branch
         id: download_baseline
-        uses: dawidd6/action-download-artifact@v3
+        # Pinned to a full commit SHA rather than a tag: a tag can be repointed,
+        # and this step consumes an artifact built by another workflow run, which
+        # is exactly the artifact-poisoning path GHSA flagged in v5 and earlier.
+        uses: dawidd6/action-download-artifact@57aa996fc1713cc1579039614f4645a7f4841fd4 # v23
         with:
           workflow: tests.yml
           branch: main
