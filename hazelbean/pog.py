@@ -22,8 +22,10 @@ import hazelbean as hb
 #   categorical  class labels: MODE overviews, for display only; modeling uses per-class intensive proportions.
 #   covariate    elevation, temperature and other fields where zero is a measurement: keep the per-type nodata value
 #                and unweighted mean overviews over valid children, with no exactness claim.
-# Extensive, intensive and categorical POGs carry NO nodata value: a cell with nothing to report holds zero (or the
-# none class), and incomplete coverage is carried by a companion observed-area POG (extensive, hectares observed).
+# Every POG DECLARES the per-type nodata value (-9999 signed and float, the type maximum unsigned), but in extensive,
+# intensive and categorical POGs no cell may HOLD it: a cell with nothing to report holds zero (or the none class), and
+# incomplete coverage is carried by a companion observed-area POG (extensive, hectares observed). Only a covariate's
+# cells hold the nodata value, where the field is missing.
 POG_VARIABLE_CLASSES = ('extensive', 'intensive', 'categorical', 'covariate')
 POG_METADATA_KEYS = ('POG_VARIABLE_CLASS', 'POG_INTENSIVE_WEIGHTING', 'POG_DENOMINATOR', 'POG_OBSERVED_AREA', 'POG_REGISTRATION_SHIFT')
 POG_REGISTRATION_SHIFT_VALUE = '+0.5,-0.5'  # cells, longitude then latitude (Appendix G.4)
@@ -31,6 +33,16 @@ POG_REGISTRATION_SHIFT_VALUE = '+0.5,-0.5'  # cells, longitude then latitude (Ap
 
 def _is_integer_gdal_type(data_type):
     return np.issubdtype(gdal_array.GDALTypeCodeToNumericTypeCode(data_type), np.integer)
+
+
+def _band_holds_value(band, value, max_strip_bytes=256e6):
+    """True if any cell of band (full resolution) equals value. Reads in row strips."""
+    n_cols, n_rows = band.XSize, band.YSize
+    strip = max(1, int(max_strip_bytes / (8 * n_cols)))
+    for r0 in range(0, n_rows, strip):
+        if np.any(band.ReadAsArray(0, r0, n_cols, min(strip, n_rows - r0)) == value):
+            return True
+    return False
 
 
 def get_pog_metadata(path):
@@ -215,8 +227,9 @@ def is_path_pog_overview_conformant(path, n_sample_rows=4, verbose=False):
 def _apply_pog_nodata_rule(input_path, output_path, variable_class, output_data_type, fill_value=0, observed_area_output_path=None, max_strip_bytes=256e6):
     """Write input_path to output_path under the nodata convention of D.2.6.
 
-    Extensive, intensive and categorical: every nodata (or non-finite) cell takes fill_value (zero, or the none class)
-    and the nodata declaration is dropped. Covariate: nodata cells take the per-type nodata value, which is declared.
+    Extensive, intensive and categorical: every nodata (or non-finite) cell takes fill_value (zero, or the none class),
+    so no cell holds the nodata value; the per-type declaration is added when the POG is finished. Covariate: nodata
+    cells take the per-type nodata value, which is declared.
     With observed_area_output_path, also write the companion observed-area raster: hectares observed per cell (Float64)."""
     src = gdal.Open(input_path)
     band = src.GetRasterBand(1)
@@ -625,8 +638,9 @@ def _write_cog_with_pyramid_overviews(current_path, output_raster_path, overview
 
     Records the POG metadata of the variable class (POG_VARIABLE_CLASS; for an intensive raster POG_INTENSIVE_WEIGHTING
     and POG_DENOMINATOR; any POG_OBSERVED_AREA / POG_REGISTRATION_SHIFT given in pog_metadata) and AREA_OR_POINT=Area,
-    applies the nodata declaration of the class (the per-type value for a covariate, none otherwise; the values must
-    already follow it, see _apply_pog_nodata_rule), computes exact statistics, builds the internal overviews at
+    declares the per-type nodata value (for every class; the values must already follow the class rule, see
+    _apply_pog_nodata_rule, and an extensive, intensive or categorical raster with a cell holding that value is refused
+    with a ValueError), computes exact statistics, builds the internal overviews at
     overview_levels by the class rule (extensive sums and intensive area-weighted means written directly; categorical
     mode and covariate mean by GDAL), then copies through the COG driver with those overviews and no others.
 
@@ -658,9 +672,13 @@ def _write_cog_with_pyramid_overviews(current_path, output_raster_path, overview
     src_ds.SetMetadata(metadata)
     if not src_ds.GetProjection():
         src_ds.SetProjection(hb.wgs_84_wkt)
+    # Every class declares the per-type nodata value (D.2.6). A covariate declares it before the statistics, which then
+    # leave its nodata cells out; the other classes declare it after, so their statistics cover every cell and can
+    # show that no cell holds it.
+    class_ndv = hb.no_data_values_by_gdal_type[output_data_type][0]
     for i in range(1, src_ds.RasterCount + 1):
         if variable_class == 'covariate':
-            src_ds.GetRasterBand(i).SetNoDataValue(hb.no_data_values_by_gdal_type[output_data_type][0])
+            src_ds.GetRasterBand(i).SetNoDataValue(class_ndv)
         elif src_ds.GetRasterBand(i).GetNoDataValue() is not None:
             src_ds.GetRasterBand(i).DeleteNoDataValue()
 
@@ -670,6 +688,15 @@ def _write_cog_with_pyramid_overviews(current_path, output_raster_path, overview
     if verbose:
         hb.log(f"Computing exact statistics for {current_path}.")
     stats_by_band = {i: src_ds.GetRasterBand(i).ComputeStatistics(False) for i in range(1, src_ds.RasterCount + 1)}
+
+    if variable_class != 'covariate':
+        for i, (stat_min, stat_max, _, _) in stats_by_band.items():
+            band = src_ds.GetRasterBand(i)
+            if stat_min <= class_ndv <= stat_max and _band_holds_value(band, class_ndv):
+                src_ds = None
+                raise ValueError(f'A cell of this {variable_class} raster holds {class_ndv}, the nodata value of its type, which no cell of an '
+                                 f'{variable_class} POG may hold (D.2.6). Use a wider data type, or recode that value: {output_raster_path}')
+            band.SetNoDataValue(class_ndv)
 
     # Remove existing overviews (if any), then build the rung's chain by the class rule.
     src_ds.BuildOverviews(None, [])
@@ -779,7 +806,8 @@ def tile_pog_to_tileset(pog_path, output_dir=None, tile_degrees=None, skip_empty
         output_dir = os.path.join(os.path.dirname(os.path.abspath(pog_path)), tileset_name)
     os.makedirs(output_dir, exist_ok=True)
     ds = gdal.Open(pog_path); band = ds.GetRasterBand(1)
-    empty = band.GetNoDataValue() if band.GetNoDataValue() is not None else 0
+    # Every POG declares nodata, but only a covariate's empty cells hold it; the other classes' hold zero.
+    empty = band.GetNoDataValue() if get_pog_metadata(pog_path).get('POG_VARIABLE_CLASS') == 'covariate' else 0
     res = hb.pyramid_compatible_resolutions[arcseconds]
     n_written = 0
     for corner in hb.list_tile_corner_strings(tile_degrees):
@@ -808,7 +836,12 @@ def build_pog_tileset_vrt(tile_dir, vrt_path=None):
     ndv = hb.get_ndv_from_path(tiles[0])
     if vrt_path is None:
         vrt_path = os.path.join(os.path.dirname(os.path.abspath(tile_dir)), f'{stem}_{hb.arcseconds_to_token(arcseconds)}sec_{int(tile_degrees)}deg.vrt')
-    nodata_options = dict(VRTNodata=ndv, srcNodata=ndv) if ndv is not None else {}
+    # The VRT fills a missing tile with its own nodata value, so only a covariate VRT declares one. Left unset, BuildVRT
+    # would copy the tiles' declaration (every POG declares nodata) and a missing tile would read as nodata, not zero.
+    if get_pog_metadata(tiles[0]).get('POG_VARIABLE_CLASS') == 'covariate':
+        nodata_options = dict(VRTNodata=ndv, srcNodata=ndv)
+    else:
+        nodata_options = dict(VRTNodata='None')
     gdal.BuildVRT(vrt_path, tiles, options=gdal.BuildVRTOptions(outputBounds=(-180, -90, 180, 90), xRes=res, yRes=res, **nodata_options)).FlushCache()
     return vrt_path
 
@@ -979,8 +1012,8 @@ def make_path_pog(input_raster_path,
     nodata). If None, the class the input declares (POG_VARIABLE_CLASS) is kept; an input declaring none is taken as
     categorical (integer types) or covariate (floats), with a log line, since the class must be declared, not guessed.
 
-    Extensive, intensive and categorical POGs carry no nodata value: nodata cells become zero (categorical_none_value for
-    a categorical raster) and the declaration is dropped. When the input's nodata marks UNOBSERVED rather than empty
+    Every POG declares the per-type nodata value, but in extensive, intensive and categorical POGs no cell holds it:
+    nodata cells become zero (categorical_none_value for a categorical raster). When the input's nodata marks UNOBSERVED rather than empty
     cells, pass observed_area_path: 'derive' writes the companion observed-area POG (hectares observed per cell, from
     the nodata mask) as <output stem>_observed_area.tif beside the output; a path attaches an existing one. An intensive
     raster is then weighted by the observed area instead of ha_per_cell.
@@ -1228,7 +1261,7 @@ def make_path_pog(input_raster_path,
         hb.reclassify_raster_hb(current_path, value_reclassification_dict, reclassify_temp_path, output_data_type=output_data_type, output_ndv=ndv)
         current_path = reclassify_temp_path
 
-    # The nodata rule of the class (zero or the none class, declaration dropped; per-type nodata for a covariate),
+    # The nodata rule of the class (zero or the none class, so no cell holds nodata; per-type nodata for a covariate),
     # deriving the observed-area companion from the nodata mask on the same pass if aggregation did not already.
     nodata_rule_path = intermediate('nodata')
     _apply_pog_nodata_rule(current_path, nodata_rule_path, variable_class, output_data_type,
@@ -1301,7 +1334,8 @@ def _write_pog_of_value(output_path, value, geotransform, x_size, y_size, arcsec
 
 def write_pog_of_value_from_scratch(output_path, value, arcsecond_resolution, output_data_type, ndv=None, overview_resampling_method=None, compression='DEFLATE', blocksize='512', verbose=False, variable_class=None):
     """A global POG at arcsecond_resolution holding value everywhere. variable_class as in make_path_pog (None: inferred
-    from the data type). A covariate carries the per-type nodata value; the other classes carry none, so ndv is unused."""
+    from the data type). Every class declares the per-type nodata value, so ndv is unused; for any class but covariate,
+    value must not equal it."""
     arcseconds = float(arcsecond_resolution)
     x_size, y_size = hb.pyramid_compatable_shapes[arcseconds]
     _write_pog_of_value(output_path, value, hb.pyramid_compatible_geotransforms[arcseconds], x_size, y_size, arcseconds, None,

@@ -1429,13 +1429,24 @@ def _is_path_pyramid(input_path, require_global, verbose=False):
             if verbose:
                 hb.log('Not pyramid because an intensive raster must declare POG_INTENSIVE_WEIGHTING (area or none) and, for area, POG_DENOMINATOR: ' + str(input_path))
             to_return = False
+    # Every class declares the per-type value; in all but a covariate, no cell may hold it. The stored exact statistics
+    # cover every cell (the POG writer computes them before declaring nodata), so a value outside [min, max] settles it
+    # without reading the raster; only a value inside the range is checked cell by cell.
     data_type = ds.GetRasterBand(1).DataType
     ndv = ds.GetRasterBand(1).GetNoDataValue()
-    correct_ndv = hb.get_correct_ndv_from_dtype_flex(data_type) if variable_class == 'covariate' else None
+    correct_ndv = hb.get_correct_ndv_from_dtype_flex(data_type)
     if ndv != correct_ndv:
         if verbose:
-            hb.log(f'Not pyramid because the nodata value is {ndv}; a {variable_class} raster must carry ' + ('the per-type value ' + str(correct_ndv) if correct_ndv is not None else 'none') + ': ' + str(input_path))
+            hb.log(f'Not pyramid because the nodata value is {ndv}; a POG must declare the per-type value {correct_ndv}: ' + str(input_path))
         to_return = False
+    elif variable_class in ('extensive', 'intensive', 'categorical'):
+        band_metadata = ds.GetRasterBand(1).GetMetadata()
+        stat_min, stat_max = band_metadata.get('STATISTICS_MINIMUM'), band_metadata.get('STATISTICS_MAXIMUM')
+        if stat_min is not None and stat_max is not None and float(stat_min) <= ndv <= float(stat_max) \
+                and hb.pog._band_holds_value(ds.GetRasterBand(1), ndv):
+            if verbose:
+                hb.log(f'Not pyramid because a cell holds the nodata value {ndv}, which no cell of a {variable_class} raster may hold: ' + str(input_path))
+            to_return = False
 
     # Check if the overview levels are correct
     # Overviews are validated by DIMENSIONS, exactly: the prescribed factors imply the size of every overview
