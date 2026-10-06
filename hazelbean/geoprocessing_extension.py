@@ -603,11 +603,13 @@ def warp_raster_hb(
                 vector_mask_options['mask_vector_where_filter'])
 
     base_raster = gdal.OpenEx(base_raster_path, gdal.OF_RASTER)
-    # Overviews are built with their own resampling rule, so reading one corrupts a method whose
-    # value is a class or a conserved quantity: a mode over averaged class integers is not a class,
-    # and a sum over averaged pixels is not the sum. Whether a file carries overviews is a property
-    # of the file, not of the data, so AUTO can also make two rasters with identical pixels resample
-    # differently. Methods that interpolate are unaffected and keep GDAL's fast path.
+    # Reading an overview means the statistic is computed over the overview's own cells, not over
+    # the data: at level 8 that is 1/64 as many. Measured on a 400x400 raster resampled 8x coarser,
+    # sum came to 0.0156 of the true total, exactly 1/64, and mode differed in about 75% of cells.
+    # Both held whether the overviews were built AVERAGE or NEAREST, so this is the smaller sample
+    # and not a corruption of the values. Whether a file carries overviews at all is a property of
+    # the file rather than of the data, so AUTO also makes two rasters with identical pixels
+    # resample differently. Interpolating methods are the case GDAL's fast path is for.
     if overview_level is None:
         overview_level = 'NONE' if resample_method in OVERVIEW_UNSAFE_RESAMPLE_METHODS else 'AUTO'
 
