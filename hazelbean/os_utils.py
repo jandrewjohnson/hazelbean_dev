@@ -981,6 +981,140 @@ def list_filtered_paths_recursively(input_folder, include_strings=None, include_
 
 
 # TODOO get rid of all uris
+# Step names make_path_pog inserts into the files it leaves beside an input, as <stem>_<keyword>_<hb timestamp>.tif.
+TEMP_FILE_KEYWORDS = ('displaced', 'copy', 'translate', 'pog', 'resample', 'censor', 'reclassify', 'b4_cog')
+
+
+def remove_temp_files_recursively(input_dir, keywords=None, dry_run=False, verbose=True):
+    """Delete files under input_dir whose name carries _<keyword>_<hb timestamp> (what make_path_pog leaves behind).
+
+    The timestamp is hb.random_string()'s YYYYMMDD_HHMMSS_mmm plus three letters, so a real raster that merely
+    contains a word like _copy_ is left alone. Sidecars of a match (.aux.xml, .ovr) match too, since the stamp
+    is in their name. keywords defaults to TEMP_FILE_KEYWORDS. dry_run only reports. Returns the matched paths.
+    """
+    if keywords is None:
+        keywords = TEMP_FILE_KEYWORDS
+    pattern = re.compile('_(' + '|'.join(re.escape(k) for k in keywords) + r')_\d{8}_\d{6}_\d{3}[a-z{]{3}')
+    matched = [i for i in list_filtered_paths_recursively(input_dir) if pattern.search(os.path.basename(i))]
+    for path in matched:
+        if verbose:
+            hb.log(('Would remove ' if dry_run else 'Removing ') + path)
+        if not dry_run:
+            os.remove(path)
+    return matched
+
+
+def rename_files_recursively(input_dir, old, new='', use_regex=False, include_extensions=None, depth=None, dry_run=False, verbose=True):
+    """Rename files under input_dir by replacing old with new in each basename (folders are never renamed).
+
+    old is a plain substring unless use_regex=True, in which case it is a regex and new may use groups (\\1).
+    Files whose name does not contain old are untouched. A rename whose target already exists is skipped
+    and logged, never overwritten. Sidecars (.aux.xml, .ovr, shapefile parts) rename with their raster as
+    long as include_extensions does not exclude them. depth limits how many folder levels below
+    input_dir are visited: 0 is input_dir only (not recursive), None (default) is unlimited.
+    dry_run only reports. Returns [(old_path, new_path)].
+
+    rename_files_recursively(d, '_masked')       # stringbean_calories_per_ha_masked.tif -> stringbean_calories_per_ha.tif
+    rename_files_recursively(d, r'_v(\\d+)', r'_version\\1', use_regex=True)
+    """
+    pattern = re.compile(old if use_regex else re.escape(old))
+    if isinstance(include_extensions, str):
+        include_extensions = [include_extensions]
+    renamed = []
+    for folder, subfolders, names in os.walk(input_dir):
+        if depth is not None and os.path.relpath(folder, input_dir).count(os.sep) + (folder != input_dir) > depth:
+            subfolders[:] = []
+            continue
+        for name in names:
+            if include_extensions and os.path.splitext(name)[1] not in include_extensions:
+                continue
+            new_name = pattern.sub(new, name)
+            if new_name == name:
+                continue
+            path, new_path = os.path.join(folder, name), os.path.join(folder, new_name)
+            if os.path.exists(new_path):
+                hb.log('Skipping ' + path + ': target exists ' + new_path)
+                continue
+            if verbose:
+                hb.log(('Would rename ' if dry_run else 'Renaming ') + path + ' -> ' + new_path)
+            if not dry_run:
+                os.rename(path, new_path)
+            renamed.append((path, new_path))
+    return renamed
+
+
+def show_dir_tree(input_dir, max_depth=None, skip_hidden=True, collapse_repeats=True, print_it=True):
+    """Print the folder tree under input_dir (ProjectFlow's RenderTree style) as aligned columns of per-folder stats.
+
+    Columns: files (in this folder), dirs (immediate subfolders), nested_dirs (all descendant folders),
+    size_mb (files in this folder), total_mb (all files beneath). Sizes are always in MB, right-aligned, so
+    a column compares by eye without reading units; 4 significant digits, so a tiny folder still shows nonzero.
+    max_depth limits how many levels are shown (the stats still count everything beneath); skip_hidden
+    ignores dot-folders like .git. collapse_repeats folds a run of sibling folders with the same shape
+    (the same subfolder layout, all the way down; file counts and sizes may differ) into the first 8, a
+    vertical ellipsis line carrying the SUM of the skipped folders' stats, and the last. Returns the text.
+    """
+    import anytree
+
+    def mb(n):
+        return f'{hb.round_significant_n(n / 1024 ** 2, 4):,.10f}'.rstrip('0').rstrip('.')  # plain decimals, never exponent notation
+
+    # Bottom-up pass so every folder's recursive totals are known before its parent needs them.
+    stats = {}
+    for folder, subfolders, files in os.walk(input_dir, topdown=False):
+        if skip_hidden:
+            subfolders = [i for i in subfolders if not i.startswith('.')]
+            files = [i for i in files if not i.startswith('.')]
+        size = sum(os.path.getsize(os.path.join(folder, i)) for i in files if os.path.isfile(os.path.join(folder, i)))
+        children = [stats[os.path.join(folder, i)] for i in subfolders if os.path.join(folder, i) in stats]
+        stats[folder] = {'files': len(files), 'dirs': len(subfolders), 'subfolders': subfolders,
+                         'nested_dirs': len(subfolders) + sum(c['nested_dirs'] for c in children),
+                         'size': size, 'total': size + sum(c['total'] for c in children)}
+
+    def shape(folder):
+        # What makes two sibling folders "the same": the subfolder layout, all the way down. File counts
+        # and sizes are deliberately ignored (a crop folder with 12 files instead of 11 is still a crop
+        # folder), otherwise every small variation breaks the run into random-looking pieces. Memoized.
+        st = stats[folder]
+        if 'shape' not in st:
+            st['shape'] = tuple((i, shape(os.path.join(folder, i))) for i in sorted(st['subfolders']))
+        return st['shape']
+
+    def node(folder, parent=None):
+        n = anytree.Node(os.path.basename(folder) or folder, parent=parent, folder=folder)
+        subs = sorted(stats[folder]['subfolders'])
+        i = 0
+        while i < len(subs):
+            run = [subs[i]]
+            while collapse_repeats and i + len(run) < len(subs) and shape(os.path.join(folder, subs[i + len(run)])) == shape(os.path.join(folder, run[0])):
+                run.append(subs[i + len(run)])
+            shown = run if len(run) <= 9 else run[:8] + [None] + run[-1:]
+            for sub in shown:
+                if sub is None:
+                    hidden = [stats[os.path.join(folder, i)] for i in run[8:-1]]
+                    summed = {k: sum(h[k] for h in hidden) for k in ('files', 'dirs', 'nested_dirs', 'size', 'total')}
+                    anytree.Node(f'\u22ee  ({len(hidden)} more folders shaped like these, summed)', parent=n, folder=None, summed=summed)
+                else:
+                    node(os.path.join(folder, sub), n)
+            i += len(run)
+        return n
+
+    # Rows first, then widths, so every column lines up regardless of tree depth or name length.
+    columns = ('files', 'dirs', 'nested_dirs', 'size_mb', 'total_mb')
+    rows = []
+    for pre, _, n in anytree.RenderTree(node(input_dir), maxlevel=None if max_depth is None else max_depth + 1):
+        st = stats[n.folder] if n.folder is not None else n.summed
+        rows.append([pre + n.name, str(st['files']), str(st['dirs']), str(st['nested_dirs']), mb(st['size']), mb(st['total'])])
+    widths = [max(len(r[i]) for r in [['folder', *columns]] + rows) for i in range(6)]
+    gap = '    '
+    lines = ['folder'.ljust(widths[0]) + gap + gap.join(c.rjust(widths[i + 1]) for i, c in enumerate(columns))]
+    lines += [(r[0].ljust(widths[0]) + gap + gap.join(r[i + 1].rjust(widths[i + 1]) for i in range(5))).rstrip() for r in rows]
+    text = '\n'.join(lines)
+    if print_it:
+        print(text)
+    return text
+
+
 def unzip_file(input_uri, output_folder=None, verbose=True):
     'Unzip file in place. If no output folder specified, place in input_uris folder'
     if not output_folder:

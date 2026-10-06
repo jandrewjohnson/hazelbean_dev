@@ -39,12 +39,17 @@ def is_path_cog(path, check_tiled=True, full_check=False, raise_exceptions=False
     result = validate(ds, check_tiled=check_tiled, full_check=full_check)
 
     
-    # Check if any element of the list result is longer than 1
-    if any(len(item) > 0 for item in result[:-1]):
+    # Fail on the validator's ERRORS only. Its warnings are advisory (e.g. 'recommended to include internal overviews'
+    # for a file wider than a block): a rung with no pyramid level above it legitimately has none, and the overview
+    # requirement that matters is the exact pyramid check in is_path_global_pyramid / is_path_subglobal_pyramid.
+    warnings_, errors_, _ = result
+    if verbose and warnings_:
+        hb.log(f"COG validator warnings for {path}: " + '; '.join(str(i) for i in warnings_))
+    if errors_:
         if verbose:
-            hb.log(f"Path {path} at abspath {hb.path_abs(path)} is not a valid COG. It raised the following errors: \n " + '\n'.join([str(i) for i in result]))
+            hb.log(f"Path {path} at abspath {hb.path_abs(path)} is not a valid COG. It raised the following errors: \n " + '\n'.join(str(i) for i in errors_))
         if raise_exceptions:
-            raise ValueError(f"Path {path} at abspath {hb.path_abs(path)} is not a valid COG. It raised the following errors: \n " + '\n'.join(result))
+            raise ValueError(f"Path {path} at abspath {hb.path_abs(path)} is not a valid COG. It raised the following errors: \n " + '\n'.join(str(i) for i in errors_))
         return False
 
     if verbose:
