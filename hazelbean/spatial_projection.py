@@ -499,7 +499,10 @@ def resample_to_match(input_path,
                       target_aligned_pixels=True, # Doesnt do anything.
                       bb_override=None,
                       verbose=False,
+                      overview_level='AUTO',
                       ):
+    # NONE forces original pixels; categorical overviews can change a mode
+    # aggregation even when two source rasters have identical full-resolution data.
     if pixel_size_override is None:
         target_pixel_size = (hb.get_cell_size_from_uri(match_path), -hb.get_cell_size_from_uri(match_path))
     elif not isinstance(pixel_size_override, (tuple, list)):
@@ -579,6 +582,7 @@ def resample_to_match(input_path,
                       calc_raster_stats=calc_raster_stats,
                       add_overviews=add_overviews,
                       target_aligned_pixels=target_aligned_pixels, # Doesnt do anything
+                      overview_level=overview_level,
     )
 
 
@@ -973,7 +977,6 @@ def force_global_angular_data_to_equal_area_earth_grid(input_path, output_path):
                              ndv=output_ndv,
                              geotransform_override=output_geotransform,
                              projection_override=match_wkt)
-
 
 
 

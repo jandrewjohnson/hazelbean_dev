@@ -436,7 +436,8 @@ def warp_raster_hb(
         calc_raster_stats=False,
         add_overviews=False,
         specific_overviews_to_add=None,
-        target_aligned_pixels=True # Doesn't do anything
+        target_aligned_pixels=True, # Doesn't do anything
+        overview_level='AUTO',
 ):
     """Resize/resample raster to desired pixel size, bbox and projection.
 
@@ -620,6 +621,7 @@ def warp_raster_hb(
         outputType=output_data_type,
         srcNodata=src_ndv,
         dstNodata=dst_ndv,
+        overviewLevel=overview_level,
         # targetAlignedPixels=target_aligned_pixels, # DEACTIVATED BECAUSE WAS THROWING ERROR. NOTE THAT I DID NOT DEACTIVATE IT IN PARENT FUNCTIONS TO ENSURE BACKWARDS COMPATIBILITY.
     )
     # TODOO decided not to implement parallel calculation of unique values list when making pyramids, but might be a nice optional addon.
@@ -1660,6 +1662,5 @@ def get_raster_info_hb(raster_path, verbose=False):
         L.info(hb.pp(raster_properties))
 
     return raster_properties
-
 
 
