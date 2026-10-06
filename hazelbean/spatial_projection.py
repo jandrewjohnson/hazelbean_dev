@@ -499,10 +499,10 @@ def resample_to_match(input_path,
                       target_aligned_pixels=True, # Doesnt do anything.
                       bb_override=None,
                       verbose=False,
-                      overview_level='AUTO',
+                      overview_level=None,
                       ):
-    # NONE forces original pixels; categorical overviews can change a mode
-    # aggregation even when two source rasters have identical full-resolution data.
+    # None lets warp_raster_hb derive it from resample_method; see
+    # OVERVIEW_UNSAFE_RESAMPLE_METHODS there.
     if pixel_size_override is None:
         target_pixel_size = (hb.get_cell_size_from_uri(match_path), -hb.get_cell_size_from_uri(match_path))
     elif not isinstance(pixel_size_override, (tuple, list)):

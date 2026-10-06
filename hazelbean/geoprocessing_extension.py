@@ -419,6 +419,9 @@ def warp_raster_HAZELBEAN_REPLACEMENT(
 
 
 
+OVERVIEW_UNSAFE_RESAMPLE_METHODS = ('near', 'nearest', 'mode', 'sum')
+
+
 def warp_raster_hb(
         base_raster_path,
         target_pixel_size,
@@ -437,7 +440,7 @@ def warp_raster_hb(
         add_overviews=False,
         specific_overviews_to_add=None,
         target_aligned_pixels=True, # Doesn't do anything
-        overview_level='AUTO',
+        overview_level=None,
 ):
     """Resize/resample raster to desired pixel size, bbox and projection.
 
@@ -600,6 +603,14 @@ def warp_raster_hb(
                 vector_mask_options['mask_vector_where_filter'])
 
     base_raster = gdal.OpenEx(base_raster_path, gdal.OF_RASTER)
+    # Overviews are built with their own resampling rule, so reading one corrupts a method whose
+    # value is a class or a conserved quantity: a mode over averaged class integers is not a class,
+    # and a sum over averaged pixels is not the sum. Whether a file carries overviews is a property
+    # of the file, not of the data, so AUTO can also make two rasters with identical pixels resample
+    # differently. Methods that interpolate are unaffected and keep GDAL's fast path.
+    if overview_level is None:
+        overview_level = 'NONE' if resample_method in OVERVIEW_UNSAFE_RESAMPLE_METHODS else 'AUTO'
+
 
     gdal.Warp(
         target_raster_path, base_raster,
