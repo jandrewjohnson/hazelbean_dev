@@ -419,6 +419,9 @@ def warp_raster_HAZELBEAN_REPLACEMENT(
 
 
 
+OVERVIEW_UNSAFE_RESAMPLE_METHODS = ('near', 'nearest', 'mode', 'sum')
+
+
 def warp_raster_hb(
         base_raster_path,
         target_pixel_size,
@@ -436,7 +439,8 @@ def warp_raster_hb(
         calc_raster_stats=False,
         add_overviews=False,
         specific_overviews_to_add=None,
-        target_aligned_pixels=True # Doesn't do anything
+        target_aligned_pixels=True, # Doesn't do anything
+        overview_level=None,
 ):
     """Resize/resample raster to desired pixel size, bbox and projection.
 
@@ -599,6 +603,16 @@ def warp_raster_hb(
                 vector_mask_options['mask_vector_where_filter'])
 
     base_raster = gdal.OpenEx(base_raster_path, gdal.OF_RASTER)
+    # Reading an overview means the statistic is computed over the overview's own cells, not over
+    # the data: at level 8 that is 1/64 as many. Measured on a 400x400 raster resampled 8x coarser,
+    # sum came to 0.0156 of the true total, exactly 1/64, and mode differed in about 75% of cells.
+    # Both held whether the overviews were built AVERAGE or NEAREST, so this is the smaller sample
+    # and not a corruption of the values. Whether a file carries overviews at all is a property of
+    # the file rather than of the data, so AUTO also makes two rasters with identical pixels
+    # resample differently. Interpolating methods are the case GDAL's fast path is for.
+    if overview_level is None:
+        overview_level = 'NONE' if resample_method in OVERVIEW_UNSAFE_RESAMPLE_METHODS else 'AUTO'
+
 
     gdal.Warp(
         target_raster_path, base_raster,
@@ -620,6 +634,7 @@ def warp_raster_hb(
         outputType=output_data_type,
         srcNodata=src_ndv,
         dstNodata=dst_ndv,
+        overviewLevel=overview_level,
         # targetAlignedPixels=target_aligned_pixels, # DEACTIVATED BECAUSE WAS THROWING ERROR. NOTE THAT I DID NOT DEACTIVATE IT IN PARENT FUNCTIONS TO ENSURE BACKWARDS COMPATIBILITY.
     )
     # TODOO decided not to implement parallel calculation of unique values list when making pyramids, but might be a nice optional addon.
@@ -1660,6 +1675,5 @@ def get_raster_info_hb(raster_path, verbose=False):
         L.info(hb.pp(raster_properties))
 
     return raster_properties
-
 
 
