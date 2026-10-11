@@ -17,9 +17,28 @@ By the end of this guide, you'll have: - ✅ **Working Hazelbean environment** w
 
 ## 🚀 Step 1: Environment Setup (5 minutes)
 
-### Option A: Complete Development Setup (Recommended)
+### Option A: Package from conda-forge (Recommended for users)
 
-**Best for:** Learning Hazelbean, contributing to the project, or accessing all features
+**Best for:** Using Hazelbean in your own projects
+
+Hazelbean is on conda-forge, prebuilt with its Cython extensions and the GDAL
+stack for Windows, macOS and Linux:
+
+``` bash
+# In an activated conda environment
+mamba install hazelbean
+
+# Verify installation
+python -c "import hazelbean as hb; print('✅ Hazelbean ready!')"
+```
+
+If you also want SEALS, `mamba install sealsmodel` brings hazelbean with it. A
+`pip install hazelbean` also exists, but it leaves the geospatial dependencies
+to pip wheels, so prefer the conda-forge package.
+
+### Option B: Developer Setup from a clone
+
+**Best for:** Contributing to the project, or running the educational examples in place
 
 ``` bash
 # 1. Clone the complete repository
@@ -40,33 +59,19 @@ python scripts/verify_installation.py
 ```
 
 **What happens in Step 4:**
-- Compiles platform-specific Cython extensions (required for performance-critical operations)
+- Compiles platform-specific Cython extensions (required for performance-critical operations), so a C/C++ compiler is required
 - Installs hazelbean in editable mode for development
 - The `--no-deps` flag prevents pip from reinstalling conda packages
+- If the conda-forge `hazelbean` package is already in the environment, remove it first with `conda remove hazelbean --force` (keeps the dependencies) so it cannot shadow the clone
 
 **If Step 4 fails on Windows:** See [Cython Compilation Issues](#cython-compilation-issues-windows) below.
-
-### Option B: Package Installation Only
-
-**Best for:** Using Hazelbean in existing projects
-
-``` bash
-# Install core dependencies
-mamba install -c conda-forge natcap.invest geopandas pygeoprocessing taskgraph cython
-
-# Install Hazelbean via pip
-pip install hazelbean
-
-# Verify installation  
-python -c "import hazelbean as hb; print('✅ Hazelbean ready!')"
-```
 
 ## 🧪 Step 2: Run Your First Example (5 minutes)
 
 Test your installation with hands-on examples:
 
 ``` bash
-# Navigate to examples (Option A setup)
+# Navigate to examples (Option B setup)
 cd examples
 
 # Run the first tutorial
@@ -82,7 +87,7 @@ python step_1_project_setup.py
 🎉 Tutorial complete! Try step_2_data_loading.py next.
 ```
 
-**If using Option B setup:** You can still run examples by creating the tutorial files manually or downloading them from the repository.
+**If using Option A setup:** You can still run examples by creating the tutorial files manually or downloading them from the repository.
 
 ## 📚 Step 3: Explore Documentation (5 minutes)
 
@@ -128,14 +133,14 @@ hazelbean_dev/
 
 ### For New Users (Start Here)
 
-1.  **Complete setup** using Option A above
+1.  **Complete setup** using Option A or B above
 2.  **Run all 5 tutorial examples** in `examples/` directory\
 3.  **Explore the [Learning Path](https://justinandrewjohnson.com/earth_economy_devstack/hazelbean_learning_path.html)** online
 4.  **Try modifying examples** with your own data
 
 ### For Contributors
 
-1.  **Complete development setup** (Option A)
+1.  **Complete development setup** (Option B)
 2.  **Review the test suite** in `hazelbean_tests/` to understand patterns
 3.  **Read [How to Contribute](https://justinandrewjohnson.com/earth_economy_devstack/version_control.html)** for the branching and PR workflow
 

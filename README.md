@@ -6,7 +6,7 @@ Hazelbean is a collection of geospatial processing tools based on gdal, numpy, s
 
 -   **Python 3.10 or later** (Python 3.9 support was dropped as of version 1.4.0 due to NumPy 2.0 compatibility issues)
 
-Hazelbean started as a personal research package of scripts for Justin Johnson and is was not originally intended for broad release. However, hazelbean is transitioning towards having full-support, primarily because it underlies several important software releases, including some from the Natural Capital Project. Thus, even in this transitory state, it is available via "pip install hazelbean". Note that hazelbean only provides a Python 3+, 64 bit, Windows version, however with the exception of precompiled cython files, it should be cross-platform and cross-version. The precompiled files are only loaded as needed.
+Hazelbean started as a personal research package of scripts for Justin Johnson and is was not originally intended for broad release. However, hazelbean is transitioning towards having full-support, primarily because it underlies several important software releases, including some from the Natural Capital Project. Thus, even in this transitory state, it is available on conda-forge via `mamba install hazelbean` (and on PyPI via `pip install hazelbean`). Note that hazelbean only provides a Python 3+, 64 bit, Windows version, however with the exception of precompiled cython files, it should be cross-platform and cross-version. The precompiled files are only loaded as needed.
 
 ## Documentation
 
@@ -33,7 +33,22 @@ been removed.
 
 ## Quick Start
 
-### Option 1: Complete Environment (Recommended)
+### Option 1: Package from conda-forge (Recommended for users)
+
+Hazelbean is on conda-forge, prebuilt with its Cython extensions and the GDAL
+stack for Windows, macOS and Linux. In an activated conda environment:
+
+``` bash
+mamba install hazelbean
+```
+
+If you also want SEALS, `mamba install sealsmodel` brings hazelbean with it. A
+`pip install hazelbean` also exists, but it leaves the geospatial dependencies
+to pip wheels, so prefer the conda-forge package.
+
+### Option 2: Developer install from a clone
+
+For contributing to hazelbean, or running the educational examples in place:
 
 ``` bash
 # 1. Clone repository and setup complete environment
@@ -58,19 +73,12 @@ cd ../../earth_economy_devstack/docs && quarto preview  # devstack docs, incl. t
 ```
 
 **Important Notes:**
-- **Step 3** compiles Cython extensions for your platform (Windows/Mac/Linux)
+- **Step 3** compiles Cython extensions for your platform (Windows/Mac/Linux), so a C/C++ compiler is required
 - **Step 4** verifies everything is working correctly and provides troubleshooting guidance if needed
 - The `--no-deps` flag prevents pip from reinstalling conda packages (correct for conda+pip hybrid environments)
+- If the conda-forge `hazelbean` package is already in the environment, remove it first with `conda remove hazelbean --force` (keeps the dependencies) so it cannot shadow the clone
 
 **Windows Users:** If Step 3 fails with compiler errors, see the [Windows Setup Guide](docs/windows-setup.md) for detailed instructions on installing build tools.
-
-### Option 2: Package Only
-
-``` bash
-# Basic installation for using Hazelbean in existing environment
-mamba install -c conda-forge natcap.invest geopandas pygeoprocessing taskgraph cython
-pip install hazelbean
-```
 
 **Next steps:** Explore the [examples/](examples/) directory for guided learning.
 
