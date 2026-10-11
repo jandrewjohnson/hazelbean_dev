@@ -590,6 +590,17 @@ def create_gdal_vrt(
     gdal.BuildVRT(vrt_path, file_paths_list, options=vrt_options)
 
 
+def _gdal_overview_resample_name(resample_method):
+    """Return the name GDAL's overview builder accepts for a gdalwarp-style method name.
+
+    BuildOverviews and the COG driver's RESAMPLING option take NEAREST, not the 'near' that
+    gdalwarp and this module's own arguments use, and reject an unknown name outright. Anything
+    already spelled the way they expect passes through.
+    """
+    name = str(resample_method).upper()
+    return {'NEAR': 'NEAREST', 'CUBICSPLINE': 'CUBICSPLINE'}.get(name, name)
+
+
 def write_vrt_to_raster(
     input_vrt_path,
     output_tif_path,
@@ -653,20 +664,24 @@ def write_vrt_to_raster(
     )
 
     overview_levels = [2, 4, 8, 16]
-    # But wait, COGs don't specify many of these cause they're optimized
-    translate_options = gdal.TranslateOptions(
-        format="COG",
-        creationOptions=[
-            f"OVERVIEWS=AUTO",
-            'NUM_THREADS=ALL_CPUS',
-            'SPARSE_OK=TRUE',
-            # f"OVERVIEWS=LEVELS={','.join(map(str, overview_levels))}", #FAILED
-            "COMPRESS=DEFLATE",
-            "RESAMPLING=NEAREST",                
-            "BIGTIFF=IF_SAFER",
-            "OVERVIEWS=IGNORE",
-]
-)        
+
+    # The COG driver names its options differently from GTiff: BLOCKSIZE rather than
+    # TILED/BLOCKXSIZE, and RESAMPLING for the overviews it adopts. Built from this call's
+    # arguments; the list that stood here was hardcoded and silently discarded all of them,
+    # including compress, bigtiff and the block size, by rebinding translate_options.
+    cog_creation_options = [
+        f'COMPRESS={compress.upper()}' if isinstance(compress, str) and compress else 'COMPRESS=DEFLATE',
+        'NUM_THREADS=ALL_CPUS',
+        'SPARSE_OK=TRUE',
+        f'BIGTIFF={"YES" if bigtiff else "IF_SAFER"}',
+        # The overviews are built below and carried over as-is. AUTO would rebuild them with the
+        # driver's own choice of method, which is the thing the overview_resampling_method
+        # argument exists to control.
+        'OVERVIEWS=FORCE_USE_EXISTING',
+        f'RESAMPLING={_gdal_overview_resample_name(overview_resampling_method)}',
+    ]
+    if blockxsize:
+        cog_creation_options.append(f'BLOCKSIZE={blockxsize}')
     
     
     
@@ -681,26 +696,37 @@ def write_vrt_to_raster(
 
 
     if write_as_cog:
-        # Use GDAL Translate for efficient conversion
+        # A finished COG cannot be reopened with GA_Update to add overviews: GDAL refuses rather
+        # than break the layout ("Updating it will generally result in losing part of the
+        # optimizations"), and the COG driver rejects an explicit OVERVIEWS=LEVELS list. So build
+        # the overviews on a plain GTiff first and have the COG driver adopt them unchanged, which
+        # is the same two-step route pog.py takes. Writing the COG first and then reopening it, as
+        # this did, raised RuntimeError on every call that reached it.
+        staging_path = output_tif_path + '.overview_staging.tif'
         gdal.Translate(
-            output_tif_path,
+            staging_path,
             vrt_ds,
             format='GTiff',
             outputType=output_data_type,
             resampleAlg=resampling_method,
-            options=translate_options,
+            creationOptions=creation_options,
             callback=progress_callback
         )
-        # Step 2: Build overviews with the desired resampling algorithm
-        dataset = gdal.Open(output_tif_path, gdal.GA_Update)  # Open COG in update mode
-        if dataset:
-            
-            # ds.BuildOverviews(overview_resample_method, pyramid_compatible_overview_levels[arcseconds], callback, [input_path])  # Based on commonly used data shapes
-
-            custom_overview_levels = [2, 4, 8, 16]  # Define your custom overview levels
-            dataset.BuildOverviews(overview_resampling_method.upper(), custom_overview_levels, progress_callback, [output_tif_path])  # Use 'AVERAGE' resampling
-            dataset.FlushCache()  # Ensure all data is written to disk
-            dataset = None  # Close the dataset
+        staging_ds = gdal.Open(staging_path, gdal.GA_Update)
+        if staging_ds is None:
+            raise RuntimeError(f'could not open {staging_path} to build overviews')
+        staging_ds.BuildOverviews(
+            _gdal_overview_resample_name(overview_resampling_method), overview_levels, progress_callback)
+        staging_ds.FlushCache()
+        staging_ds = None
+        gdal.Translate(
+            output_tif_path,
+            staging_path,
+            format='COG',
+            creationOptions=cog_creation_options,
+            callback=progress_callback
+        )
+        os.remove(staging_path)
 
     else:
         # Use GDAL Translate for efficient conversion
