@@ -1262,7 +1262,16 @@ class ProjectFlow(object):
                             task.task_dir = os.path.join(self.intermediate_dir, task.function.__name__)
                     self.cur_dir = task.task_dir
                 elif task.parent.type == 'iterator':
-                    task.task_dir = os.path.join(self.cur_dir_parent_dir, task.name)
+                    # A task under an iterator gets its own directory inside the iteration's
+                    # directory. creates_dir=False means the task shares the iteration's
+                    # directory instead, so a group of tasks that together write one logical
+                    # record per iteration costs one directory rather than one each. Outside an
+                    # iterator creates_dir=False only suppresses creation, which is why the flag
+                    # has to be read here as well as where the directory is made.
+                    if task.creates_dir:
+                        task.task_dir = os.path.join(self.cur_dir_parent_dir, task.name)
+                    else:
+                        task.task_dir = self.cur_dir_parent_dir
                     self.cur_dir = task.task_dir
                 else:
                     raise NameError('Unknown Node type')
