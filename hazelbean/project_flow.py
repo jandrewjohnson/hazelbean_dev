@@ -1463,6 +1463,15 @@ class ProjectFlow(object):
                     results = []
 
                     if task.run_in_parallel:
+                        requested_workers = os.environ.get('SEALS_NUM_WORKERS')
+                        if requested_workers and int(self.num_workers) != int(requested_workers):
+                            raise RuntimeError(
+                                'Worker limit not honoured: SEALS_NUM_WORKERS=%s but the pool is '
+                                'about to start %s workers. The pool size is bounded by the memory '
+                                'this job was given, not by the machine\'s cpu count.'
+                                % (requested_workers, self.num_workers))
+                        hb.log('Starting worker pool with %d workers (SEALS_NUM_WORKERS=%s)'
+                               % (self.num_workers, requested_workers))
                         # OPTIMIZATION NOTE: It's slow to spawn 460 processes when they are just going to be skipped, thus run_this for iterators needs to be improved.
                         worker_pool = multiprocessing.Pool(self.num_workers) # NOTE, worker pool and results are LOCAL variabes so that they aren't pickled when we pass the project object.
 
