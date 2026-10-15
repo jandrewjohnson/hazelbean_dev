@@ -104,6 +104,80 @@ def run_iterator(p, task, iteration_counter):
 
     return things_returned
 
+class ParallelIterationFailure(RuntimeError):
+    """An iteration raised, or a worker died, and the run must not continue."""
+
+
+def _iteration_label(arguments):
+    """Name an iteration by the directory it was working in, which is the tile a reader needs."""
+    project_copy = arguments[0] if arguments else None
+    counter = arguments[2] if len(arguments) > 2 else '?'
+    return 'iteration %s (%s)' % (counter, getattr(project_copy, 'cur_dir', 'unknown directory'))
+
+
+def run_parallel_iterations(num_workers, function, parsed_iterable):
+    """Run an iterator's children in parallel, stopping the run when any iteration or worker dies.
+
+    multiprocessing.Pool.starmap, which this replaces, fails two ways that each cost a global run
+    hours. An iteration that raises abandons every iteration still queued and reports only its own
+    exception, so a run stops having silently not attempted thousands of iterations: one tile's
+    missing coefficients left 83 other tiles unprocessed, with nothing in the log saying they had
+    been dropped. A worker that dies abruptly -- which is what an OOM kill looks like -- never
+    delivers a result at all, and starmap waits on it forever: a job held a node for 5.5 hours
+    doing nothing. ProcessPoolExecutor is used instead because it promises what Pool does not, that
+    a process dying abruptly surfaces as BrokenProcessPool rather than as silence.
+
+    Failing fast is deliberate, and so is failing LOUDLY about scope: the message says which
+    iteration raised, how many finished, and how many were never attempted, because "it stopped"
+    and "it stopped with 83 tiles silently skipped" call for different recovery.
+
+    Nothing here removes anything. Completed outputs and whatever failure evidence a task wrote
+    stay on disk exactly as they are, which is what a resume reads to decide what to redo.
+    """
+    import concurrent.futures as futures_module
+
+    pool = futures_module.ProcessPoolExecutor(max_workers=max(1, int(num_workers)))
+    pending, results = {}, []
+    for arguments in parsed_iterable:
+        pending[pool.submit(function, *arguments)] = arguments
+    total = len(pending)
+
+    def stop(reason, arguments, error):
+        done = sum(1 for f in pending if f.done() and not f.cancelled())
+        unattempted = sum(1 for f in pending if not f.done())
+        pool.shutdown(wait=False, cancel_futures=True)
+        return ParallelIterationFailure(
+            '%s\n'
+            '  failing iteration: %s\n'
+            '  %d of %d iterations finished, %d were never attempted\n'
+            '  completed outputs and any failure evidence are preserved on disk; a resume will\n'
+            '  redo only what is unfinished\n'
+            '  original error: %s: %s'
+            % (reason, _iteration_label(arguments), done, total, unattempted,
+               type(error).__name__, error))
+
+    try:
+        for future in futures_module.as_completed(pending):
+            try:
+                results.append(future.result())
+            except futures_module.process.BrokenProcessPool as error:
+                raise stop('A parallel worker died abruptly, so its iteration produced no result '
+                           'at all. The usual cause is the kernel killing it for memory; check '
+                           'the scheduler accounting for an OOM event and lower the worker count '
+                           'or raise the allocation before resuming.',
+                           pending[future], error) from error
+            except Exception as error:
+                raise stop('A parallel iteration raised, so the run is stopping.',
+                           pending[future], error) from error
+    except ParallelIterationFailure:
+        raise
+    except BaseException:
+        pool.shutdown(wait=False, cancel_futures=True)
+        raise
+    pool.shutdown(wait=True)
+    return results
+
+
 def run_iterator_in_parallel(p, task, iteration_counter):
     things_returned = []
     for child in task.children:
@@ -1470,10 +1544,8 @@ class ProjectFlow(object):
                                 'about to start %s workers. The pool size is bounded by the memory '
                                 'this job was given, not by the machine\'s cpu count.'
                                 % (requested_workers, self.num_workers))
-                        hb.log('Starting worker pool with %d workers (SEALS_NUM_WORKERS=%s)'
+                        hb.log('Running iterations with %d workers (SEALS_NUM_WORKERS=%s)'
                                % (self.num_workers, requested_workers))
-                        # OPTIMIZATION NOTE: It's slow to spawn 460 processes when they are just going to be skipped, thus run_this for iterators needs to be improved.
-                        worker_pool = multiprocessing.Pool(self.num_workers) # NOTE, worker pool and results are LOCAL variabes so that they aren't pickled when we pass the project object.
 
                     # Once all the iterations are done, iterate through the stored results and call their get functions, which blocks running past this point until all are done.
                     # SUPER CONFUSING POINT. the project object will be modified independently by all tasks. Cant think of a good way ro rejoin them
@@ -1516,7 +1588,7 @@ class ProjectFlow(object):
                         # We use apply_async, which immediately lets the next line calculate. It is blocked below with results.get()
                         # result = worker_pool.apply_async(func=run_iterator_in_parallel, args=(project_copy, task, iteration_counter))
 
-                        result = worker_pool.starmap(run_iterator_in_parallel, parsed_iterable)
+                        result = run_parallel_iterations(self.num_workers, run_iterator_in_parallel, parsed_iterable)
 
                         # Not sure if needed, but note that I don't actually ever iterate over result to get the results.
 
