@@ -2,6 +2,7 @@ import os.path
 import struct
 import sys
 import pathlib
+import warnings
 from osgeo import gdal
 import numpy as np
 from osgeo import gdal, osr
@@ -58,9 +59,47 @@ def is_path_cog(path, check_tiled=True, full_check=False, raise_exceptions=False
 
 
 def make_path_cog(input_raster_path, output_raster_path=None, output_data_type=None, overview_resampling_method=None, ndv=None, compression="ZSTD", blocksize=512, verbose=False):
-    """ Create a Pog (pyramidal cog) from input_raster_path. Writes in-place if output_raster_path is not set. Chooses correct values for 
+    """Write input_raster_path as a plain Cloud Optimized GeoTIFF in one pass through GDAL's COG driver.
+
+    The driver tiles the raster, builds dyadic (2, 4, 8...) internal overviews, computes exact statistics and lays the
+    file out as a COG. This is for rasters off the pyramid ladder (any CRS, any cell size). A raster on a rung should go
+    through hb.make_path_pog instead, which writes the rung's overview levels by the variable-class rule.
+
+    output_raster_path None converts in place: the COG is written beside the input and swapped in, and the original is
+    kept as <stem>_displaced_by_make_path_cog_<stamp>.tif. output_data_type is a GDAL type number (1 Byte ... 7 Float64);
+    None keeps the input's. overview_resampling_method is a COG driver name (nearest, average, mode, bilinear, cubic,
+    rms); None lets the driver choose by type. ndv None keeps the input's declaration."""
+    if not hb.path_exists(input_raster_path, verbose=verbose):
+        raise FileNotFoundError(f"Input raster does not exist: {input_raster_path} at abs path {hb.path_abs(input_raster_path)}")
+
+    in_place = output_raster_path is None
+    if in_place:
+        output_raster_path = hb.temp('.tif', hb.file_root(input_raster_path) + '_displaced_by_make_path_cog', remove_at_exit=False,
+                                     folder=os.path.dirname(os.path.abspath(input_raster_path)), tag_along_file_extensions=['.aux.xml'])
+
+    creation_options = [f"COMPRESS={compression}", f"BLOCKSIZE={blocksize}", "BIGTIFF=YES", "STATISTICS=YES"]
+    if overview_resampling_method is not None:
+        creation_options.append(f"OVERVIEW_RESAMPLING={overview_resampling_method.upper()}")
+    gdal.Translate(output_raster_path, input_raster_path, format='COG', creationOptions=creation_options,
+                   outputType=hb.gdal_number_to_gdal_type[output_data_type] if output_data_type is not None else gdal.GDT_Unknown,
+                   noData=ndv,
+                   callback=hb.make_gdal_callback(f'Writing COG at {output_raster_path}') if verbose else None)
+
+    if in_place:
+        hb.swap_filenames(output_raster_path, input_raster_path)  # the COG takes the input's name; the original sits at the displaced path
+        output_raster_path = input_raster_path
+    if not is_path_cog(output_raster_path, verbose=verbose):
+        raise ValueError(f"Failed to write a valid COG at {output_raster_path} (abs path {hb.path_abs(output_raster_path)})")
+    return output_raster_path
+
+
+def make_path_cog_legacy(input_raster_path, output_raster_path=None, output_data_type=None, overview_resampling_method=None, ndv=None, compression="ZSTD", blocksize=512, verbose=False):
+    """ Create a Pog (pyramidal cog) from input_raster_path. Writes in-place if output_raster_path is not set. Chooses correct values for
     everything else if not set."""
-    
+    warnings.warn('make_path_cog_legacy is deprecated: it builds pyramid overview levels through a copy-overviews-copy sequence and '
+                  'fails off the ladder. Use hb.make_path_cog for a plain COG or hb.make_path_pog for a pyramid-aligned one.',
+                  DeprecationWarning, stacklevel=2)
+
     # Check if input exists
     if not hb.path_exists(input_raster_path, verbose=verbose):
         raise FileNotFoundError(f"Input raster does not exist: {input_raster_path} at abs path {hb.path_abs(input_raster_path)}")
@@ -242,6 +281,8 @@ def write_random_cog(output_path, xsize=256, ysize=256, epsg=4326):
     return result
 
 def make_path_cog_with_cogger(input_raster_path, output_raster_path=None, verbose=False):
+    warnings.warn('make_path_cog_with_cogger is deprecated: it shells out to a Windows-only cogger.exe. '
+                  'Use hb.make_path_cog.', DeprecationWarning, stacklevel=2)
     hazelbean_dir = pathlib.Path(__file__).parent
     cogger_path = hazelbean_dir/'bin/cogger/cogger.exe'
     if not hb.path_exists(cogger_path):
