@@ -108,8 +108,7 @@ def make_path_cog_legacy(input_raster_path, output_raster_path=None, output_data
         hb.log(f"Raster is already a COG: {input_raster_path}")
         return
     # Make a local copy at a temp file to process on to avoid corrupting the original
-    input_dir = os.path.dirname(input_raster_path)
-    temp_copy_path = hb.temp('.tif', 'copy', True, folder=input_dir, tag_along_file_extensions=['.aux.xml'])
+    temp_copy_path = hb.temp('.tif', 'copy', True, tag_along_file_extensions=['.aux.xml'])
     
     # Ensure output directory exists
     os.makedirs(os.path.dirname(temp_copy_path), exist_ok=True)       

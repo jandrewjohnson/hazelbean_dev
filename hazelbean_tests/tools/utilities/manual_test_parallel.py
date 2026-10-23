@@ -18,7 +18,6 @@ freeze_support()
 run_all = 1
 
 remove_temporary_files = 1
-output_dir = 'data'
 
 if __name__ == '__main__':
 
@@ -28,6 +27,7 @@ if __name__ == '__main__':
     import os
     import hazelbean as hb
     import numpy as np
+    output_dir = hb.temporary_dir()
     import pygeoprocessing as pgp
     import rioxarray
 

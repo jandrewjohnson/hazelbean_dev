@@ -1,10 +1,12 @@
 from google.cloud import storage
+import json
 import pickle
 import os
 import os
 import subprocess
 import hazelbean as hb
 import taskgraph
+import threading
 import urllib
 import time
 import socket
@@ -389,3 +391,98 @@ def download_file(url, target_path, chunk_size=1024 * 1024, retries=3):
             print(f"\nDownload failed (attempt {attempt}/{retries}): {e}")
             if attempt == retries:
                 raise  # Re-raise the last exception if all retries fail
+
+
+# Cloudflare R2, through its S3-compatible API. boto3 is imported lazily: only curators who write to R2 need it.
+
+def get_r2_client():
+    """An S3 client for Cloudflare R2 from HB_R2_ACCOUNT_ID, HB_R2_ACCESS_KEY_ID and HB_R2_SECRET_ACCESS_KEY (machine.env), or None if they aren't set."""
+    account, key_id, secret = (os.environ.get(k) for k in ("HB_R2_ACCOUNT_ID", "HB_R2_ACCESS_KEY_ID", "HB_R2_SECRET_ACCESS_KEY"))
+    if not (account and key_id and secret):
+        return None
+    import boto3
+    from botocore.config import Config
+    return boto3.client("s3", endpoint_url=f"https://{account}.r2.cloudflarestorage.com", aws_access_key_id=key_id, aws_secret_access_key=secret, region_name="auto",
+                        config=Config(max_pool_connections=64))  # enough for one connection per worker thread
+
+def get_r2_error_status(error):
+    """The HTTP status of an error raised by the S3 client (e.g. 404 missing, 412 a failed If-Match), or None for other errors."""
+    return (getattr(error, "response", None) or {}).get("ResponseMetadata", {}).get("HTTPStatusCode")
+
+def read_r2_json(client, bucket, key):
+    """The JSON object at key and its ETag, or (None, None) if the key doesn't exist."""
+    try:
+        response = client.get_object(Bucket=bucket, Key=key)
+    except Exception as e:
+        if get_r2_error_status(e) == 404:
+            return None, None
+        raise
+    return json.loads(response["Body"].read()), response["ETag"]
+
+def write_r2_json(client, bucket, key, obj, cache_control="public, max-age=31536000, immutable", **conditions):
+    """Write obj as JSON to key. conditions are IfMatch=<etag> or IfNoneMatch='*', which R2 evaluates atomically (412 on failure)."""
+    client.put_object(Bucket=bucket, Key=key, Body=json.dumps(obj, indent=2).encode("utf-8"), ContentType="application/json", CacheControl=cache_control, **conditions)
+
+def list_r2_keys(client, bucket, prefix=""):
+    """Every key under prefix, sorted."""
+    keys, request = [], {"Bucket": bucket, "Prefix": prefix}
+    while True:
+        response = client.list_objects_v2(**request)
+        keys += [o["Key"] for o in response.get("Contents", [])]
+        if not response.get("IsTruncated"):
+            return sorted(keys)
+        request["ContinuationToken"] = response["NextContinuationToken"]
+
+def read_r2_object_metadata(client, bucket, key):
+    """The user metadata stored with an object (a dict, possibly empty), or None if the key doesn't exist. Reads no bytes."""
+    try:
+        return client.head_object(Bucket=bucket, Key=key).get("Metadata", {})
+    except Exception as e:
+        if get_r2_error_status(e) == 404:
+            return None
+        raise
+
+class R2TransferProgress:
+    """A boto3 transfer callback that logs one transfer's progress: MB done, percent and speed, at most every few seconds,
+    and always once at the end. boto3 calls it from several threads with the bytes moved since its last call."""
+
+    def __init__(self, label, total_bytes, every_seconds=2.0):
+        self.label, self.total_bytes, self.every_seconds = label, total_bytes, every_seconds
+        self.done_bytes, self.start = 0, time.time()
+        self.last_logged = self.start
+        self.lock = threading.Lock()
+
+    def __call__(self, n_bytes):
+        with self.lock:
+            self.done_bytes += n_bytes
+            now = time.time()
+            finished = self.done_bytes >= self.total_bytes
+            if not finished and now - self.last_logged < self.every_seconds:
+                return
+            self.last_logged = now
+            rate = self.done_bytes / 1e6 / max(now - self.start, 1e-6)
+            hb.log(f"{self.label}: {self.done_bytes / 1e6:,.1f} of {self.total_bytes / 1e6:,.1f} MB "
+                   f"({100 * self.done_bytes / max(self.total_bytes, 1):.0f}%), {rate:,.1f} MB/s" + (", done." if finished else ""))
+
+def upload_path_to_r2(client, bucket, path, key, metadata=None, content_type="application/octet-stream", cache_control="public, max-age=31536000, immutable",
+                      skip_if_exists=True, progress_label=None):
+    """Upload a file to key. With skip_if_exists, an existing key is left alone (for content-addressed keys, existing means
+    identical). With progress_label, progress is logged under that label as the bytes go up. Returns True if it uploaded."""
+    if skip_if_exists and read_r2_object_metadata(client, bucket, key) is not None:
+        if progress_label:
+            hb.log(f"{progress_label}: already uploaded, skipped.")
+        return False
+    callback = R2TransferProgress(progress_label, os.path.getsize(path)) if progress_label else None
+    client.upload_file(path, bucket, key, ExtraArgs={"Metadata": metadata or {}, "ContentType": content_type, "CacheControl": cache_control}, Callback=callback)
+    return True
+
+def copy_r2_object(client, bucket, source_key, key, metadata=None, content_type="application/octet-stream", cache_control="public, max-age=31536000, immutable",
+                   progress_label=None):
+    """Copy an object within a bucket, server-side (nothing is downloaded; large objects are copied in parts), replacing
+    its metadata, content type and cache control with the ones given. Overwrites key if it exists. With progress_label,
+    progress is logged under that label."""
+    callback = None
+    if progress_label:
+        callback = R2TransferProgress(progress_label, client.head_object(Bucket=bucket, Key=source_key)["ContentLength"])
+    client.copy({"Bucket": bucket, "Key": source_key}, bucket, key,
+                ExtraArgs={"MetadataDirective": "REPLACE", "Metadata": metadata or {}, "ContentType": content_type, "CacheControl": cache_control}, Callback=callback)
