@@ -2529,19 +2529,16 @@ def arrays_equal_ignoring_order(array1, array2, ignore_values=None):
         hb.log('Compared arrays and found different unique, count sets: ', unique1, counts1, unique2, counts2, level=100)
     return identical
 
-def hash_file_path(file_path):
-    """Compute and return the SHA-256 hash of a binary-redable file (like a png) specified by its file path.
-    And return a string of the hash."""
-    sha256 = hashlib.sha256()
-    try:
-        with open(file_path, 'rb') as f:
-            while chunk := f.read(8192):
-                sha256.update(chunk)
-        return sha256.hexdigest()
-    except FileNotFoundError:
-        return "File not found."
-    except Exception as e:
-        return f"An error occurred: {e}"
+def hash_file_path(file_path, algorithm='sha256'):
+    """Return the hex digest of a file's bytes, read in chunks so large files are fine.
+
+    algorithm is any hashlib name: 'sha256' (default) or 'md5', for instance. Raises if the file cannot be read, so an
+    error can never be mistaken for a hash."""
+    h = hashlib.new(algorithm)
+    with open(file_path, 'rb') as f:
+        while chunk := f.read(1024 * 1024):
+            h.update(chunk)
+    return h.hexdigest()
     
 def concatenate_list_of_df_paths(input_df_paths, output_path=None, verbose=False):
     """Concatenate a list of dataframes into a single dataframe. Return DF. Also write to output_path if given"""

@@ -243,3 +243,13 @@ def test_ha_per_cell_tile_holds_exactly_the_rows_of_the_global_pog(tmp_path):
     ds = gdal.Open(tile); tile_values = ds.ReadAsArray(); ds = None
     assert np.array_equal(tile_values, window)
     assert np.array_equal(tile_values[:, 0], hb.ha_per_cell_rows(900.0, 160, 40))
+
+
+def test_get_pog_info_reports_rung_class_extent_and_global_total(tmp_path):
+    path = hb.write_ha_per_cell_pog(str(tmp_path / 'ha_per_cell_900sec.tif'), 900)
+    info = hb.get_pog_info(path)
+    assert info['rung'] == '900' and info['arcseconds'] == 900 and info['variable_class'] == 'extensive'
+    assert info['bounding_box'] == [-180.0, -90.0, 180.0, 90.0] and info['denominator'] is None
+    # An extensive POG's global total is the area of the WGS84 ellipsoid in hectares, the sum of every cell.
+    assert info['stats']['sum'] == pytest.approx(hb.ha_per_cell_rows(900.0, 0, 720).sum() * 1440, rel=1e-9)
+    assert not os.path.exists(path + '.aux.xml')  # read from the file, not recomputed by GDAL into a sidecar

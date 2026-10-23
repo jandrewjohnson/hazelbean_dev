@@ -56,6 +56,10 @@ setup(
         "pytest-cov",
         "pytest-benchmark",
       ],
+      # Only curators publishing to the base data store need this (hazelbean/base_data_processing.py).
+      "store": [
+        "boto3",
+      ],
     },
     include_dirs=[numpy.get_include()],
     cmdclass={'build_ext': build_ext},

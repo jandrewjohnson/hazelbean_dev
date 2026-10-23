@@ -55,6 +55,27 @@ def get_pog_metadata(path):
     return {k: v for k, v in (ds.GetMetadata() or {}).items() if k in POG_METADATA_KEYS}
 
 
+def get_pog_info(path):
+    """What a POG says about itself, as a dict: its rung (arcseconds and the filename token), variable class, intensive
+    weighting, denominator and observed-area companion (from get_pog_metadata), bounding box [xmin, ymin, xmax, ymax], and
+    the exact statistics stored in it, plus 'sum' for an extensive raster: the global total (mean times cell count),
+    which Requirement 4 makes exact. Assumes path passes hb.is_path_pog."""
+    meta = get_pog_metadata(path)
+    raster_info = hb.get_raster_info_hb(path)
+    arcseconds = hb.get_cell_size_from_path_in_arcseconds(path, force_to_pyramid=True)
+    # Read the stored exact statistics (Requirement 4) directly. GDAL's GetStatistics(0, 1) would recompute them from every
+    # cell (minutes at 10 s) and write a .aux.xml sidecar: asked for exact statistics, GDAL distrusts stored ones whenever a
+    # STATISTICS_APPROXIMATE item exists, even the 'NO' that every POG carries.
+    ds = gdal.Open(path)
+    stats = {k: float(ds.GetRasterBand(1).GetMetadataItem('STATISTICS_' + k.upper())) for k in ('minimum', 'maximum', 'mean', 'stddev')}
+    ds = None
+    if meta.get('POG_VARIABLE_CLASS') == 'extensive':
+        stats['sum'] = stats['mean'] * raster_info['size']
+    return {'arcseconds': arcseconds, 'rung': hb.arcseconds_to_token(arcseconds), 'variable_class': meta.get('POG_VARIABLE_CLASS'),
+            'intensive_weighting': meta.get('POG_INTENSIVE_WEIGHTING'), 'denominator': meta.get('POG_DENOMINATOR'),
+            'observed_area': meta.get('POG_OBSERVED_AREA'), 'bounding_box': [float(v) for v in raster_info['bounding_box']], 'stats': stats}
+
+
 def _resolve_pog_reference(pog_path, reference):
     """A POG_DENOMINATOR / POG_OBSERVED_AREA value as an absolute path (relative values resolve beside pog_path)."""
     if reference is None or reference == 'ha_per_cell':
@@ -1056,9 +1077,9 @@ def make_path_pog(input_raster_path,
     if not hb.path_exists(input_raster_path, verbose=verbose):
         raise FileNotFoundError(f"Input raster does not exist: {input_raster_path} at abs path {hb.path_abs(input_raster_path)}")
 
-    # An in-place conversion leaves the original beside the POG as <name>_displaced_<stamp>.tif, and its
-    # intermediates as <name>_copy_<stamp>.tif etc. (kept when remove_intermediate_files=False, or after a
-    # crash). A directory walk that reruns would otherwise poggerize those too; skip them by default.
+    # An in-place conversion leaves the original beside the POG as <name>_displaced_<stamp>.tif (and older
+    # versions also left intermediates there as <name>_copy_<stamp>.tif etc.). A directory walk that reruns
+    # would otherwise poggerize those too; skip them by default.
     if any(marker in os.path.basename(input_raster_path) for marker in TEMP_NAME_MARKERS) and not include_displaced_and_temp_files:
         if verbose:
             hb.log(f"Skipping displaced/temp file (pass include_displaced_and_temp_files=True to convert it): {input_raster_path}")
@@ -1115,11 +1136,12 @@ def make_path_pog(input_raster_path,
             raise ValueError(_explain_unsupported_resolution(input_raster_path)) from e
 
     # Make a local copy at a temp file to process on to avoid corrupting the original.
-    # Intermediates are named <input stem>_<step>_<stamp>.tif so they sort beside their source.
+    # Intermediates go in hb.get_temp_dir() (never beside the input, so a crash cannot litter its folder),
+    # named <input stem>_<step>_<stamp>.tif so they can be traced to their source.
     input_dir = os.path.dirname(input_raster_path)
     input_stem = os.path.splitext(os.path.basename(input_raster_path))[0]
-    def intermediate(step, folder=input_dir):
-        path = hb.temp('.tif', input_stem + '_' + step, remove_intermediate_files, folder=folder, tag_along_file_extensions=['.aux.xml'])
+    def intermediate(step):
+        path = hb.temp('.tif', input_stem + '_' + step, remove_intermediate_files, tag_along_file_extensions=['.aux.xml'])
         intermediate_paths.append(path)
         return path
     intermediate_paths = []  # deleted at the end when remove_intermediate_files
@@ -1212,7 +1234,7 @@ def make_path_pog(input_raster_path,
                              and hb.pyramids._divides(native_arcseconds, arcseconds))
         if exact_aggregation:
             # Place the input on its own rung over the target extent (exact: aligned cells are copied), then block-aggregate.
-            native_frame_path = intermediate('native_frame', hb.get_temp_dir())
+            native_frame_path = intermediate('native_frame')
             write_pyramid_frame_raster(native_frame_path, native_arcseconds, target_bb, output_data_type, frame_ndv)
             native_path = intermediate('native')
             hb.resample_to_match(current_path, native_frame_path, native_path, resample_method='near', output_data_type=output_data_type, src_ndv=None, ndv=frame_ndv,
@@ -1238,7 +1260,7 @@ def make_path_pog(input_raster_path,
             # The target frame is synthesized from the pyramid tables (a sparse raster with the exact pyramid
             # geotransform and WGS84) rather than fetched: resample_to_match only reads geometry from its match,
             # and a fetched raster cannot exist for every rung (a global 3/10-arcsecond one would be 9 trillion cells).
-            match_path = intermediate('frame', hb.get_temp_dir())
+            match_path = intermediate('frame')
             write_pyramid_frame_raster(match_path, arcseconds, target_bb, output_data_type, frame_ndv)
             resample_temp_path = intermediate('resample')
             if verbose:

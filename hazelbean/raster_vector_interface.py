@@ -70,6 +70,7 @@ def raster_to_polygon(input_raster_path, output_vector_path, id_label, dissolve_
         gdf = gpd.read_file(output_vector_displaced_path)
         gdf = gdf.dissolve(by=id_label)
         gdf.to_file(output_vector_path, driver='GPKG')
+        hb.remove_path(output_vector_displaced_path)
     
     
     # # Open the raster file
@@ -1079,6 +1080,9 @@ def convert_id_raster_to_polygons(input_raster_path, output_vector_path, dst_lay
 def vector_super_simplify(input_vector_path, id_column_label, blur_size, output_path, remove_temp_files=True):
     """
     Simplify a vector file by rasterizing it on the id_column, then blurring it with mode_resampling, then vectorizing it back
+
+    NYI: unfinished. The blur/mode-resampling step is never run (raster_blurred_path is unused),
+    and nothing is written to output_path -- the result lands in <output_path stem>_raster_idssmoothed.gpkg.
     """
 
     gdf = gpd.read_file(input_vector_path)
@@ -1114,6 +1118,10 @@ def vector_super_simplify(input_vector_path, id_column_label, blur_size, output_
     gdf = gpd.read_file(input_vector_path).to_crs(epsg=3857)
     gdf['geometry'] = gdf['geometry'].buffer(5000).buffer(-5000)
     gdf.to_file(smoothed_vector_path, driver='GPKG')
+
+    if remove_temp_files:
+        hb.remove_path(output_raster_path)
+        hb.remove_path(output_vector_path)
     
     
     

@@ -649,15 +649,7 @@ class ProjectFlow(object):
             if not os.path.isfile(template_path) or os.path.getmtime(template_path) <= os.path.getmtime(input_path):
                 return
             if os.path.getsize(template_path) == os.path.getsize(input_path):
-                import hashlib
-                digests = []
-                for path in (template_path, input_path):
-                    h = hashlib.sha256()
-                    with open(path, 'rb') as f:
-                        for chunk in iter(lambda: f.read(1024 * 1024), b''):
-                            h.update(chunk)
-                    digests.append(h.hexdigest())
-                if digests[0] == digests[1]:
+                if hb.hash_file_path(template_path) == hb.hash_file_path(input_path):
                     return
         except OSError:
             return
