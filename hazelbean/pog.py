@@ -35,6 +35,35 @@ def _is_integer_gdal_type(data_type):
     return np.issubdtype(gdal_array.GDALTypeCodeToNumericTypeCode(data_type), np.integer)
 
 
+# Float16 is not a POG type (D.2.6): it cannot hold the -9999 nodata (stored as -10000, so the declaration and the
+# pixels disagree), its sums overflow at 65504, and it keeps about three significant digits. A Float16 raster is
+# promoted to Float32 on entry. GDT_Float16 exists only from GDAL 3.11; on older GDAL nothing is ever Float16.
+GDT_FLOAT16 = getattr(gdal, 'GDT_Float16', None)
+
+
+def _is_float16_gdal_type(data_type):
+    return GDT_FLOAT16 is not None and data_type == GDT_FLOAT16
+
+
+def _promote_float16(data_type, path=None, verbose=False):
+    """Float32 in place of Float16; any other type unchanged."""
+    if _is_float16_gdal_type(data_type):
+        if verbose:
+            hb.log(f"Promoting the Float16 raster {path} to Float32: Float16 is not a POG data type.")
+        return gdal.GDT_Float32
+    return data_type
+
+
+def _is_path_float16(path):
+    if GDT_FLOAT16 is None:
+        return False
+    ds = gdal.Open(path)
+    try:
+        return any(ds.GetRasterBand(i).DataType == GDT_FLOAT16 for i in range(1, ds.RasterCount + 1))
+    finally:
+        ds = None
+
+
 def _band_holds_value(band, value, max_strip_bytes=256e6):
     """True if any cell of band (full resolution) equals value. Reads in row strips."""
     n_cols, n_rows = band.XSize, band.YSize
@@ -422,8 +451,13 @@ def is_path_pog(path, check_tiled=True, full_check=False, raise_exceptions=False
             hb.log(f"Raster is a COG: {path}")
         else:
             hb.log(f"Raster is not a COG: {path}")
-            
-    return is_pyramid and is_cog
+
+    # Float16 is not a POG data type; reporting False makes make_path_pog convert (promote) it rather than skip it.
+    is_allowed_type = not _is_path_float16(path)
+    if verbose and not is_allowed_type:
+        hb.log(f"Raster is Float16, which is not a POG data type (promote to Float32): {path}")
+
+    return is_pyramid and is_cog and is_allowed_type
 
 
 
@@ -797,7 +831,8 @@ def _write_cog_with_pyramid_overviews(current_path, output_raster_path, overview
 
 def is_path_subpog(path, check_tiled=True, full_check=False, raise_exceptions=False, verbose=False):
     """A subpog is a POG in every respect except extent: pyramid-aligned sub-extent (hb.is_path_subglobal_pyramid) and a valid COG."""
-    return hb.is_path_subglobal_pyramid(path, verbose=verbose) and hb.is_path_cog(path, check_tiled=check_tiled, full_check=full_check, raise_exceptions=raise_exceptions, verbose=verbose)
+    return (hb.is_path_subglobal_pyramid(path, verbose=verbose) and hb.is_path_cog(path, check_tiled=check_tiled, full_check=full_check, raise_exceptions=raise_exceptions, verbose=verbose)
+            and not _is_path_float16(path))
 
 
 def write_subpog_from_pog_window(pog_path, bb, output_path, compression='DEFLATE', blocksize=512, verbose=False):
@@ -1155,6 +1190,8 @@ def make_path_pog(input_raster_path,
     input_data_type = hb.get_datatype_from_uri(input_raster_path)
     if output_data_type is None or output_data_type == 'auto':
         output_data_type = input_data_type
+    # Float16 (input or requested) is promoted to Float32; the type change below then translates it on the first pass.
+    output_data_type = _promote_float16(output_data_type, input_raster_path, verbose)
 
     declared = get_pog_metadata(input_raster_path)
     if variable_class is None:
@@ -1358,6 +1395,7 @@ def make_path_pog(input_raster_path,
 
 def _write_pog_of_value(output_path, value, geotransform, x_size, y_size, arcseconds, bb, output_data_type, ndv, overview_resampling_method, compression, blocksize, verbose, variable_class):
     """Shared body of the write_pog_of_value_* functions: a constant raster on the given frame, finished as a POG."""
+    output_data_type = _promote_float16(output_data_type, output_path, verbose)
     if variable_class is None:
         variable_class = _infer_variable_class(output_data_type)
     if variable_class == 'extensive' and _is_integer_gdal_type(output_data_type):

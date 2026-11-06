@@ -224,7 +224,7 @@ gdal_number_to_numpy_type = {
 
 
 numpy_type_to_gdal_number = {
-    np.byte: 1, # Is identical to uint8, which is preferred, but included here for convenience.
+    np.byte: 1, # NOTE: np.byte is numpy's SIGNED int8, not uint8. Kept mapped to GDAL Byte so existing int8 mask arrays still write as Byte.
     np.uint8: 1,
     np.uint16: 2,
     np.int16: 3,
@@ -274,6 +274,14 @@ gdal_type_to_numpy_type = {
     gdalconst.GDT_UInt64: np.uint64,
     gdalconst.GDT_Int64: np.int64,
 }
+
+if hasattr(gdalconst, 'GDT_Int8'):  # GDAL 3.7 and later
+    gdal_number_to_gdal_name[14] = 'Int8'
+    gdal_name_to_gdal_number.update({'Int8': 14, 'int8': 14})
+    gdal_number_to_numpy_type[14] = np.int8
+    numpy_type_string_to_gdal_number['int8'] = 14
+    gdal_type_to_numpy_type[gdalconst.GDT_Int8] = np.int8
+numpy_type_string_to_numpy_type['int8'] = np.int8
 
 
 try:
@@ -349,10 +357,14 @@ MAX_UINT64 = 18446744073709551615
 MAX_INT16 = 32767
 MAX_INT32 = 2147483647
 MAX_INT64 = 9223372036854775807
+MIN_INT8 = -128  # Int8 cannot hold -9999, so its nodata is the type minimum (POG spec D.2.6).
 
+# Per-type nodata values of the POG spec (D.2.6): the type maximum for unsigned integers, the type minimum for Int8,
+# and -9999 for every other signed integer and float type. In a POG only covariate rasters declare it.
+# NOTE: np.byte is numpy's SIGNED 8-bit type (identical to np.int8), not uint8, so it is keyed here as np.int8.
 no_data_values_by_numpy_type_NON_LIST = {
     np.uint8: MAX_UINT8,
-    np.byte: MAX_UINT8,
+    np.int8: MIN_INT8,
     np.uint16: MAX_UINT16,
     np.int16: -9999,
     np.uint32: MAX_UINT32,
@@ -365,7 +377,7 @@ no_data_values_by_numpy_type_NON_LIST = {
 
 no_data_values_by_numpy_type = {
     np.uint8: [MAX_UINT8, 0],
-    np.byte: [MAX_UINT8, 0],
+    np.int8: [MIN_INT8],
     np.uint16: [MAX_UINT16, 0],
     np.int16: [-9999,],
     np.uint32: [MAX_UINT32, 0],
@@ -399,6 +411,11 @@ no_data_values_by_gdal_type = {
     gdalconst.GDT_UInt64: no_data_values_by_numpy_type[gdal_type_to_numpy_type[12]],
     gdalconst.GDT_Int64: no_data_values_by_numpy_type[gdal_type_to_numpy_type[13]],
 }
+
+# Int8 is GDAL type 14 and exists only from GDAL 3.7, so it is registered only where the running GDAL has it.
+if hasattr(gdalconst, 'GDT_Int8'):
+    no_data_values_by_gdal_number[14] = no_data_values_by_numpy_type[np.int8]
+    no_data_values_by_gdal_type[gdalconst.GDT_Int8] = no_data_values_by_numpy_type[np.int8]
 
 
 def create_gdal_virtual_raster(input_tifs_uri_list, ouput_virt_uri, srcnodata=None, shifted_extent=None):
