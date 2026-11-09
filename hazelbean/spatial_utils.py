@@ -615,7 +615,7 @@ def _gdal_overview_resample_name(resample_method):
     already spelled the way they expect passes through.
     """
     name = str(resample_method).upper()
-    return {'NEAR': 'NEAREST', 'CUBICSPLINE': 'CUBICSPLINE'}.get(name, name)
+    return 'NEAREST' if name == 'NEAR' else name
 
 
 def write_vrt_to_raster(
@@ -683,9 +683,7 @@ def write_vrt_to_raster(
     overview_levels = [2, 4, 8, 16]
 
     # The COG driver names its options differently from GTiff: BLOCKSIZE rather than
-    # TILED/BLOCKXSIZE, and RESAMPLING for the overviews it adopts. Built from this call's
-    # arguments; the list that stood here was hardcoded and silently discarded all of them,
-    # including compress, bigtiff and the block size, by rebinding translate_options.
+    # TILED/BLOCKXSIZE, and RESAMPLING for the overviews it adopts.
     cog_creation_options = [
         f'COMPRESS={compress.upper()}' if isinstance(compress, str) and compress else 'COMPRESS=DEFLATE',
         'NUM_THREADS=ALL_CPUS',
@@ -717,8 +715,7 @@ def write_vrt_to_raster(
         # than break the layout ("Updating it will generally result in losing part of the
         # optimizations"), and the COG driver rejects an explicit OVERVIEWS=LEVELS list. So build
         # the overviews on a plain GTiff first and have the COG driver adopt them unchanged, which
-        # is the same two-step route pog.py takes. Writing the COG first and then reopening it, as
-        # this did, raised RuntimeError on every call that reached it.
+        # is the same two-step route pog.py takes.
         staging_path = output_tif_path + '.overview_staging.tif'
         gdal.Translate(
             staging_path,

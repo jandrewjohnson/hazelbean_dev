@@ -118,21 +118,11 @@ def _iteration_label(arguments):
 def run_parallel_iterations(num_workers, function, parsed_iterable):
     """Run an iterator's children in parallel, stopping the run when any iteration or worker dies.
 
-    multiprocessing.Pool.starmap, which this replaces, fails two ways that each cost a global run
-    hours. An iteration that raises abandons every iteration still queued and reports only its own
-    exception, so a run stops having silently not attempted thousands of iterations: one tile's
-    missing coefficients left 83 other tiles unprocessed, with nothing in the log saying they had
-    been dropped. A worker that dies abruptly -- which is what an OOM kill looks like -- never
-    delivers a result at all, and starmap waits on it forever: a job held a node for 5.5 hours
-    doing nothing. ProcessPoolExecutor is used instead because it promises what Pool does not, that
-    a process dying abruptly surfaces as BrokenProcessPool rather than as silence.
-
-    Failing fast is deliberate, and so is failing LOUDLY about scope: the message says which
-    iteration raised, how many finished, and how many were never attempted, because "it stopped"
-    and "it stopped with 83 tiles silently skipped" call for different recovery.
-
-    Nothing here removes anything. Completed outputs and whatever failure evidence a task wrote
-    stay on disk exactly as they are, which is what a resume reads to decide what to redo.
+    A worker that dies abruptly (an OOM kill, for example) surfaces as BrokenProcessPool, which
+    ProcessPoolExecutor guarantees and multiprocessing.Pool does not. The first failure cancels
+    every queued iteration and raises ParallelIterationFailure, naming the failing iteration and
+    how many iterations finished and how many were never attempted. Completed outputs stay on disk,
+    so a resume redoes only what is unfinished.
     """
     import concurrent.futures as futures_module
 

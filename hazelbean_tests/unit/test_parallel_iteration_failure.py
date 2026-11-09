@@ -1,15 +1,12 @@
-"""A failing iteration and a dying worker must both stop the run, loudly and without data loss.
+"""A failing iteration and a dying worker both stop the run, without waiting forever or losing outputs.
 
-Pool.starmap gave neither guarantee. A raising iteration abandoned everything still queued while
-reporting only its own exception, and an abruptly killed worker -- an OOM kill -- never delivered a
-result, so the parent waited forever. The second is the one that cannot be caught by inspection:
-the only way to know it terminates is to kill a worker and watch the clock, which is what these
-tests do. Every test is bounded, so a regression to waiting forever FAILS rather than hanging.
+Every call is bounded by a thread join, so a regression to waiting forever fails the test rather than
+hanging the suite. A thread is used rather than SIGALRM so the tests also run on Windows.
 """
 import os
-import signal
+import re
+import threading
 import time
-from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
@@ -26,18 +23,24 @@ class FakeProject:
         self.cur_dir = str(cur_dir)
 
 
-@contextmanager
-def time_limit(seconds):
-    def expired(signum, frame):
-        raise TimeoutError(
-            'did not terminate within %ds -- this is the hang the fix exists to remove' % seconds)
-    previous = signal.signal(signal.SIGALRM, expired)
-    signal.alarm(seconds)
-    try:
-        yield
-    finally:
-        signal.alarm(0)
-        signal.signal(signal.SIGALRM, previous)
+def run_within_time_limit(*arguments):
+    """run_parallel_iterations(*arguments), failing the test if it has not returned within the limit."""
+    outcome = {}
+
+    def target():
+        try:
+            outcome['value'] = run_parallel_iterations(*arguments)
+        except BaseException as error:  # re-raised in the test thread below
+            outcome['error'] = error
+
+    thread = threading.Thread(target=target, daemon=True)
+    thread.start()
+    thread.join(TIME_LIMIT_SECONDS)
+    if thread.is_alive():
+        pytest.fail('run_parallel_iterations did not return within %ds' % TIME_LIMIT_SECONDS)
+    if 'error' in outcome:
+        raise outcome['error']
+    return outcome['value']
 
 
 def write_output_then_raise(project, task, counter):
@@ -80,16 +83,14 @@ def build(tmp_path, n, bad):
 
 
 def test_all_iterations_run_when_none_fail(tmp_path):
-    with time_limit(TIME_LIMIT_SECONDS):
-        results = run_parallel_iterations(4, write_output_then_raise, build(tmp_path, 12, -1))
+    results = run_within_time_limit(4, write_output_then_raise, build(tmp_path, 12, -1))
     assert sorted(results) == list(range(12))
     assert len(list(tmp_path.glob('tile_*/output.txt'))) == 12
 
 
 def test_a_raising_iteration_stops_the_run_and_names_what_was_not_attempted(tmp_path):
-    with time_limit(TIME_LIMIT_SECONDS):
-        with pytest.raises(ParallelIterationFailure) as raised:
-            run_parallel_iterations(2, write_output_then_raise, build(tmp_path, 40, 7))
+    with pytest.raises(ParallelIterationFailure) as raised:
+        run_within_time_limit(2, write_output_then_raise, build(tmp_path, 40, 7))
     message = str(raised.value)
     assert 'A parallel iteration raised' in message
     assert 'tile_7' in message, 'the failing iteration must be named: %s' % message
@@ -102,9 +103,8 @@ def test_a_raising_iteration_stops_the_run_and_names_what_was_not_attempted(tmp_
 
 def test_an_abruptly_killed_worker_stops_the_run_instead_of_waiting_forever(tmp_path):
     started = time.time()
-    with time_limit(TIME_LIMIT_SECONDS):
-        with pytest.raises(ParallelIterationFailure) as raised:
-            run_parallel_iterations(4, write_output_then_die, build(tmp_path, 40, 5))
+    with pytest.raises(ParallelIterationFailure) as raised:
+        run_within_time_limit(4, write_output_then_die, build(tmp_path, 40, 5))
     elapsed = time.time() - started
     message = str(raised.value)
     assert 'died abruptly' in message, message
@@ -116,11 +116,9 @@ def test_an_abruptly_killed_worker_stops_the_run_instead_of_waiting_forever(tmp_
 
 
 def test_the_failure_counts_add_up(tmp_path):
-    with time_limit(TIME_LIMIT_SECONDS):
-        with pytest.raises(ParallelIterationFailure) as raised:
-            run_parallel_iterations(2, write_output_slowly_then_raise, build(tmp_path, 30, 0))
+    with pytest.raises(ParallelIterationFailure) as raised:
+        run_within_time_limit(2, write_output_slowly_then_raise, build(tmp_path, 30, 0))
     message = str(raised.value)
-    import re
     found = re.search(r'(\d+) of (\d+) iterations finished, (\d+) were never attempted', message)
     assert found, message
     done, total, unattempted = (int(g) for g in found.groups())

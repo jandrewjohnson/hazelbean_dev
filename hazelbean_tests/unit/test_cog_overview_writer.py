@@ -1,10 +1,4 @@
-"""write_vrt_to_raster must produce a valid COG that carries the overviews it was asked for.
-
-Before the fix the COG branch wrote the COG and then reopened it with GA_Update to build
-overviews, which GDAL refuses on COG layout, so every call that reached it raised RuntimeError.
-A second defect rebound translate_options to a hardcoded list, discarding compress, bigtiff and
-the block size the caller passed, and specified OVERVIEWS twice with an invalid second value.
-"""
+"""write_vrt_to_raster writes a valid COG carrying the requested overviews and the caller's creation options."""
 import os
 import numpy as np
 import pytest
