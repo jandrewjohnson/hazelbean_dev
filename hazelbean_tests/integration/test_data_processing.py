@@ -79,8 +79,7 @@ class BaseDataProcessingTest(TestCase):
         self.valid_pog_path = os.path.join(self.cartographic_data_dir, "ee_r264_ids_900sec.tif")
         
         # Spatial utils specific setup
-        user_dir = os.path.expanduser("~")
-        self.output_dir = os.path.join(user_dir, "temp")
+        self.output_dir = hb.temporary_dir()
         
     def tearDown(self):
         pass
@@ -91,8 +90,7 @@ class TestAlignmentOperations(BaseDataProcessingTest):
     
     def test_resample_to_match(self): 
         """Test basic raster resampling to match reference raster"""
-        output_dir = 'data'
-        output_path = hb.temp('.tif', 'resampled', delete_on_finish, output_dir)
+        output_path = hb.temp('.tif', 'resampled', delete_on_finish, folder=hb.temporary_dir())
 
         hb.resample_to_match(self.ee_r264_ids_900sec_path, 
                      self.global_1deg_raster_path, 
@@ -106,14 +104,12 @@ class TestAlignmentOperations(BaseDataProcessingTest):
                      add_overviews=False,
                      pixel_size_override=None)
 
-        output2_path = hb.temp('.tif', 'mask', delete_on_finish, output_dir)
+        output2_path = hb.temp('.tif', 'mask', delete_on_finish, folder=hb.temporary_dir())
         hb.create_valid_mask_from_vector_path(self.ee_r264_correspondence_vector_path, self.global_1deg_raster_path, output2_path,
                                         all_touched=True)
 
     def test_misc_operations(self):
         """Test miscellaneous array and data structure operations"""
-        output_dir = 'data'
-        
         # Test comma linebreak string to array conversion
         input_string = '''0,1,1
         3,2,2
@@ -123,7 +119,7 @@ class TestAlignmentOperations(BaseDataProcessingTest):
 
         # Test numpy array save/load operations
         a = np.random.rand(5, 5)
-        temp_path = hb.temp('.npy', 'npytest', delete_on_finish, output_dir)
+        temp_path = hb.temp('.npy', 'npytest', delete_on_finish, folder=hb.temporary_dir())
         hb.save_array_as_npy(a, temp_path)
         r = hb.describe(temp_path, surpress_print=True, surpress_logger=True)
 
@@ -342,7 +338,7 @@ class TestPyramidOperations(BaseDataProcessingTest):
 
     def test_convert_ndv_to_alpha_band(self):
         """Test converting no-data values to alpha band"""
-        output_path = hb.temp(folder=os.path.dirname(self.maize_calories_path), remove_at_exit=True)
+        output_path = hb.temp(folder=hb.temporary_dir(), remove_at_exit=True)
         hb.convert_ndv_to_alpha_band(self.maize_calories_path, output_path)
 
     @pytest.mark.integration
@@ -426,7 +422,7 @@ class TestRasterVectorInterface(BaseDataProcessingTest):
         input_vector_path = self.ee_r264_correspondence_vector_path
         id_column_label = 'ee_r264_id'
         blur_size = 300.0 
-        output_path = 'simplified_vector.gpkg'
+        output_path = hb.temp('.gpkg', 'simplified_vector', True, folder=hb.temporary_dir())
         raster_vector_interface.vector_super_simplify(input_vector_path, id_column_label, blur_size, output_path, remove_temp_files=True)
 
 
@@ -510,7 +506,6 @@ class TestSpatialUtils(BaseDataProcessingTest):
 
         run_all = 0
         remove_temporary_files = 1
-        output_dir = self.test_data_dir
 
         # Test getting a Bounding Box of a raster
         bb = hb.get_bounding_box(self.global_1deg_raster_path)
@@ -521,7 +516,7 @@ class TestSpatialUtils(BaseDataProcessingTest):
         print(bb)
 
         # Create a new GPKG for just the country of RWA
-        rwa_vector_path = hb.temp('.gpkg', 'rwa', remove_temporary_files, output_dir)
+        rwa_vector_path = hb.temp('.gpkg', 'rwa', remove_temporary_files, folder=hb.temporary_dir())
         hb.extract_features_in_shapefile_by_attribute(zones_vector_path, rwa_vector_path, "ee_r264_id", 70)
 
         # Get the bounding box of that new vector
@@ -556,8 +551,7 @@ class TestSpatialUtils(BaseDataProcessingTest):
 
         print('Created', output_path)
 
-        output_dir = 'data'
-        output_path = hb.temp('.tif', 'clipped_attr', delete_on_finish, output_dir)
+        output_path = hb.temp('.tif', 'clipped_attr', delete_on_finish, folder=hb.temporary_dir())
 
         hb.clip_raster_by_vector_simple(self.ee_r264_ids_900sec_path, 
                                         output_path, 

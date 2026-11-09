@@ -28,8 +28,7 @@ class DataStructuresTester(TestCase):
         self.ha_per_cell_900sec_path = os.path.join(self.pyramid_data_dir, "ha_per_cell_900sec.tif")
         self.pyramid_match_900sec_path = os.path.join(self.pyramid_data_dir, "match_900sec.tif")
         self.global_1deg_raster_path = os.path.join(self.pyramid_data_dir, "ha_per_cell_3600sec.tif")
-        user_dir = os.path.expanduser("~")
-        self.output_dir = os.path.join(user_dir, "temp")
+        self.output_dir = hb.temporary_dir()
         
     def tearDown(self):
         pass
@@ -90,7 +89,6 @@ class DataStructuresTester(TestCase):
 
         run_all = 0
         remove_temporary_files = 1
-        output_dir = self.test_data_dir
 
 
         # Test getting a Bounding Box of a raster
@@ -102,7 +100,7 @@ class DataStructuresTester(TestCase):
         print(bb)
 
         # Create a new GPKG for just the country of RWA
-        rwa_vector_path = hb.temp('.gpkg', 'rwa', remove_temporary_files, output_dir)
+        rwa_vector_path = hb.temp('.gpkg', 'rwa', remove_temporary_files, folder=hb.temporary_dir())
         hb.extract_features_in_shapefile_by_attribute(zones_vector_path, rwa_vector_path, "ee_r264_id", 70)
 
         # Get the bounding box of that new vector
@@ -168,7 +166,6 @@ class DataStructuresTester(TestCase):
         # zone_ids_raster_path = "data/country_ids_300sec.tif"
         # zone_values_path = "data/ha_per_cell_300sec.tif"
 
-        output_dir = 'data'
         output_path = hb.temp('.tif', 'clipped', delete_on_finish, self.output_dir)
 
         hb.clip_raster_by_vector_simple(self.ee_r264_ids_900sec_path, 
@@ -180,7 +177,7 @@ class DataStructuresTester(TestCase):
         print('Created', output_path)
 
 
-        output_path = hb.temp('.tif', 'clipped_attr', delete_on_finish, output_dir)
+        output_path = hb.temp('.tif', 'clipped_attr', delete_on_finish, folder=hb.temporary_dir())
 
         hb.clip_raster_by_vector_simple(self.ee_r264_ids_900sec_path, 
                                         output_path, 

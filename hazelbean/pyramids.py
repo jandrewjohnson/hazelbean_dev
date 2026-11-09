@@ -14,6 +14,7 @@ import pandas as pd
 import geopandas as gpd
 import tempfile
 import subprocess
+import warnings
 
 from hazelbean import cog
 from hazelbean import config as hb_config
@@ -3099,6 +3100,8 @@ def write_geotiff_as_cog(input_path, output_path, match_path, verbose=False):
          writes the data, and builds internal overviews.
       4. Uses gdal.Translate with the COPY_SRC_OVERVIEWS option to produce the final file.
     """
+    warnings.warn('write_geotiff_as_cog is deprecated: it reads the whole raster into memory and uses the pre-COG-driver two-step. '
+                  'Use hb.make_path_cog (plain COG) or hb.make_path_pog (pyramid-aligned).', DeprecationWarning, stacklevel=2)
     # 1. Open the input dataset.
     in_ds = gdal.Open(input_path, gdal.GA_ReadOnly)
     if in_ds is None:

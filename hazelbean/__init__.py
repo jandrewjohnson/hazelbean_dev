@@ -176,6 +176,11 @@ import hazelbean.pog
 from hazelbean.pog import *
 if report_import_times:
     hb.timer('pog')
+
+import hazelbean.base_data_processing
+from hazelbean.base_data_processing import *  # only publish_base_data and publish_base_data_from_manifest (see its __all__)
+if report_import_times:
+    hb.timer('base_data_processing')
    
 if import_medium_level:
     

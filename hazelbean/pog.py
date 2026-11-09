@@ -35,6 +35,35 @@ def _is_integer_gdal_type(data_type):
     return np.issubdtype(gdal_array.GDALTypeCodeToNumericTypeCode(data_type), np.integer)
 
 
+# Float16 is not a POG type (D.2.6): it cannot hold the -9999 nodata (stored as -10000, so the declaration and the
+# pixels disagree), its sums overflow at 65504, and it keeps about three significant digits. A Float16 raster is
+# promoted to Float32 on entry. GDT_Float16 exists only from GDAL 3.11; on older GDAL nothing is ever Float16.
+GDT_FLOAT16 = getattr(gdal, 'GDT_Float16', None)
+
+
+def _is_float16_gdal_type(data_type):
+    return GDT_FLOAT16 is not None and data_type == GDT_FLOAT16
+
+
+def _promote_float16(data_type, path=None, verbose=False):
+    """Float32 in place of Float16; any other type unchanged."""
+    if _is_float16_gdal_type(data_type):
+        if verbose:
+            hb.log(f"Promoting the Float16 raster {path} to Float32: Float16 is not a POG data type.")
+        return gdal.GDT_Float32
+    return data_type
+
+
+def _is_path_float16(path):
+    if GDT_FLOAT16 is None:
+        return False
+    ds = gdal.Open(path)
+    try:
+        return any(ds.GetRasterBand(i).DataType == GDT_FLOAT16 for i in range(1, ds.RasterCount + 1))
+    finally:
+        ds = None
+
+
 def _band_holds_value(band, value, max_strip_bytes=256e6):
     """True if any cell of band (full resolution) equals value. Reads in row strips."""
     n_cols, n_rows = band.XSize, band.YSize
@@ -53,6 +82,27 @@ def get_pog_metadata(path):
     if os.path.splitext(path)[1].lower() == '.vrt' and len(ds.GetFileList()) > 1:
         ds = gdal.Open(ds.GetFileList()[1])
     return {k: v for k, v in (ds.GetMetadata() or {}).items() if k in POG_METADATA_KEYS}
+
+
+def get_pog_info(path):
+    """What a POG says about itself, as a dict: its rung (arcseconds and the filename token), variable class, intensive
+    weighting, denominator and observed-area companion (from get_pog_metadata), bounding box [xmin, ymin, xmax, ymax], and
+    the exact statistics stored in it, plus 'sum' for an extensive raster: the global total (mean times cell count),
+    which Requirement 4 makes exact. Assumes path passes hb.is_path_pog."""
+    meta = get_pog_metadata(path)
+    raster_info = hb.get_raster_info_hb(path)
+    arcseconds = hb.get_cell_size_from_path_in_arcseconds(path, force_to_pyramid=True)
+    # Read the stored exact statistics (Requirement 4) directly. GDAL's GetStatistics(0, 1) would recompute them from every
+    # cell (minutes at 10 s) and write a .aux.xml sidecar: asked for exact statistics, GDAL distrusts stored ones whenever a
+    # STATISTICS_APPROXIMATE item exists, even the 'NO' that every POG carries.
+    ds = gdal.Open(path)
+    stats = {k: float(ds.GetRasterBand(1).GetMetadataItem('STATISTICS_' + k.upper())) for k in ('minimum', 'maximum', 'mean', 'stddev')}
+    ds = None
+    if meta.get('POG_VARIABLE_CLASS') == 'extensive':
+        stats['sum'] = stats['mean'] * raster_info['size']
+    return {'arcseconds': arcseconds, 'rung': hb.arcseconds_to_token(arcseconds), 'variable_class': meta.get('POG_VARIABLE_CLASS'),
+            'intensive_weighting': meta.get('POG_INTENSIVE_WEIGHTING'), 'denominator': meta.get('POG_DENOMINATOR'),
+            'observed_area': meta.get('POG_OBSERVED_AREA'), 'bounding_box': [float(v) for v in raster_info['bounding_box']], 'stats': stats}
 
 
 def _resolve_pog_reference(pog_path, reference):
@@ -401,8 +451,13 @@ def is_path_pog(path, check_tiled=True, full_check=False, raise_exceptions=False
             hb.log(f"Raster is a COG: {path}")
         else:
             hb.log(f"Raster is not a COG: {path}")
-            
-    return is_pyramid and is_cog
+
+    # Float16 is not a POG data type; reporting False makes make_path_pog convert (promote) it rather than skip it.
+    is_allowed_type = not _is_path_float16(path)
+    if verbose and not is_allowed_type:
+        hb.log(f"Raster is Float16, which is not a POG data type (promote to Float32): {path}")
+
+    return is_pyramid and is_cog and is_allowed_type
 
 
 
@@ -656,7 +711,7 @@ def _infer_variable_class(data_type):
 
 
 def _write_cog_with_pyramid_overviews(current_path, output_raster_path, overview_levels, overview_resampling_method, output_data_type, ndv, compression, blocksize, verbose=False,
-                                      variable_class=None, intensive_weighting='area', denominator=None, pog_metadata=None):
+                                      variable_class=None, intensive_weighting='area', denominator=None, pog_metadata=None, color_table=None):
     """The POG finishing sequence shared by make_path_pog and the subpog writers. current_path is modified in place.
 
     Records the POG metadata of the variable class (POG_VARIABLE_CLASS; for an intensive raster POG_INTENSIVE_WEIGHTING
@@ -667,7 +722,9 @@ def _write_cog_with_pyramid_overviews(current_path, output_raster_path, overview
     overview_levels by the class rule (extensive sums and intensive area-weighted means written directly; categorical
     mode and covariate mean by GDAL), then copies through the COG driver with those overviews and no others.
 
-    denominator is the token ha_per_cell or the absolute path of the observed-area POG an intensive raster is weighted by."""
+    denominator is the token ha_per_cell or the absolute path of the observed-area POG an intensive raster is weighted by.
+    color_table, a dict of value to RGB (see hb.make_gdal_color_table), is written into the header first, before anything
+    else is written: GTiff cannot change a band's photometric interpretation once a write has happened."""
     if variable_class is None:
         variable_class = _infer_variable_class(output_data_type)
     if variable_class not in POG_VARIABLE_CLASSES:
@@ -683,6 +740,10 @@ def _write_cog_with_pyramid_overviews(current_path, output_raster_path, overview
     src_ds = gdal.OpenEx(current_path, gdal.GA_Update, open_options=["IGNORE_COG_LAYOUT_BREAK=YES"])
     if not src_ds:
         raise ValueError(f"Unable to open raster: {current_path}")
+    if color_table is not None:
+        if src_ds.GetRasterBand(1).SetRasterColorTable(hb.make_gdal_color_table(color_table)) != gdal.CE_None:
+            src_ds = None
+            raise ValueError(f"Could not set the color table on {current_path}: a palette needs a single Byte or UInt16 band.")
 
     metadata = {k: v for k, v in (src_ds.GetMetadata() or {}).items() if k not in POG_METADATA_KEYS}
     metadata['AREA_OR_POINT'] = 'Area'
@@ -731,17 +792,48 @@ def _write_cog_with_pyramid_overviews(current_path, output_raster_path, overview
             _write_class_overviews(src_ds, overview_levels, variable_class, intensive_weighting, denominator)
         else:
             method = overview_resampling_method or ('mode' if variable_class == 'categorical' else 'average')
-            src_ds.BuildOverviews(method.upper(), overview_levels, hb.make_gdal_callback(f'Building overviews for {current_path}'))
+            src_ds.BuildOverviews('NONE', overview_levels)  # allocate; each level is regenerated from the one before it below
+            _regenerate_overviews_in_cascade(src_ds, method, hb.make_gdal_callback(f'Building overviews for {current_path}'))
 
     # Re-apply the statistics after overview building (BuildOverviews can drop band metadata), then close.
-    for i, (stat_min, stat_max, stat_mean, stat_std) in stats_by_band.items():
-        band = src_ds.GetRasterBand(i)
-        for key, value in (('STATISTICS_MINIMUM', stat_min), ('STATISTICS_MAXIMUM', stat_max), ('STATISTICS_MEAN', stat_mean), ('STATISTICS_STDDEV', stat_std)):
-            band.SetMetadataItem(key, str(value))
-        band.SetMetadataItem('STATISTICS_APPROXIMATE', 'NO')
+    for i, stats in stats_by_band.items():
+        _set_band_statistics(src_ds.GetRasterBand(i), *stats)
     del src_ds
 
-    # Reopen it to use it as a copy target
+    _copy_to_cog(current_path, output_raster_path, overview_levels, compression, blocksize, verbose)
+
+
+def _regenerate_overviews_in_cascade(ds, method, callback=None):
+    """Write every allocated overview of ds, each level from the one before it (the base for the first), by method.
+
+    Not ds.BuildOverviews(method, levels): on an internal-overview GeoTIFF that leaves the smallest levels unwritten, every
+    cell nodata, once a level's factor is large against the raster (GDAL 3.12.2: factor 60 and up on a 720-cell raster, the
+    2 x 1 top of a global 1-arcsecond POG, the 4 x 2 and 2 x 1 tops of a 10-arcsecond one). gdal.RegenerateOverview writes
+    the same levels correctly, provided the chunk of source rows it reads at a time (GDAL_OVR_CHUNKYSIZE) is a multiple of
+    the factor: a block straddling two chunks is otherwise aggregated from one of them alone (a wrong mode on one row in
+    every 2048 of a factor-3 level, measured). Cascading reads the base once; a coarser level is read from the finer one,
+    which is what GDAL does itself when a factor is a multiple of a previous one. callback goes to the pass over the base."""
+    with gdal.config_option('GDAL_NUM_THREADS', 'ALL_CPUS'):  # GDAL computes overviews on every core only when told
+        for i in range(1, ds.RasterCount + 1):
+            band = ds.GetRasterBand(i)
+            source = band
+            for k in range(band.GetOverviewCount()):
+                overview = band.GetOverview(k)
+                ratio = int(round(source.YSize / overview.YSize))
+                with gdal.config_option('GDAL_OVR_CHUNKYSIZE', str(ratio * max(1, 2048 // ratio))):
+                    gdal.RegenerateOverview(source, overview, method.upper(), callback if k == 0 else None)
+                source = overview
+
+
+def _set_band_statistics(band, stat_min, stat_max, stat_mean, stat_std):
+    """Record exact statistics on band's metadata (what ComputeStatistics writes, so the POG check reads them as exact)."""
+    for key, value in (('STATISTICS_MINIMUM', stat_min), ('STATISTICS_MAXIMUM', stat_max), ('STATISTICS_MEAN', stat_mean), ('STATISTICS_STDDEV', stat_std)):
+        band.SetMetadataItem(key, str(value))
+    band.SetMetadataItem('STATISTICS_APPROXIMATE', 'NO')
+
+
+def _copy_to_cog(current_path, output_raster_path, overview_levels, compression, blocksize, verbose=False):
+    """Copy the finished GeoTIFF at current_path (overviews built, metadata set) through the COG driver to output_raster_path."""
     if verbose:
         hb.log(f"Reopening {current_path} for COG creation...")
     src_ds = gdal.OpenEx(current_path, gdal.GA_ReadOnly)
@@ -754,6 +846,7 @@ def _write_cog_with_pyramid_overviews(current_path, output_raster_path, overview
         f"BIGTIFF=YES",
         f"OVERVIEW_COMPRESS={compression}",
         "OVERVIEWS=FORCE_USE_EXISTING" if overview_levels else "OVERVIEWS=NONE",
+        "NUM_THREADS=ALL_CPUS",  # compression on every core
     ]
 
     cog_driver = gdal.GetDriverByName('COG')
@@ -772,11 +865,13 @@ def _write_cog_with_pyramid_overviews(current_path, output_raster_path, overview
     )
 
     dst_ds = None
+    src_ds = None
 
 
 def is_path_subpog(path, check_tiled=True, full_check=False, raise_exceptions=False, verbose=False):
     """A subpog is a POG in every respect except extent: pyramid-aligned sub-extent (hb.is_path_subglobal_pyramid) and a valid COG."""
-    return hb.is_path_subglobal_pyramid(path, verbose=verbose) and hb.is_path_cog(path, check_tiled=check_tiled, full_check=full_check, raise_exceptions=raise_exceptions, verbose=verbose)
+    return (hb.is_path_subglobal_pyramid(path, verbose=verbose) and hb.is_path_cog(path, check_tiled=check_tiled, full_check=full_check, raise_exceptions=raise_exceptions, verbose=verbose)
+            and not _is_path_float16(path))
 
 
 def write_subpog_from_pog_window(pog_path, bb, output_path, compression='DEFLATE', blocksize=512, verbose=False):
@@ -910,6 +1005,142 @@ def is_path_pog_tileset(vrt_path, verbose=False):
     return True
 
 
+def _aggregate_level(array, ratio, variable_class):
+    """One overview level from the level ratio times finer: the mode of each ratio x ratio block (ties to the smallest class)
+    for a categorical raster, the sum for an extensive one. The array's sides must be multiples of ratio."""
+    rows, cols = array.shape
+    if rows % ratio or cols % ratio:
+        raise ValueError(f'A {rows} x {cols} level cannot be aggregated by {ratio}.')
+    blocks = array.reshape(rows // ratio, ratio, cols // ratio, ratio)
+    if variable_class == 'extensive':
+        return blocks.astype(np.float64).sum(axis=(1, 3))
+    best_count = np.zeros((rows // ratio, cols // ratio), dtype=np.int64)
+    best = np.zeros_like(best_count, dtype=array.dtype)
+    for value in np.unique(array):  # ascending, and a later value replaces an earlier only with a strictly larger count
+        count = (blocks == value).sum(axis=(1, 3))
+        better = count > best_count
+        best[better], best_count[better] = value, count[better]
+    return best
+
+
+def _combine_tile_statistics(tile_paths):
+    """Exact statistics of the union of equally sized tiles from each tile's exact statistics, or None if a tile lacks them.
+
+    Every cell of a categorical or extensive subpog is valid and all tiles hold the same number of cells, so the global mean is
+    the mean of the tile means and the variance is the mean of the tiles' (variance + mean squared) less the global mean squared."""
+    mins, maxs, means, squares = [], [], [], []
+    for path in tile_paths:
+        ds = gdal.Open(path)
+        md = ds.GetRasterBand(1).GetMetadata()
+        ds = None
+        if md.get('STATISTICS_APPROXIMATE', 'YES') != 'NO' or any(k not in md for k in ('STATISTICS_MINIMUM', 'STATISTICS_MAXIMUM', 'STATISTICS_MEAN', 'STATISTICS_STDDEV')):
+            return None
+        mins.append(float(md['STATISTICS_MINIMUM'])); maxs.append(float(md['STATISTICS_MAXIMUM']))
+        mean, std = float(md['STATISTICS_MEAN']), float(md['STATISTICS_STDDEV'])
+        means.append(mean); squares.append(std * std + mean * mean)
+    mean = float(np.mean(means))
+    return min(mins), max(maxs), mean, float(np.sqrt(max(0.0, np.mean(squares) - mean * mean)))
+
+
+def write_pog_from_pog_tileset(tileset_vrt_path, output_path, color_table=None, intermediate_dir=None, remove_intermediate_files=True,
+                               compression='DEFLATE', blocksize=512, verbose=False):
+    """The global POG of a POG tile set (hb.is_path_pog_tileset: a global VRT over the corner-named subpogs of one dataset,
+    which must cover the globe) at output_path, built from what the tiles already are rather than from the assembled raster.
+
+    make_path_pog, given the VRT, reads it into a GeoTIFF, applies the nodata rule, computes the statistics and builds
+    every overview from the base: four passes over a raster the size of the globe at the rung, on one core each. A subpog
+    already follows its class rule, declares the per-type nodata, carries exact statistics and holds its overviews, so
+    here there are two passes, threaded: the VRT is read once into a GeoTIFF (DEFLATE on every core), its statistics are
+    combined from the tiles' (_combine_tile_statistics; computed on the base if a tile lacks them), the levels the tiles
+    hold are copied from them (a level that divides the tile edge has no block crossing a tile, so these are the levels
+    make_path_pog would compute) and each coarser level is aggregated from the one before it (_aggregate_level: the mode
+    for a categorical raster, ties to the smallest class; the sum for an extensive one). Then
+    the COG copy. Categorical and extensive tile sets only; an intensive or covariate set goes through make_path_pog.
+    color_table, intermediate_dir and remove_intermediate_files as in make_path_pog. Returns output_path."""
+    if not is_path_pog_tileset(tileset_vrt_path, verbose=verbose):
+        raise ValueError(f'Not a POG tile set (is_path_pog_tileset with verbose=True says why): {tileset_vrt_path}')
+    ds = gdal.Open(tileset_vrt_path)
+    tile_paths = ds.GetFileList()[1:]
+    gt, n_cols, n_rows = ds.GetGeoTransform(), ds.RasterXSize, ds.RasterYSize
+    ds = None
+    stem, arcseconds, corner, tile_height, tile_width = hb.parse_tile_filename(tile_paths[0])
+    arcseconds = float(arcseconds)
+    res = hb.pyramid_compatible_resolutions[arcseconds]
+    n_tiles_expected = int(round(360 / tile_width)) * int(round(180 / tile_height))
+    if len(tile_paths) != n_tiles_expected:
+        raise ValueError(f'{len(tile_paths)} tiles, but {n_tiles_expected} are needed to cover the globe with {tile_height} x {tile_width} degree tiles: '
+                         f'an overview block over a missing tile would read as nodata. {tileset_vrt_path}')
+    variable_class = get_pog_metadata(tile_paths[0]).get('POG_VARIABLE_CLASS')
+    if variable_class not in ('categorical', 'extensive'):
+        raise ValueError(f'write_pog_from_pog_tileset handles categorical and extensive tile sets; this one is {variable_class!r}: use make_path_pog. {tileset_vrt_path}')
+    output_data_type = hb.get_datatype_from_uri(tile_paths[0])
+    class_ndv = hb.no_data_values_by_gdal_type[output_data_type][0]
+    overview_levels = hb.pyramid_compatible_overview_levels[arcseconds]
+    tile_levels = hb.get_pyramid_overview_levels_for_bb(arcseconds, hb.get_tile_bb_from_corner_string(corner, tile_height, tile_width))
+    if overview_levels[:len(tile_levels)] != tile_levels or any(overview_levels[k] % overview_levels[k - 1] for k in range(len(tile_levels), len(overview_levels))):
+        raise ValueError(f'The tiles\' overview levels {tile_levels} must be the first of the global levels {overview_levels}, and each later level a '
+                         f'multiple of the one before it. {tileset_vrt_path}')
+    if intermediate_dir is not None:
+        hb.create_directories(intermediate_dir)
+    current_path = hb.temp('.tif', os.path.splitext(os.path.basename(output_path))[0] + '_translate', remove_intermediate_files, folder=intermediate_dir, tag_along_file_extensions=['.aux.xml'])
+
+    with gdal.config_option('GDAL_NUM_THREADS', 'ALL_CPUS'):  # threaded DEFLATE decoding of the tiles and encoding of the GeoTIFF
+        if verbose:
+            hb.log(f'Reading the {len(tile_paths)} tiles of {tileset_vrt_path} into {current_path}.')
+        gdal.Translate(current_path, tileset_vrt_path, outputType=output_data_type, creationOptions=hb.globals.PRECOG_GTIFF_CREATION_OPTIONS_LIST,
+                       callback=hb.make_gdal_callback(f'Reading {hb.path_filename(tileset_vrt_path)} into {current_path}.'))
+        ds = gdal.OpenEx(current_path, gdal.GA_Update, open_options=['IGNORE_COG_LAYOUT_BREAK=YES'])
+        band = ds.GetRasterBand(1)
+        if color_table is not None and band.SetRasterColorTable(hb.make_gdal_color_table(color_table)) != gdal.CE_None:
+            ds = None
+            raise ValueError(f'Could not set the color table on {current_path}: a palette needs a single Byte or UInt16 band.')
+        ds.SetMetadata({'AREA_OR_POINT': 'Area', 'POG_VARIABLE_CLASS': variable_class})
+        if not ds.GetProjection():
+            ds.SetProjection(hb.wgs_84_wkt)
+        band.SetNoDataValue(class_ndv)
+        stats = _combine_tile_statistics(tile_paths)
+        if stats is None:
+            if verbose:
+                hb.log(f'A tile has no exact statistics, so they are computed over {current_path}.')
+            stats = band.ComputeStatistics(False)
+        _set_band_statistics(band, *stats)
+
+        ds.BuildOverviews('NONE', overview_levels)  # allocate; every level is written below
+        overviews = [band.GetOverview(i) for i in range(band.GetOverviewCount())]
+        if [(o.XSize, o.YSize) for o in overviews] != [(n_cols // f, n_rows // f) for f in overview_levels]:
+            ds = None
+            raise ValueError(f'Allocated overviews {[(o.XSize, o.YSize) for o in overviews]} do not match the levels {overview_levels}.')
+        if verbose:
+            hb.log(f'Copying the tiles\' overviews into levels {tile_levels} of {current_path}; levels {overview_levels[len(tile_levels):]} are aggregated from them.')
+        for tile_path in tile_paths:
+            tile_ds = gdal.Open(tile_path)
+            tile_band = tile_ds.GetRasterBand(1)
+            tile_gt = tile_ds.GetGeoTransform()
+            for k, f in enumerate(tile_levels):
+                overviews[k].WriteArray(tile_band.GetOverview(k).ReadAsArray(), int(round((tile_gt[0] - gt[0]) / (res * f))), int(round((gt[3] - tile_gt[3]) / (res * f))))
+            tile_ds = None
+        for k in range(len(tile_levels)):  # the small copied levels are cheap to check; a tile built before 2026-11-07 holds nodata in its top ones
+            if overviews[k].XSize * overviews[k].YSize <= 50e6 and (overviews[k].ReadAsArray() == class_ndv).any():
+                ds = None
+                raise ValueError(f'Overview level {overview_levels[k]} copied from the tiles holds the nodata value {class_ndv}: the tiles\' own top overviews '
+                                 f'are unwritten (tiles built with hazelbean before 2026-11-07). Rebuild the tiles. {tileset_vrt_path}')
+        level = overviews[len(tile_levels) - 1].ReadAsArray()
+        np_type = gdal_array.GDALTypeCodeToNumericTypeCode(output_data_type)
+        for k in range(len(tile_levels), len(overview_levels)):
+            level = _aggregate_level(level, overview_levels[k] // overview_levels[k - 1], variable_class)
+            overviews[k].WriteArray((np.rint(level) if np.issubdtype(np_type, np.integer) else level).astype(np_type))
+        _set_band_statistics(band, *stats)  # BuildOverviews can drop band metadata
+        band = overviews = None
+        ds = None
+
+    _copy_to_cog(current_path, output_path, overview_levels, compression, blocksize, verbose)
+    if remove_intermediate_files:
+        for sidecar in (current_path, current_path + '.aux.xml'):
+            if os.path.exists(sidecar):
+                os.remove(sidecar)
+    return output_path
+
+
 def _explain_unsupported_resolution(input_raster_path):
     """Error text for a raster whose output resolution make_path_pog cannot infer: says whether the CRS is WGS84,
     what the native cell size is in arcseconds, which supported resolution to pass as output_arcseconds, and where."""
@@ -1023,7 +1254,9 @@ def make_path_pog(input_raster_path,
                   intensive_weighting='area',
                   observed_area_path=None,
                   categorical_none_value=0,
-                  allow_registration_shift=True):
+                  allow_registration_shift=True,
+                  color_table=None,
+                  intermediate_dir=None):
 
     """ Create a POG (pyramidal cog) from input_raster_path. Writes in-place if output_raster_path is not set. Follows the
     steps of the specification (the paper's Appendix D.4; pogs.qmd).
@@ -1050,15 +1283,26 @@ def make_path_pog(input_raster_path,
     rung; also the way to convert deliberately between rungs. Reaching a coarser rung aggregates by the class rule:
     exactly (block sums, area-weighted for intensive) when the input sits aligned on a rung that divides the target,
     otherwise by one GDAL resample (sum, average, mode). A point-registered input whose samples fall on canonical grid
-    lines (SRTM, NASADEM) enters by the half-cell registration shift instead of a resample (allow_registration_shift)."""
+    lines (SRTM, NASADEM) enters by the half-cell registration shift instead of a resample (allow_registration_shift).
+
+    color_table, a dict of cell value to (r, g, b) such as hb.globals.glc_fcs30d_colors, is written into the output's header so
+    viewers render a categorical POG in its legend's colours (hb.make_gdal_color_table). Byte or UInt16 outputs only.
+
+    For a VRT over a POG tile set whose tiles cover the globe, write_pog_from_pog_tileset builds the same POG in two threaded
+    passes instead of four and is the route to prefer.
+
+    intermediate_dir is where the intermediates of the steps (copy or translate, shift, resample, reclassify, nodata...) are
+    written: a ProjectFlow task passes its p.cur_dir so they can be watched and inspected while the run is going, and a
+    failed run leaves them where the task's other files are. None is hazelbean's temp folder (hb.get_temp_dir()). They are
+    deleted at the end unless remove_intermediate_files=False."""
 
     # Check if input exists
     if not hb.path_exists(input_raster_path, verbose=verbose):
         raise FileNotFoundError(f"Input raster does not exist: {input_raster_path} at abs path {hb.path_abs(input_raster_path)}")
 
-    # An in-place conversion leaves the original beside the POG as <name>_displaced_<stamp>.tif, and its
-    # intermediates as <name>_copy_<stamp>.tif etc. (kept when remove_intermediate_files=False, or after a
-    # crash). A directory walk that reruns would otherwise poggerize those too; skip them by default.
+    # An in-place conversion leaves the original beside the POG as <name>_displaced_<stamp>.tif (and older
+    # versions also left intermediates there as <name>_copy_<stamp>.tif etc.). A directory walk that reruns
+    # would otherwise poggerize those too; skip them by default.
     if any(marker in os.path.basename(input_raster_path) for marker in TEMP_NAME_MARKERS) and not include_displaced_and_temp_files:
         if verbose:
             hb.log(f"Skipping displaced/temp file (pass include_displaced_and_temp_files=True to convert it): {input_raster_path}")
@@ -1115,11 +1359,14 @@ def make_path_pog(input_raster_path,
             raise ValueError(_explain_unsupported_resolution(input_raster_path)) from e
 
     # Make a local copy at a temp file to process on to avoid corrupting the original.
-    # Intermediates are named <input stem>_<step>_<stamp>.tif so they sort beside their source.
+    # Intermediates go in intermediate_dir, else hb.get_temp_dir() (never beside the input, so a crash cannot litter its
+    # folder), named <input stem>_<step>_<stamp>.tif so they can be traced to their source.
     input_dir = os.path.dirname(input_raster_path)
     input_stem = os.path.splitext(os.path.basename(input_raster_path))[0]
-    def intermediate(step, folder=input_dir):
-        path = hb.temp('.tif', input_stem + '_' + step, remove_intermediate_files, folder=folder, tag_along_file_extensions=['.aux.xml'])
+    if intermediate_dir is not None:
+        hb.create_directories(intermediate_dir)
+    def intermediate(step):
+        path = hb.temp('.tif', input_stem + '_' + step, remove_intermediate_files, folder=intermediate_dir, tag_along_file_extensions=['.aux.xml'])
         intermediate_paths.append(path)
         return path
     intermediate_paths = []  # deleted at the end when remove_intermediate_files
@@ -1133,6 +1380,8 @@ def make_path_pog(input_raster_path,
     input_data_type = hb.get_datatype_from_uri(input_raster_path)
     if output_data_type is None or output_data_type == 'auto':
         output_data_type = input_data_type
+    # Float16 (input or requested) is promoted to Float32; the type change below then translates it on the first pass.
+    output_data_type = _promote_float16(output_data_type, input_raster_path, verbose)
 
     declared = get_pog_metadata(input_raster_path)
     if variable_class is None:
@@ -1212,7 +1461,7 @@ def make_path_pog(input_raster_path,
                              and hb.pyramids._divides(native_arcseconds, arcseconds))
         if exact_aggregation:
             # Place the input on its own rung over the target extent (exact: aligned cells are copied), then block-aggregate.
-            native_frame_path = intermediate('native_frame', hb.get_temp_dir())
+            native_frame_path = intermediate('native_frame')
             write_pyramid_frame_raster(native_frame_path, native_arcseconds, target_bb, output_data_type, frame_ndv)
             native_path = intermediate('native')
             hb.resample_to_match(current_path, native_frame_path, native_path, resample_method='near', output_data_type=output_data_type, src_ndv=None, ndv=frame_ndv,
@@ -1238,7 +1487,7 @@ def make_path_pog(input_raster_path,
             # The target frame is synthesized from the pyramid tables (a sparse raster with the exact pyramid
             # geotransform and WGS84) rather than fetched: resample_to_match only reads geometry from its match,
             # and a fetched raster cannot exist for every rung (a global 3/10-arcsecond one would be 9 trillion cells).
-            match_path = intermediate('frame', hb.get_temp_dir())
+            match_path = intermediate('frame')
             write_pyramid_frame_raster(match_path, arcseconds, target_bb, output_data_type, frame_ndv)
             resample_temp_path = intermediate('resample')
             if verbose:
@@ -1307,7 +1556,8 @@ def make_path_pog(input_raster_path,
     _write_cog_with_pyramid_overviews(current_path, output_raster_path, overview_levels, overview_resampling_method, output_data_type, ndv, compression, blocksize, verbose,
                                       variable_class=variable_class, intensive_weighting=intensive_weighting, denominator=denominator,
                                       pog_metadata={'POG_OBSERVED_AREA': _pog_reference_for(final_raster_path, observed_area_path) if observed_area_path else None,
-                                                    'POG_REGISTRATION_SHIFT': registration_shift or declared.get('POG_REGISTRATION_SHIFT')})
+                                                    'POG_REGISTRATION_SHIFT': registration_shift or declared.get('POG_REGISTRATION_SHIFT')},
+                                      color_table=color_table)
 
     if not is_path_requested_kind(output_raster_path, verbose=verbose) and verbose:
         hb.log(f"Failed to create {'POG' if expand_to_global_extent else 'subpog'}: {output_raster_path} at abs path {hb.path_abs(output_raster_path)}")
@@ -1336,6 +1586,7 @@ def make_path_pog(input_raster_path,
 
 def _write_pog_of_value(output_path, value, geotransform, x_size, y_size, arcseconds, bb, output_data_type, ndv, overview_resampling_method, compression, blocksize, verbose, variable_class):
     """Shared body of the write_pog_of_value_* functions: a constant raster on the given frame, finished as a POG."""
+    output_data_type = _promote_float16(output_data_type, output_path, verbose)
     if variable_class is None:
         variable_class = _infer_variable_class(output_data_type)
     if variable_class == 'extensive' and _is_integer_gdal_type(output_data_type):

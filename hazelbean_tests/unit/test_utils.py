@@ -87,7 +87,19 @@ class TestUtils(unittest.TestCase):
                 print('about to parse', row, col, value)
                 parsed_value = hb.parse_flex_to_python_object(value)
                 print('parsed_value', row, col, parsed_value)
-                
+
+    def test_hash_file_path(self):
+        """hash_file_path matches hashlib for sha256 and md5, and raises for a missing file instead of returning text."""
+        import hashlib, tempfile
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, 'bytes.bin')
+            with open(path, 'wb') as f:
+                f.write(b'hazelbean' * 1000)
+            self.assertEqual(hb.hash_file_path(path), hashlib.sha256(b'hazelbean' * 1000).hexdigest())
+            self.assertEqual(hb.hash_file_path(path, 'md5'), hashlib.md5(b'hazelbean' * 1000).hexdigest())
+            with self.assertRaises(FileNotFoundError):
+                hb.hash_file_path(os.path.join(d, 'missing.bin'))
+
 
 
 if __name__ == "__main__":

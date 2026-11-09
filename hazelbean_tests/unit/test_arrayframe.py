@@ -39,15 +39,14 @@ class ArrayFrameTester(TestCase):
         af = hb.ArrayFrame(input_uri)
         
         
-        output_dir = self.data_dir
-        output_path = hb.temp('.tif', 'resampled', delete_on_finish, output_dir)
+        output_path = hb.temp('.tif', 'resampled', delete_on_finish, folder=hb.temporary_dir())
 
         # Test arraframes and their functions
-        temp_path = hb.temp('.tif', 'testing_arrayframe_add', delete_on_finish, output_dir)
+        temp_path = hb.temp('.tif', 'testing_arrayframe_add', delete_on_finish, folder=hb.temporary_dir())
 
         hb.add(self.global_1deg_raster_path, self.global_1deg_raster_path, temp_path)
 
-        temp_path = hb.temp('.tif', 'testing_arrayframe_add', delete_on_finish, output_dir)
+        temp_path = hb.temp('.tif', 'testing_arrayframe_add', delete_on_finish, folder=hb.temporary_dir())
         af1 = hb.ArrayFrame(self.global_1deg_raster_path)
         hb.add(af1, af1, temp_path)
 
