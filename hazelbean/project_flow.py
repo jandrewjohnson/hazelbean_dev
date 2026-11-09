@@ -1524,15 +1524,7 @@ class ProjectFlow(object):
                     results = []
 
                     if task.run_in_parallel:
-                        requested_workers = os.environ.get('SEALS_NUM_WORKERS')
-                        if requested_workers and int(self.num_workers) != int(requested_workers):
-                            raise RuntimeError(
-                                'Worker limit not honoured: SEALS_NUM_WORKERS=%s but the pool is '
-                                'about to start %s workers. The pool size is bounded by the memory '
-                                'this job was given, not by the machine\'s cpu count.'
-                                % (requested_workers, self.num_workers))
-                        hb.log('Running iterations with %d workers (SEALS_NUM_WORKERS=%s)'
-                               % (self.num_workers, requested_workers))
+                        hb.log('Running iterations with %d workers' % self.num_workers)
 
                     # Once all the iterations are done, iterate through the stored results and call their get functions, which blocks running past this point until all are done.
                     # SUPER CONFUSING POINT. the project object will be modified independently by all tasks. Cant think of a good way ro rejoin them
