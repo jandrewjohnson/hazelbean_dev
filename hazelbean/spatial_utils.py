@@ -746,6 +746,29 @@ def set_ndv_in_raster_header(input_raster_path, new_ndv):
     ds = None
 
 
+def make_gdal_color_table(colors):
+    """A gdal.ColorTable from colors, a dict of cell value to (r, g, b) or (r, g, b, a), as hb.globals.glc_fcs30d_colors.
+
+    Values the dict leaves out stay at the table's default (opaque black), so a legend should name every value the raster holds."""
+    color_table = gdal.ColorTable()
+    for value, rgb in colors.items():
+        rgb = tuple(int(i) for i in rgb)
+        color_table.SetColorEntry(int(value), rgb if len(rgb) == 4 else rgb + (255,))
+    return color_table
+
+
+def set_color_table_in_raster_header(input_raster_path, colors):
+    """Write colors (see make_gdal_color_table) into the header of the Byte or UInt16 single-band GeoTIFF at input_raster_path.
+
+    Does not change the data. The band becomes palette-interpreted, so QGIS and other viewers render each class in its legend
+    colour. Fails on a finished COG (the layout would break): give a POG its palette through make_path_pog's color_table."""
+    ds = gdal.OpenEx(input_raster_path, gdal.GA_Update)
+    if ds.GetRasterBand(1).SetRasterColorTable(make_gdal_color_table(colors)) != gdal.CE_None:
+        ds = None
+        raise ValueError(f"Could not set a color table on {input_raster_path}: it must be a single-band Byte or UInt16 raster.")
+    ds = None
+
+
 def set_ndv_by_mask_path(input_data_path, valid_mask_path, output_path=None, ndv=None):
     # NOT Memory safe.
     if not output_path:

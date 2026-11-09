@@ -586,7 +586,12 @@ class ProjectFlow(object):
 
         # input/ always exists (empty until the user copies an override into it);
         # before 2026-09-03 it was created only as a side effect of the template copy.
-        hb.create_directories(self.input_dir)
+        # The exception is a run file that lives in its own project folder (a base_data
+        # dataset folder, whose definition CSVs sit flat beside it): that folder stays
+        # flat, so no input/ is made there; get_path simply finds nothing in it.
+        script_dir = getattr(self, 'script_dir', None)
+        if not (script_dir and os.path.abspath(script_dir) == os.path.abspath(self.project_dir)):
+            hb.create_directories(self.input_dir)
         self._project_dirs_materialized = True
 
     def set_project_dir(self, project_dir=None, project_name=None, run_mode=None, extra_dirs=None):

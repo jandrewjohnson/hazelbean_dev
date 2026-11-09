@@ -291,7 +291,7 @@ def test_add_directory_dry_run_plans_and_writes_nothing(incoming):
 
 def test_add_directory_converts_copies_lists_and_dry_runs_publishing(incoming):
     source_dir, base_data_dir, manifest_path = incoming
-    overrides = {"sub/*": {"variable_class": "intensive", "units": "proportion", "description": "Cropland share."}}
+    overrides = {"sub/*": {"variable_class": "intensive", "units": "proportion", "description": "Cropland share."}, "table.csv": {"tier": "private"}}
     result = store.add_directory_to_base_data(source_dir, "crops", manifest_path, base_data_dir=base_data_dir, overrides=overrides, dry_run=False, client=FakeR2(), **METADATA)
     cropland = os.path.join(base_data_dir, "crops", "sub", "cropland_900sec.tif")
     assert hb.is_path_pog(cropland) and hb.get_pog_metadata(cropland)["POG_VARIABLE_CLASS"] == "intensive"
@@ -300,7 +300,8 @@ def test_add_directory_converts_copies_lists_and_dry_runs_publishing(incoming):
     assert manifest["kind"].to_dict() == {"crops/area_324000sec.tif": "pog", "crops/sub/cropland_900sec.tif": "pog", "crops/table.csv": "table"}
     assert manifest["variable_class"].to_dict() == {"crops/area_324000sec.tif": "extensive", "crops/sub/cropland_900sec.tif": "intensive", "crops/table.csv": ""}
     assert manifest.loc["crops/sub/cropland_900sec.tif", "units"] == "proportion"
-    assert result["publish"]["statuses"] == {"crops/area_324000sec.tif": "new", "crops/sub/cropland_900sec.tif": "new", "crops/table.csv": "unsupported"}
+    assert manifest["tier"].to_dict() == {"crops/area_324000sec.tif": "public", "crops/sub/cropland_900sec.tif": "public", "crops/table.csv": "private"}
+    assert result["publish"]["statuses"] == {"crops/area_324000sec.tif": "new", "crops/sub/cropland_900sec.tif": "new", "crops/table.csv": "unsupported"}  # a private row is listed, not published
     assert any("depends on datasets that are not published: ['pyramids/ha_per_cell_900sec.tif']" in p for p in result["publish"]["plan"]["problems"])
     again = store.add_directory_to_base_data(source_dir, "crops", manifest_path, base_data_dir=base_data_dir, overrides=overrides, client=FakeR2(), **METADATA)
     assert set(again["actions"].values()) == {"already there"} and again["problems"] == []  # rerunning the same folder is a no-op
@@ -474,3 +475,57 @@ def test_add_directory_accepts_a_stale_date_as_a_dry_run(incoming):
     source_dir, base_data_dir, manifest_path = incoming
     result = store.add_directory_to_base_data(source_dir, "crops", manifest_path, base_data_dir=base_data_dir, dry_run="2000-01-01", client=FakeR2(), **METADATA)
     assert result["publish"] is None and not os.path.exists(manifest_path) and not os.listdir(base_data_dir)
+
+@pytest.fixture
+def mixed_manifest(manifest):
+    """The pyramids manifest plus a cartographic folder holding a tiny GeoPackage, its CSV twin and a shapefile row (unsupported: several files)."""
+    from osgeo import ogr, osr
+    base_data_dir = manifest[1]
+    folder = os.path.join(base_data_dir, "cartographic", "ee")
+    os.makedirs(folder)
+    ds = ogr.GetDriverByName("GPKG").CreateDataSource(os.path.join(folder, "regions.gpkg"))
+    srs = osr.SpatialReference(); srs.ImportFromEPSG(4326)
+    layer = ds.CreateLayer("regions", srs, ogr.wkbPolygon)
+    layer.CreateField(ogr.FieldDefn("id", ogr.OFTInteger))
+    feature = ogr.Feature(layer.GetLayerDefn()); feature.SetField("id", 1); feature.SetGeometry(ogr.CreateGeometryFromWkt("POLYGON((0 0,1 0,1 1,0 1,0 0))"))
+    layer.CreateFeature(feature); ds = None
+    pd.DataFrame({"id": [1], "label": ["one"]}).to_csv(os.path.join(folder, "regions.csv"), index=False, encoding="utf-8-sig")
+    with open(os.path.join(folder, "old.shp"), "wb") as f:
+        f.write(b"not a shapefile")
+    row = dict(kind="vector", tier="public", variable_class="", code="test", license="ODbL-1.0", units="polygons", data_source="drawn", description="Regions.")
+    rows = [dict(row, ref_path="cartographic/ee/regions.gpkg"), dict(row, ref_path="cartographic/ee/regions.csv", kind="table", units="rows"),
+            dict(row, ref_path="cartographic/ee/old.shp")]
+    pd.DataFrame(rows)[list(store.MANIFEST_COLUMNS)].to_csv(os.path.join(folder, "cartographic_ee_base_data_manifest.csv"), index=False, encoding="utf-8-sig")
+    return base_data_dir
+
+def test_vectors_and_tables_publish_as_plain_files_and_shapefiles_stay_unsupported(mixed_manifest, pogs):
+    r2 = FakeR2()
+    dry = store.publish_base_data_from_manifests(base_data_dir=mixed_manifest, client=r2)
+    assert dry["statuses"]["cartographic/ee/regions.gpkg"] == dry["statuses"]["cartographic/ee/regions.csv"] == "new"
+    assert dry["statuses"]["cartographic/ee/old.shp"] == "unsupported" and dry["plan"]["problems"] == [] and r2.objects == {}
+    result = store.publish_base_data_from_manifests(base_data_dir=mixed_manifest, note="Regions.", dry_run=False, client=r2)
+    release = r2.json(f"_release/{result['plan']['release']}.json")
+    assert {"cartographic/ee/regions.gpkg", "cartographic/ee/regions.csv"} <= set(release["datasets"]) and "cartographic/ee/old.shp" not in release["datasets"]
+    gpkg_path = os.path.join(mixed_manifest, "cartographic", "ee", "regions.gpkg")
+    assert r2.body("cartographic/ee/regions.gpkg") == read(gpkg_path) and r2.objects["cartographic/ee/regions.gpkg"][1]["sha256"] == hb.hash_file_path(gpkg_path)
+    entry = r2.json(f"_catalogue/cartographic/ee/regions.gpkg/{result['plan']['release']}.json")
+    assert entry["kind"] == "vector" and entry["lattice"] is None and entry["semantics"] == {"units": "polygons"} and entry["depends_on"] == []
+    assert r2.json(f"_catalogue/cartographic/ee/regions.csv/{result['plan']['release']}.json")["kind"] == "table"
+    assert r2.json(f"_catalogue/{REFS[0]}/{result['plan']['release']}.json")["lattice"]["rung"] == "324000"  # POGs unchanged
+    again = store.publish_base_data_from_manifests(base_data_dir=mixed_manifest, client=r2)
+    assert again["statuses"]["cartographic/ee/regions.gpkg"] == "unchanged" and again["plan"] is None
+
+def test_gate_refuses_an_unsupported_extension_and_a_mismatched_source(tmp_path, pogs):
+    txt = tmp_path / "notes.txt"; txt.write_text("x")
+    assert "supports single files only" in store.check_publication_status(str(txt), "cartographic/notes.txt")["problems"][0]
+    assert "need an existing .gpkg source" in store.check_publication_status(pogs[324000], "cartographic/regions.gpkg")["problems"][0]
+
+@needs_quarto
+def test_pages_show_vectors_and_tables_by_kind(mixed_manifest, site):
+    r2 = FakeR2()
+    store.publish_base_data_from_manifests(base_data_dir=mixed_manifest, note="Regions.", dry_run=False, client=r2, site_dir=site)
+    page = r2.body("cartographic/ee/index.html").decode("utf-8")
+    assert "regions.gpkg" in page and "regions.csv" in page and "old.shp" not in page
+    assert ">vector<" in page and ">table<" in page  # the Resolution cell names the kind
+    landing = r2.body("index.html").decode("utf-8")
+    assert "4 datasets in 2, release" in landing and 'href="/cartographic/"' in landing

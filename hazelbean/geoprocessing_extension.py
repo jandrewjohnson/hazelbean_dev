@@ -516,13 +516,11 @@ def warp_raster_hb(
     if src_ndv is None:
         src_ndv = base_raster_info['ndv']
 
+    # The output declares the input's nodata unless the caller says otherwise. When neither declares one, none is invented:
+    # a value GDAL is told is nodata must not occur in the data, and it rewrites any cell holding it (a Byte raster's
+    # 255 became 254, silently corrupting a class) to keep the two apart. Cells outside the input then hold zero.
     if dst_ndv is None:
         dst_ndv = base_raster_info['ndv']
-        if dst_ndv is None:
-            if output_data_type < 5:
-                dst_ndv = 255
-            else:
-                dst_ndv = -9999.0
 
     # determine the raster size that bounds the input bounding box and then
     # adjust the bounding box to be that size

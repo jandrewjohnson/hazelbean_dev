@@ -9,7 +9,7 @@ release ID, writes one catalogue entry per dataset, and commits by compare-and-s
 the plain paths overwritten from staging. If another curator's release commits first, the release and entries this one wrote are
 deleted and it stops: rerun it. If overwriting a plain path fails after the commit, rerunning the manifest command finishes it.
 
-Single-file POG datasets in the public bucket only. The R2 calls are in hazelbean.cloud_utils; credentials come from
+Single-file datasets in the public bucket only: POG rasters, GeoPackage vectors and CSV or XLSX tables. The R2 calls are in hazelbean.cloud_utils; credentials come from
 ~/.config/hazelbean/machine.env (see cloud_utils.get_r2_client).
 
 Each dataset folder in base_data carries its own manifest, <name>_base_data_manifest.csv, written by the ingestion script
@@ -50,8 +50,11 @@ REVISION_TOKENS = {"final", "new", "old", "copy", "bak", "backup", "temp", "tmp"
 MANIFEST_COLUMNS = ("ref_path", "kind", "tier", "variable_class", "license", "units", "data_source", "description", "code")
 MANIFEST_SUFFIX = "_base_data_manifest.csv"
 RAW_FOLDER = "raw"  # a dataset folder's raw downloads, exactly as provided: read by its ingestion script, never listed or uploaded
+INTERMEDIATE_FOLDER = "intermediate"  # the ingestion run file's ProjectFlow task folders (the dataset folder is its project folder): never listed or uploaded
 KINDS_BY_EXTENSION = {".tif": "pog", ".tiff": "pog", ".csv": "table", ".xlsx": "table", ".gpkg": "vector", ".shp": "vector"}
 SHAPEFILE_SIDECARS = (".shx", ".dbf", ".prj", ".cpg", ".sbn", ".sbx", ".qix")  # copied with their .shp, but not datasets of their own
+CONTENT_TYPES = {".tif": "image/tiff", ".gpkg": "application/geopackage+sqlite3", ".csv": "text/csv",
+                 ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}  # the single-file kinds publishing supports
 NOT_DATA = (".py", ".pyc", ".ipynb", ".r", ".sh", ".aux.xml", MANIFEST_SUFFIX)  # ingestion scripts, manifests and GDAL sidecars aren't datasets
 PAGE_CACHE_CONTROL = "public, max-age=300"  # the index pages are rebuilt after every publish
 PAGE_FIELDS = (("variable_class", "Variable class"), ("units", "Units"), ("license", "Licence"), ("data_source", "Source"),
@@ -105,7 +108,9 @@ def add_directory_to_base_data(source_dir, ref_folder, manifest_path, license, u
         variable_class (str): For rasters that don't declare one: 'extensive', 'intensive', 'categorical' or 'covariate'.
             Never guessed: a raster with no class declared anywhere is refused.
         overrides (dict): Per-file changes, keyed by a pattern matched against each file's path relative to source_dir,
-            e.g. {'*_yield_*.tif': {'units': 't/ha', 'variable_class': 'intensive'}}. Later patterns win.
+            e.g. {'*_yield_*.tif': {'units': 't/ha', 'variable_class': 'intensive'}}. Later patterns win. 'tier' can be
+            overridden too: 'private' lists a file in the manifest without publishing it (publishing reports it as
+            unsupported), for a dataset kept in the local store and shared on request.
         include (list): Patterns (matched like overrides); if given, only matching files are added.
         include_subdirectories (bool): Also add files in source_dir's subdirectories.
         make_pogs (bool): Convert rasters that aren't POGs now. False lists them with their variable class, and
@@ -133,7 +138,7 @@ def add_directory_to_base_data(source_dir, ref_folder, manifest_path, license, u
         raise ValueError(f"A dataset manifest's name must end with {MANIFEST_SUFFIX}, so publishing finds it: {manifest_path}")
     base_data_dir = base_data_dir or os.path.join(os.path.expanduser("~"), "Files", "base_data")
     ref_folder = ref_folder.replace("\\", "/").strip("/")
-    defaults = dict(license=license, units=units, data_source=data_source, description=description, code=code, variable_class=variable_class)
+    defaults = dict(license=license, units=units, data_source=data_source, description=description, code=code, variable_class=variable_class, tier="public")
     listed = set(_read_manifest(manifest_path)["ref_path"]) if os.path.exists(manifest_path) else set()
 
     n_workers = n_workers or max(1, hb.available_cpu_count() - 1)
@@ -142,7 +147,8 @@ def add_directory_to_base_data(source_dir, ref_folder, manifest_path, license, u
     items, skipped, n_not_included = [], [], 0
     for root, dirs, files in os.walk(source_dir):
         skipped += [os.path.relpath(os.path.join(root, d), source_dir).replace(os.sep, "/") + "/ (raw input, never added)" for d in dirs if d == RAW_FOLDER]
-        dirs[:] = sorted(d for d in dirs if not d.startswith(".") and d not in ("__pycache__", RAW_FOLDER))
+        skipped += [os.path.relpath(os.path.join(root, d), source_dir).replace(os.sep, "/") + "/ (run file intermediates, never added)" for d in dirs if d == INTERMEDIATE_FOLDER]
+        dirs[:] = sorted(d for d in dirs if not d.startswith(".") and d not in ("__pycache__", RAW_FOLDER, INTERMEDIATE_FOLDER))
         if not include_subdirectories:
             skipped += [os.path.relpath(os.path.join(root, d), source_dir).replace(os.sep, "/") + "/ (subdirectory)" for d in dirs]
             dirs[:] = []
@@ -228,7 +234,7 @@ def add_directory_to_base_data(source_dir, ref_folder, manifest_path, license, u
         raise RuntimeError("These files couldn't be put in place, so the manifest wasn't updated; the others are done, and a rerun "
                            "skips them:\n  " + "\n  ".join(failures))
     rows = [dict({k: i["settings"][k] or "" for k in ("variable_class", "license", "units", "data_source", "description", "code")}, ref_path=i["ref_path"],
-                 kind=i["kind"], tier="public") for i in items if i["manifest"] == "new row"]
+                 kind=i["kind"], tier=i["settings"]["tier"]) for i in items if i["manifest"] == "new row"]
     if rows:
         existing = [_read_manifest(manifest_path)] if os.path.exists(manifest_path) else []
         pd.concat(existing + [pd.DataFrame(rows)[list(MANIFEST_COLUMNS)]]).to_csv(manifest_path, index=False, encoding="utf-8-sig")
@@ -242,7 +248,7 @@ def find_base_data_manifests(base_data_dir=None):
     base_data_dir = base_data_dir or os.path.join(os.path.expanduser("~"), "Files", "base_data")
     found = []
     for root, dirs, files in os.walk(base_data_dir):
-        dirs[:] = sorted(d for d in dirs if not d.startswith(".") and d not in ("__pycache__", RAW_FOLDER))
+        dirs[:] = sorted(d for d in dirs if not d.startswith(".") and d not in ("__pycache__", RAW_FOLDER, INTERMEDIATE_FOLDER))
         found += [os.path.join(root, f) for f in files if f.endswith(MANIFEST_SUFFIX)]
     return sorted(found)
 
@@ -252,8 +258,9 @@ def publish_base_data_from_manifests(base_data_dir=None, manifest_paths=None, no
 
     The manifests (<name>_base_data_manifest.csv, each beside its dataset's ingestion script) are combined into one
     list; a ref path listed by two manifests is an error. A listed raster that isn't a POG yet is converted in place with
-    its row's variable_class before anything else, on a real run only: a dry run reports it as 'needs_pog'. Every row then
-    gets a status: 'new' (not yet published), 'changed' (the local bytes differ from the published version), 'unchanged',
+    its row's variable_class before anything else, on a real run only: a dry run reports it as 'needs_pog'. Single-file
+    public rows publish: POG rasters (.tif), GeoPackage vectors (.gpkg) and tables (.csv, .xlsx); shapefiles and the
+    private tier don't yet. Every row then gets a status: 'new' (not yet published), 'changed' (the local bytes differ from the published version), 'unchanged',
     'unfinished' (published, but its plain path doesn't hold those bytes yet, because an earlier run stopped after its
     commit), 'missing_locally', or 'unsupported' (a kind or tier publishing can't handle yet). Published datasets that no
     manifest lists are reported as 'not_in_manifest'. Unfinished plain paths are completed from the local files, then the
@@ -292,10 +299,10 @@ def publish_base_data_from_manifests(base_data_dir=None, manifest_paths=None, no
     rows = df.to_dict("records")
     for row in rows:
         row["path"] = os.path.join(base_data_dir, *row["ref_path"].split("/"))
-    publishable = [row for row in rows if row["kind"] == "pog" and row["tier"] == "public" and os.path.isfile(row["path"])]
+    publishable = [row for row in rows if _is_publishable(row) and os.path.isfile(row["path"])]
 
     # Rasters an ingestion script listed without converting: convert them now (real runs only).
-    is_pog = _run_each(lambda row: hb.is_path_pog(row["path"]), publishable, parallel, n_workers)
+    is_pog = _run_each(lambda row: row["kind"] != "pog" or hb.is_path_pog(row["path"]), publishable, parallel, n_workers)
     needs_pog = [row for row, pog in zip(publishable, is_pog) if not pog]
     unclassed = [row["ref_path"] for row in needs_pog if not row["variable_class"]]
     if unclassed and not dry_run:
@@ -322,7 +329,7 @@ def publish_base_data_from_manifests(base_data_dir=None, manifest_paths=None, no
         ref_path, path = row["ref_path"], row["path"]
         if ref_path in skip:
             statuses[ref_path] = "needs_pog"
-        elif row["kind"] != "pog" or row["tier"] != "public":
+        elif not _is_publishable(row):
             statuses[ref_path] = "unsupported"
         elif not os.path.isfile(path):
             statuses[ref_path] = "missing_locally"
@@ -344,7 +351,7 @@ def publish_base_data_from_manifests(base_data_dir=None, manifest_paths=None, no
         hb.log(f"PROBLEM: these rasters aren't POGs yet and their manifest rows declare no variable_class: {unclassed}")
     if not dry_run:
         for i, (path, ref_path, sha256) in enumerate(unfinished, 1):  # finish what an interrupted run committed but didn't move into place
-            cloud_utils.upload_path_to_r2(client, BUCKET, path, ref_path, metadata={"sha256": sha256, "md5": hb.hash_file_path(path, "md5")}, content_type="image/tiff",
+            cloud_utils.upload_path_to_r2(client, BUCKET, path, ref_path, metadata={"sha256": sha256, "md5": hb.hash_file_path(path, "md5")}, content_type=_get_content_type(ref_path),
                                           cache_control=CURRENT_CACHE_CONTROL, skip_if_exists=False, progress_label=f"Finishing {i}/{len(unfinished)} {ref_path}")
             client.delete_object(Bucket=BUCKET, Key=_get_staging_key(ref_path, sha256))
     plan = None
@@ -407,7 +414,8 @@ def write_base_data_index_pages(site_dir, base_data_dir=None, manifest_paths=Non
     archive_keys = cloud_utils.list_r2_keys(client, BUCKET, ARCHIVE_FOLDER + "/")
     for row, entry in zip(rows, entries):
         archive_folder = f"{ARCHIVE_FOLDER}/{os.path.splitext(row['ref_path'])[0]}/"
-        row.update(size=entry["files"][0]["size"], rung=entry["lattice"]["rung"], archive_keys=[k for k in archive_keys if k.startswith(archive_folder)])
+        row.update(size=entry["files"][0]["size"], rung=entry["lattice"]["rung"] if entry.get("lattice") else None,  # vectors and tables have no rung
+                   archive_keys=[k for k in archive_keys if k.startswith(archive_folder)])
     hb.log(f"Building pages for {len(rows)} published datasets of release {release['release']}.")
 
     rows_by_folder = {}
@@ -425,10 +433,10 @@ def write_base_data_index_pages(site_dir, base_data_dir=None, manifest_paths=Non
         return [row for row in rows if row["ref_path"].startswith(folder + "/")]
     n_files = {f: len(rows_under(f)) for f in folders}  # on the pages a dataset is a folder such as lulc/esa, and its rows are files
     def chips(folder_rows):
-        arcseconds = sorted({hb.token_to_arcseconds(row["rung"]) for row in folder_rows})
-        resolutions = _format_resolution(arcseconds[0]) + (f" to {_format_resolution(arcseconds[-1])}" if len(arcseconds) > 1 else "")
+        arcseconds = sorted({hb.token_to_arcseconds(row["rung"]) for row in folder_rows if row["rung"]})
+        resolutions = _format_resolution(arcseconds[0]) + (f" to {_format_resolution(arcseconds[-1])}" if len(arcseconds) > 1 else "") if arcseconds else ""
         return (f'<ul class="chips"><li><b>{len(folder_rows)}</b> file{"s" if len(folder_rows) != 1 else ""}</li>'
-                f'<li><b>{_format_size(sum(row["size"] for row in folder_rows))}</b></li><li>{resolutions}</li></ul>')
+                f'<li><b>{_format_size(sum(row["size"] for row in folder_rows))}</b></li>' + (f"<li>{resolutions}</li>" if resolutions else "") + "</ul>")
     def card(folder, link_class="card"):
         text = texts.get(folder, {})
         return (f'<a class="{link_class}" href="/{folder}/"><span class="path">{folder}/</span><h3>{html.escape(text.get("title", folder.rsplit("/", 1)[-1]))}</h3>'
@@ -513,10 +521,10 @@ def write_base_data_index_pages(site_dir, base_data_dir=None, manifest_paths=Non
 
 def publish_base_data(sources, ref_paths, note, license, units, data_source, description, code=None, archive_previous=True, parallel=True, n_workers=None,
                       dry_run=False, client=None):
-    """Publish single-file POG datasets into the public base data store as one release.
+    """Publish single-file datasets (POG rasters, GeoPackage vectors, CSV or XLSX tables) into the public base data store as one release.
 
     Args:
-        sources (str | list): Local POG paths, one per dataset.
+        sources (str | list): Local file paths, one per dataset.
         ref_paths (str | list): Destination ref paths, in the same order.
         note (str): One-line change note.
         license (str | list): Licence identifier, e.g. 'CC-BY-4.0'. This and the metadata below are given once for
@@ -561,7 +569,7 @@ def publish_base_data(sources, ref_paths, note, license, units, data_source, des
     # The gate.
     problems = [] if note else ["a one-line change note is required"]
     datasets = []
-    checked = _run_each(lambda pair: check_pog_publication_status(*pair), list(zip(sources, ref_paths)), parallel, n_workers)
+    checked = _run_each(lambda pair: check_publication_status(*pair), list(zip(sources, ref_paths)), parallel, n_workers)
     for i, (dataset, ref_path) in enumerate(zip(checked, ref_paths)):
         dataset["metadata"] = {k: v[i] for k, v in metadata.items()}
         absent = [k for k in ("license", "units", "data_source", "description") if not dataset["metadata"][k]]
@@ -597,10 +605,11 @@ def publish_base_data(sources, ref_paths, note, license, units, data_source, des
     for i, d in enumerate(datasets, 1):
         f = d["files"][0]
         cloud_utils.upload_path_to_r2(client, BUCKET, d["source_path"], _get_staging_key(d["ref_path"], f["sha256"]),
-                                      metadata={"sha256": f["sha256"], "md5": f["md5"]}, content_type="image/tiff", progress_label=f"Uploading {i}/{len(datasets)} {d['ref_path']}")
+                                      metadata={"sha256": f["sha256"], "md5": f["md5"]}, content_type=_get_content_type(d["ref_path"]),
+                                      progress_label=f"Uploading {i}/{len(datasets)} {d['ref_path']}")
         if d["archive_key"] and cloud_utils.read_r2_object_metadata(client, BUCKET, d["archive_key"]) is None:
             served = cloud_utils.read_r2_object_metadata(client, BUCKET, d["ref_path"])
-            cloud_utils.copy_r2_object(client, BUCKET, d["ref_path"], d["archive_key"], metadata=served, content_type="image/tiff",
+            cloud_utils.copy_r2_object(client, BUCKET, d["ref_path"], d["archive_key"], metadata=served, content_type=_get_content_type(d["ref_path"]),
                                        progress_label=f"Archiving inside R2 {i}/{len(datasets)} {d['ref_path']} as {d['archive_key']}")
 
     # Claim the release ID, write the entries, then commit. Only the commit makes the release visible.
@@ -613,9 +622,9 @@ def publish_base_data(sources, ref_paths, note, license, units, data_source, des
         written.append(f"_release/{release_id}.json")
         for d in datasets:
             m = d["metadata"]
-            entry = {"dataset": d["ref_path"], "kind": "pog", "tier": "public", "version": d["version"], "dataset_sha256": d["dataset_sha256"], "release": release_id,
+            entry = {"dataset": d["ref_path"], "kind": d["kind"], "tier": "public", "version": d["version"], "dataset_sha256": d["dataset_sha256"], "release": release_id,
                      "previous": dict(d["previous"], archive_key=d["archive_key"]) if d["previous"] else None,  # archive_key None: not archived
-                     "lattice": d["lattice"], "semantics": dict(d["semantics"], units=m["units"]), "files": d["files"],
+                     "lattice": d["lattice"], "semantics": dict(d["semantics"] or {}, units=m["units"]), "files": d["files"],  # lattice None: not a raster
                      "depends_on": d["depends_on"], "license": {"id": m["license"]}, "description": m["description"],
                      "provenance": {"source": m["data_source"], "code": m["code"], "promoted_from": None, "published_by": getpass.getuser(),
                                     "published_at": now, "note": note}}  # promoted_from: the submission it was promoted from (none until that route exists)
@@ -638,7 +647,8 @@ def publish_base_data(sources, ref_paths, note, license, units, data_source, des
         f = d["files"][0]
         try:
             cloud_utils.copy_r2_object(client, BUCKET, _get_staging_key(d["ref_path"], f["sha256"]), d["ref_path"], metadata={"sha256": f["sha256"], "md5": f["md5"]},
-                                       content_type="image/tiff", cache_control=CURRENT_CACHE_CONTROL, progress_label=f"Moving into place inside R2 {i}/{len(datasets)} {d['ref_path']}")
+                                       content_type=_get_content_type(d["ref_path"]), cache_control=CURRENT_CACHE_CONTROL,
+                                       progress_label=f"Moving into place inside R2 {i}/{len(datasets)} {d['ref_path']}")
             client.delete_object(Bucket=BUCKET, Key=_get_staging_key(d["ref_path"], f["sha256"]))
         except Exception as e:
             unfinished.append(f"{d['ref_path']} ({e})")
@@ -648,12 +658,15 @@ def publish_base_data(sources, ref_paths, note, license, units, data_source, des
     hb.log(f"Published release {release_id}.")
     return plan
 
-def check_pog_publication_status(source_path, ref_path):
-    """Gate one single-file POG and describe it for the catalogue. The returned 'problems' list is empty when it passes.
+def check_publication_status(source_path, ref_path):
+    """Gate one single-file dataset (a POG, a GeoPackage or a table) and describe it for the catalogue. 'problems' is empty when it passes.
 
     POG conformance (variable class, nodata convention, overviews and their rule, exact statistics, COG layout) is entirely
-    hb.is_path_pog's job. Only the store's own rules are checked here: how ref paths are named, and what publishing supports."""
-    d = {"ref_path": ref_path, "source_path": source_path, "problems": []}
+    hb.is_path_pog's job. Only the store's own rules are checked here: how ref paths are named, and what publishing supports.
+    A vector or table is taken as it is: it gets files and hashes but no lattice or semantics."""
+    extension = os.path.splitext(ref_path)[1].lower()
+    d = {"ref_path": ref_path, "source_path": source_path, "problems": [], "kind": KINDS_BY_EXTENSION.get(extension, "other"), "depends_on": [],
+         "lattice": None, "semantics": None}
     components = ref_path.split("/")
     if ref_path.startswith(("/", "_")) or "\\" in ref_path or any(not re.fullmatch(r"[a-z0-9][a-z0-9_.\-]*", c) for c in components):
         d["problems"].append("ref path must be relative, lowercase, forward-slashed, and must not start with '_'")
@@ -661,26 +674,37 @@ def check_pog_publication_status(source_path, ref_path):
         d["problems"].append(f"ref paths must not start with '{ARCHIVE_FOLDER}/', which holds archived versions")
     if any(t in REVISION_TOKENS or re.fullmatch(r"v\d+", t) for t in os.path.splitext(components[-1])[0].split("_")):
         d["problems"].append("file names carry meaning, never revisions such as _v2 or _final")
-    if not ref_path.endswith(".tif") or not os.path.isfile(source_path):
-        d["problems"].append(f"need an existing .tif source for a .tif ref path: {source_path}")
+    if extension not in CONTENT_TYPES:
+        d["problems"].append(f"publishing supports single files only: .tif POGs, .gpkg vectors and .csv or .xlsx tables, not {extension or 'no extension'}")
         return d
-    if not hb.is_path_pog(source_path, full_check=True):
-        d["problems"].append("fails hb.is_path_pog(full_check=True); run it with verbose=True to see why")
+    if os.path.splitext(source_path)[1].lower() != extension or not os.path.isfile(source_path):
+        d["problems"].append(f"need an existing {extension} source for a {extension} ref path: {source_path}")
         return d
-    pog = hb.get_pog_info(source_path)
-    if pog["observed_area"]:
-        d["problems"].append("POGs with an observed-area companion can't be published yet")
-    if pog["denominator"] == "ha_per_cell":
-        d["depends_on"] = [hb.pyramid_ha_per_cell_ref_paths[pog["arcseconds"]].replace(os.sep, "/")]
-    else:
-        d["depends_on"] = [posixpath.normpath(posixpath.join(posixpath.dirname(ref_path), pog["denominator"]))] if pog["denominator"] else []
+    if extension == ".tif":
+        if not hb.is_path_pog(source_path, full_check=True):
+            d["problems"].append("fails hb.is_path_pog(full_check=True); run it with verbose=True to see why")
+            return d
+        pog = hb.get_pog_info(source_path)
+        if pog["observed_area"]:
+            d["problems"].append("POGs with an observed-area companion can't be published yet")
+        if pog["denominator"] == "ha_per_cell":
+            d["depends_on"] = [hb.pyramid_ha_per_cell_ref_paths[pog["arcseconds"]].replace(os.sep, "/")]
+        else:
+            d["depends_on"] = [posixpath.normpath(posixpath.join(posixpath.dirname(ref_path), pog["denominator"]))] if pog["denominator"] else []
+        d["lattice"] = {"rung": pog["rung"], "storage_form": "pog", "extent": pog["bounding_box"]}
+        d["semantics"] = {k: pog[k] for k in ("variable_class", "intensive_weighting", "denominator", "stats")}
     sha256, md5 = hb.hash_file_path(source_path), hb.hash_file_path(source_path, "md5")
     d["size"] = os.path.getsize(source_path)
     d["files"] = [{"ref_path": ref_path, "size": d["size"], "sha256": sha256, "md5": md5}]
     d["dataset_sha256"] = _get_dataset_sha256(ref_path, sha256)
-    d["lattice"] = {"rung": pog["rung"], "storage_form": "pog", "extent": pog["bounding_box"]}
-    d["semantics"] = {k: pog[k] for k in ("variable_class", "intensive_weighting", "denominator", "stats")}
     return d
+
+def _is_publishable(row):
+    """Whether a manifest row is of a kind and tier publishing supports: a public single file of a known extension."""
+    return row["tier"] == "public" and row["kind"] in ("pog", "vector", "table") and os.path.splitext(row["ref_path"])[1].lower() in CONTENT_TYPES
+
+def _get_content_type(ref_path):
+    return CONTENT_TYPES[os.path.splitext(ref_path)[1].lower()]
 
 def _read_latest_release(client):
     """The latest release and the ETag of _release/latest.json, or (None, None) before the first release or without a client."""
@@ -730,7 +754,8 @@ def _run_each_collecting_failures(function, items, parallel=True, n_workers=None
     return [failure for failure in _run_each(attempt, items, parallel, n_workers) if failure]
 
 def _get_dataset_table_html(rows):
-    """A folder's published datasets as HTML: the metadata every row shares, once, then a table with one row per file."""
+    """A folder's published datasets as HTML: the metadata every row shares, once, then a table with one row per file (the Resolution
+    cell of a vector or table names its kind instead)."""
     shared = [(k, label) for k, label in PAGE_FIELDS if len({row[k] for row in rows}) == 1]
     varying = [(k, label) for k, label in PAGE_FIELDS if (k, label) not in shared]
     lines = ['<dl class="shared">' + "".join(f"<dt>{label}</dt><dd>{_linkify(rows[0][k])}</dd>" for k, label in shared if rows[0][k]) + "</dl>",
@@ -742,7 +767,7 @@ def _get_dataset_table_html(rows):
                            for k in row["archive_keys"])
         lines.append(f'<tr><td class="file"><a href="https://data.teemlabs.org/{row["ref_path"]}" download>{posixpath.basename(row["ref_path"])}</a></td>'
                      f'<td><span class="pill">v{row["version"]}</span></td><td class="num">{row["release"]}</td><td class="num">{_format_size(row["size"])}</td>'
-                     f'<td class="num">{_format_resolution(hb.token_to_arcseconds(row["rung"]))}</td>'
+                     f'<td class="num">{_format_resolution(hb.token_to_arcseconds(row["rung"])) if row.get("rung") else row["kind"]}</td>'  # a vector or table: its kind
                      + "".join(f'<td class="meta">{_linkify(row[k])}</td>' for k, _ in varying) + f"<td>{archives or '&ndash;'}</td></tr>")
     return "\n".join(lines + ["</tbody></table></div>"])
 
