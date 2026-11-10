@@ -1,9 +1,6 @@
-"""A task under an iterator can share the iteration's directory via creates_dir=False.
+"""A task under an iterator shares the iteration's directory when registered with creates_dir=False.
 
-Without this, every task under an iterator gets its own subdirectory inside each iteration. For a
-tree that iterates over hundreds of thousands of spatial tiles and runs several tasks per tile,
-the subdirectories dominate the inode count even though the tasks together write one logical
-record per tile. The default is unchanged, so existing trees keep a directory per task.
+By default each task under an iterator gets its own subdirectory inside each iteration.
 """
 import os
 from pathlib import Path
@@ -16,12 +13,15 @@ def _tree(tmp_path, seen):
 
     def zones(p):
         p.iterator_replacements = {'cur_dir_parent_dir': [os.path.join(p.cur_dir, '0_0')]}
+        return p
 
     def own_dir(p):
         seen['own_dir'] = p.cur_dir
+        return p
 
     def shared_dir(p):
         seen['shared_dir'] = p.cur_dir
+        return p
 
     p = hb.ProjectFlow(project_dir=str(tmp_path / 'proj'))
     iterator = p.add_iterator(zones, run_in_parallel=False)
@@ -47,12 +47,15 @@ def test_the_default_is_a_directory_per_task(tmp_path):
 
     def zones(p):
         p.iterator_replacements = {'cur_dir_parent_dir': [os.path.join(p.cur_dir, '0_0')]}
+        return p
 
     def first(p):
         seen['first'] = p.cur_dir
+        return p
 
     def second(p):
         seen['second'] = p.cur_dir
+        return p
 
     p = hb.ProjectFlow(project_dir=str(tmp_path / 'proj'))
     iterator = p.add_iterator(zones, run_in_parallel=False)
