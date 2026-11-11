@@ -104,6 +104,70 @@ def run_iterator(p, task, iteration_counter):
 
     return things_returned
 
+class ParallelIterationFailure(RuntimeError):
+    """An iteration raised, or a worker died, and the run must not continue."""
+
+
+def _iteration_label(arguments):
+    """Name an iteration by the directory it was working in, which is the tile a reader needs."""
+    project_copy = arguments[0] if arguments else None
+    counter = arguments[2] if len(arguments) > 2 else '?'
+    return 'iteration %s (%s)' % (counter, getattr(project_copy, 'cur_dir', 'unknown directory'))
+
+
+def run_parallel_iterations(num_workers, function, parsed_iterable):
+    """Run an iterator's children in parallel, stopping the run when any iteration or worker dies.
+
+    A worker that dies abruptly (an OOM kill, for example) surfaces as BrokenProcessPool, which
+    ProcessPoolExecutor guarantees and multiprocessing.Pool does not. The first failure cancels
+    every queued iteration and raises ParallelIterationFailure, naming the failing iteration and
+    how many iterations finished and how many were never attempted. Completed outputs stay on disk,
+    so a resume redoes only what is unfinished.
+    """
+    import concurrent.futures as futures_module
+
+    pool = futures_module.ProcessPoolExecutor(max_workers=max(1, int(num_workers)))
+    pending, results = {}, []
+    for arguments in parsed_iterable:
+        pending[pool.submit(function, *arguments)] = arguments
+    total = len(pending)
+
+    def stop(reason, arguments, error):
+        done = sum(1 for f in pending if f.done() and not f.cancelled())
+        unattempted = sum(1 for f in pending if not f.done())
+        pool.shutdown(wait=False, cancel_futures=True)
+        return ParallelIterationFailure(
+            '%s\n'
+            '  failing iteration: %s\n'
+            '  %d of %d iterations finished, %d were never attempted\n'
+            '  completed outputs and any failure evidence are preserved on disk; a resume will\n'
+            '  redo only what is unfinished\n'
+            '  original error: %s: %s'
+            % (reason, _iteration_label(arguments), done, total, unattempted,
+               type(error).__name__, error))
+
+    try:
+        for future in futures_module.as_completed(pending):
+            try:
+                results.append(future.result())
+            except futures_module.process.BrokenProcessPool as error:
+                raise stop('A parallel worker died abruptly, so its iteration produced no result '
+                           'at all. The usual cause is the kernel killing it for memory; check '
+                           'the scheduler accounting for an OOM event and lower the worker count '
+                           'or raise the allocation before resuming.',
+                           pending[future], error) from error
+            except Exception as error:
+                raise stop('A parallel iteration raised, so the run is stopping.',
+                           pending[future], error) from error
+    except ParallelIterationFailure:
+        raise
+    except BaseException:
+        pool.shutdown(wait=False, cancel_futures=True)
+        raise
+    pool.shutdown(wait=True)
+    return results
+
+
 def run_iterator_in_parallel(p, task, iteration_counter):
     things_returned = []
     for child in task.children:
@@ -1259,7 +1323,16 @@ class ProjectFlow(object):
                             task.task_dir = os.path.join(self.intermediate_dir, task.function.__name__)
                     self.cur_dir = task.task_dir
                 elif task.parent.type == 'iterator':
-                    task.task_dir = os.path.join(self.cur_dir_parent_dir, task.name)
+                    # A task under an iterator gets its own directory inside the iteration's
+                    # directory. creates_dir=False means the task shares the iteration's
+                    # directory instead, so a group of tasks that together write one logical
+                    # record per iteration costs one directory rather than one each. Outside an
+                    # iterator creates_dir=False only suppresses creation, which is why the flag
+                    # has to be read here as well as where the directory is made.
+                    if task.creates_dir:
+                        task.task_dir = os.path.join(self.cur_dir_parent_dir, task.name)
+                    else:
+                        task.task_dir = self.cur_dir_parent_dir
                     self.cur_dir = task.task_dir
                 else:
                     raise NameError('Unknown Node type')
@@ -1451,8 +1524,7 @@ class ProjectFlow(object):
                     results = []
 
                     if task.run_in_parallel:
-                        # OPTIMIZATION NOTE: It's slow to spawn 460 processes when they are just going to be skipped, thus run_this for iterators needs to be improved.
-                        worker_pool = multiprocessing.Pool(self.num_workers) # NOTE, worker pool and results are LOCAL variabes so that they aren't pickled when we pass the project object.
+                        hb.log('Running iterations with %d workers' % self.num_workers)
 
                     # Once all the iterations are done, iterate through the stored results and call their get functions, which blocks running past this point until all are done.
                     # SUPER CONFUSING POINT. the project object will be modified independently by all tasks. Cant think of a good way ro rejoin them
@@ -1495,7 +1567,7 @@ class ProjectFlow(object):
                         # We use apply_async, which immediately lets the next line calculate. It is blocked below with results.get()
                         # result = worker_pool.apply_async(func=run_iterator_in_parallel, args=(project_copy, task, iteration_counter))
 
-                        result = worker_pool.starmap(run_iterator_in_parallel, parsed_iterable)
+                        result = run_parallel_iterations(self.num_workers, run_iterator_in_parallel, parsed_iterable)
 
                         # Not sure if needed, but note that I don't actually ever iterate over result to get the results.
 

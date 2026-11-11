@@ -10,6 +10,8 @@ Story 1: Test Infrastructure & Core Validation - Core Proof Test 2
 import pytest
 import os
 import sys
+import re
+import threading
 import time
 import logging
 from pathlib import Path
@@ -19,6 +21,7 @@ from unittest.mock import patch
 sys.path.extend(['../..'])
 
 import hazelbean as hb
+from hazelbean.project_flow import ParallelIterationFailure, run_parallel_iterations
 from hazelbean_tests.unit.test_fixtures import (
     isolated_project, 
     sample_iterator_function,
@@ -1168,3 +1171,192 @@ class TestMultiprocessingIsolationB6:
         
         # Memory leak detection will be handled by anytree_node_tracker fixture
         # This test validates the hierarchy can be created without memory issues
+
+
+# A task under an iterator shares the iteration's directory when registered with creates_dir=False.
+
+def _tree(tmp_path, seen):
+    """One iterator over a single iteration, with a default child and a sharing child."""
+
+    def zones(p):
+        p.iterator_replacements = {'cur_dir_parent_dir': [os.path.join(p.cur_dir, '0_0')]}
+        return p
+
+    def own_dir(p):
+        seen['own_dir'] = p.cur_dir
+        return p
+
+    def shared_dir(p):
+        seen['shared_dir'] = p.cur_dir
+        return p
+
+    p = hb.ProjectFlow(project_dir=str(tmp_path / 'proj'))
+    iterator = p.add_iterator(zones, run_in_parallel=False)
+    p.add_task(own_dir, parent=iterator, skip_existing=0)
+    p.add_task(shared_dir, parent=iterator, skip_existing=0, creates_dir=False)
+    return p, iterator
+
+
+def test_creates_dir_false_shares_the_iteration_dir_and_true_does_not(tmp_path):
+    seen = {}
+    p, iterator = _tree(tmp_path, seen)
+    p.execute()
+    iteration = os.path.join(iterator.task_dir, '0_0')
+    # The sharing child writes into the iteration's own directory.
+    assert seen['shared_dir'] == iteration
+    # The default child keeps a directory named after itself, as before.
+    assert seen['own_dir'] == os.path.join(iteration, 'own_dir')
+
+
+def test_the_default_is_a_directory_per_task(tmp_path):
+    """Guards the existing behaviour: creates_dir defaults to True, so nothing shares by accident."""
+    seen = {}
+
+    def zones(p):
+        p.iterator_replacements = {'cur_dir_parent_dir': [os.path.join(p.cur_dir, '0_0')]}
+        return p
+
+    def first(p):
+        seen['first'] = p.cur_dir
+        return p
+
+    def second(p):
+        seen['second'] = p.cur_dir
+        return p
+
+    p = hb.ProjectFlow(project_dir=str(tmp_path / 'proj'))
+    iterator = p.add_iterator(zones, run_in_parallel=False)
+    p.add_task(first, parent=iterator, skip_existing=0)
+    p.add_task(second, parent=iterator, skip_existing=0)
+    p.execute()
+    assert seen['first'] != seen['second']
+    assert Path(seen['first']).name == 'first'
+    assert Path(seen['second']).name == 'second'
+
+
+def test_a_shared_child_does_not_create_a_directory_of_its_own(tmp_path):
+    """The point of the flag: no per-task directory appears inside the iteration."""
+    seen = {}
+    p, iterator = _tree(tmp_path, seen)
+    p.execute()
+    iteration = Path(iterator.task_dir) / '0_0'
+    assert not (iteration / 'shared_dir').exists()
+    assert (iteration / 'own_dir').is_dir()
+
+
+# A failing iteration and a dying worker both stop a parallel run. Each call is bounded by a thread join
+# (portable to Windows, unlike SIGALRM), so a regression to waiting forever fails instead of hanging.
+
+TIME_LIMIT_SECONDS = 90
+
+
+class FakeProject:
+    """Stands in for the project copy an iteration is handed; only cur_dir is read."""
+
+    def __init__(self, cur_dir):
+        self.cur_dir = str(cur_dir)
+
+
+def run_within_time_limit(*arguments):
+    """run_parallel_iterations(*arguments), failing the test if it has not returned within the limit."""
+    outcome = {}
+
+    def target():
+        try:
+            outcome['value'] = run_parallel_iterations(*arguments)
+        except BaseException as error:  # re-raised in the test thread below
+            outcome['error'] = error
+
+    thread = threading.Thread(target=target, daemon=True)
+    thread.start()
+    thread.join(TIME_LIMIT_SECONDS)
+    if thread.is_alive():
+        pytest.fail('run_parallel_iterations did not return within %ds' % TIME_LIMIT_SECONDS)
+    if 'error' in outcome:
+        raise outcome['error']
+    return outcome['value']
+
+
+def write_output_then_raise(project, task, counter):
+    """Write this iteration's output, then fail if this is the designated bad iteration."""
+    Path(project.cur_dir).mkdir(parents=True, exist_ok=True)
+    (Path(project.cur_dir) / 'output.txt').write_text('iteration %s' % counter)
+    if task == counter:
+        (Path(project.cur_dir) / 'failure.json').write_text('{"status": "failed"}')
+        raise ValueError('missing coefficients for this tile')
+    return counter
+
+
+def write_output_then_die(project, task, counter):
+    """Write this iteration's output, then leave abruptly, as an OOM-killed worker does."""
+    Path(project.cur_dir).mkdir(parents=True, exist_ok=True)
+    (Path(project.cur_dir) / 'output.txt').write_text('iteration %s' % counter)
+    if task == counter:
+        os._exit(137)
+    time.sleep(0.05)
+    return counter
+
+
+def write_output_slowly_then_raise(project, task, counter):
+    """Good iterations take long enough that work is still queued when the bad one fails.
+
+    With every iteration trivial, all of them finish before the failure is noticed and nothing is
+    dropped -- a truthful count, but one that cannot show that a fail-fast stop REPORTS what it
+    dropped. Real tiles take seconds each, so that is the case worth pinning.
+    """
+    Path(project.cur_dir).mkdir(parents=True, exist_ok=True)
+    if task == counter:
+        raise ValueError('missing coefficients for this tile')
+    time.sleep(1.0)
+    (Path(project.cur_dir) / 'output.txt').write_text('iteration %s' % counter)
+    return counter
+
+
+def build(tmp_path, n, bad):
+    return [(FakeProject(tmp_path / ('tile_%d' % i)), bad, i) for i in range(n)]
+
+
+def test_all_iterations_run_when_none_fail(tmp_path):
+    results = run_within_time_limit(4, write_output_then_raise, build(tmp_path, 12, -1))
+    assert sorted(results) == list(range(12))
+    assert len(list(tmp_path.glob('tile_*/output.txt'))) == 12
+
+
+def test_a_raising_iteration_stops_the_run_and_names_what_was_not_attempted(tmp_path):
+    with pytest.raises(ParallelIterationFailure) as raised:
+        run_within_time_limit(2, write_output_then_raise, build(tmp_path, 40, 7))
+    message = str(raised.value)
+    assert 'A parallel iteration raised' in message
+    assert 'tile_7' in message, 'the failing iteration must be named: %s' % message
+    assert 'never attempted' in message
+    assert 'ValueError: missing coefficients for this tile' in message
+    # Evidence and completed outputs survive: nothing in the orchestration deletes.
+    assert (tmp_path / 'tile_7' / 'failure.json').is_file()
+    assert len(list(tmp_path.glob('tile_*/output.txt'))) >= 1
+
+
+def test_an_abruptly_killed_worker_stops_the_run_instead_of_waiting_forever(tmp_path):
+    started = time.time()
+    with pytest.raises(ParallelIterationFailure) as raised:
+        run_within_time_limit(4, write_output_then_die, build(tmp_path, 40, 5))
+    elapsed = time.time() - started
+    message = str(raised.value)
+    assert 'died abruptly' in message, message
+    assert 'OOM' in message, 'the message must point at the usual cause: %s' % message
+    assert 'preserved on disk' in message
+    assert elapsed < TIME_LIMIT_SECONDS
+    # Work finished before the kill is still on disk.
+    assert len(list(tmp_path.glob('tile_*/output.txt'))) >= 1
+
+
+def test_the_failure_counts_add_up(tmp_path):
+    with pytest.raises(ParallelIterationFailure) as raised:
+        run_within_time_limit(2, write_output_slowly_then_raise, build(tmp_path, 30, 0))
+    message = str(raised.value)
+    found = re.search(r'(\d+) of (\d+) iterations finished, (\d+) were never attempted', message)
+    assert found, message
+    done, total, unattempted = (int(g) for g in found.groups())
+    assert total == 30
+    assert done + unattempted <= total
+    assert unattempted > 0, 'a fail-fast stop must report the iterations it dropped'
+    assert done < total, 'the run must stop before working through everything'
