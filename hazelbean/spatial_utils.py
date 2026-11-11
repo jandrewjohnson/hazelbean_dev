@@ -665,20 +665,6 @@ def write_vrt_to_raster(
     # ADD_OVERVIEWS=LEVELS={','.join(map(str, overview_levels))}"  # Specific overview levels
 
     creation_options.extend(['NUM_THREADS=ALL_CPUS'])
-    # Translate options for creating a COG
-    
-    
-    
-    translate_options = gdal.TranslateOptions(
-        format="COG",
-        creationOptions=creation_options,
-            # "TILED=YES",             # Enable tiling
-            # "COMPRESS=DEFLATE",      # Use DEFLATE compression
-            # "BIGTIFF=IF_SAFER",      # Allow BigTIFF if necessary
-            # "RESAMPLING=NEAREST",    # Resampling method for overviews
-            # "BLOCKSIZE=256"          # Tile size
-        # ]
-    )
 
     overview_levels = [2, 4, 8, 16]
 
@@ -697,11 +683,7 @@ def write_vrt_to_raster(
     ]
     if blockxsize:
         cog_creation_options.append(f'BLOCKSIZE={blockxsize}')
-    
-    
-    
-    # Perform the translation
-    # gdal.Translate(output_path, input_path, options=translate_options)
+
     def progress_callback(complete, message, user_data=None):
         # `complete` is a float between 0 and 1
         print(f"Progress: {complete * 100:.2f}% - {message}")
