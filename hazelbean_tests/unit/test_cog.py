@@ -97,12 +97,24 @@ def two_tiles(tmp_path):
 
 def test_it_writes_a_cog_without_reopening_it_for_update(tmp_path, two_tiles):
     out = str(tmp_path / 'stitched.tif')
-    spatial_utils.stitch_rasters_using_vrt(two_tiles, out)
+    spatial_utils.stitch_rasters_using_vrt(two_tiles, out, write_as_cog=True)
     assert os.path.exists(out)
     # Cheapest possible proof the layout is a real COG: GDAL refuses GA_Update on one.
     gdal.UseExceptions()
     with pytest.raises(RuntimeError, match='C.loud. O.ptimized. G.eoTIFF.'):
         gdal.Open(out, gdal.GA_Update)
+
+
+def test_a_stitch_is_a_plain_geotiff_unless_a_cog_is_asked_for(tmp_path, two_tiles):
+    # A stitch is usually an intermediate, so by default it pays for neither overviews nor a COG rewrite.
+    out = str(tmp_path / 'stitched_plain.tif')
+    spatial_utils.stitch_rasters_using_vrt(two_tiles, out)
+    ds = gdal.Open(out)
+    assert ds.GetRasterBand(1).GetOverviewCount() == 0
+    assert ds.GetMetadataItem('LAYOUT', 'IMAGE_STRUCTURE') != 'COG'
+    assert set(np.unique(ds.GetRasterBand(1).ReadAsArray())) == {3, 4}
+    ds = None
+    assert not os.path.exists(out + '.overview_staging.tif')
 
 
 def test_the_overviews_are_present_and_built_by_the_requested_method(tmp_path, two_tiles):

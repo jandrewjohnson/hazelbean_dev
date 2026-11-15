@@ -526,8 +526,11 @@ def stitch_rasters_using_vrt(
     blockxsize=256,
     blockysize=256,
     output_data_type=None,
+    write_as_cog=False,
     ):
 
+    # write_as_cog defaults to False: a stitch is usually an intermediate that later tasks read,
+    # and the COG route costs a second full write plus an overview build. Pass True for a final product.
     vrt_path = hb.replace_ext(output_tif_path, '.vrt')
 
     # Create a vrt from the list of files. This is very fast because it is just an index file referencing the rasters in the list
@@ -551,6 +554,7 @@ def stitch_rasters_using_vrt(
         bigtiff=bigtiff,
         blockxsize=blockxsize,
         blockysize=blockysize,
+        write_as_cog=write_as_cog,
         )
 
 def create_gdal_vrt(
