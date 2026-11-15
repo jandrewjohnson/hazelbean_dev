@@ -1360,3 +1360,17 @@ def test_the_failure_counts_add_up(tmp_path):
     assert done + unattempted <= total
     assert unattempted > 0, 'a fail-fast stop must report the iterations it dropped'
     assert done < total, 'the run must stop before working through everything'
+
+
+def test_a_killed_worker_is_not_reported_as_everything_having_finished(tmp_path):
+    """A broken pool fails every unfinished future at once, so the dead iteration cannot be named and none of them finished."""
+    with pytest.raises(ParallelIterationFailure) as raised:
+        run_within_time_limit(4, write_output_then_die, build(tmp_path, 40, 5))
+    message = str(raised.value)
+    assert 'failing iteration: unknown' in message, message
+    found = re.search(r'(\d+) of (\d+) iterations finished', message)
+    assert found, message
+    finished, total = (int(g) for g in found.groups())
+    assert total == 40
+    assert finished < total, 'the iteration whose worker died cannot have finished: %s' % message
+    assert 'never attempted' not in message, 'which iterations had started is not knowable here: %s' % message

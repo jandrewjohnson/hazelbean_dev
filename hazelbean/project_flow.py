@@ -133,18 +133,27 @@ def run_parallel_iterations(num_workers, function, parsed_iterable):
     total = len(pending)
 
     def stop(reason, arguments, error):
-        done = sum(1 for f in pending if f.done() and not f.cancelled())
+        # Finished means returned a result: a future that raised is done too, and must not count.
+        finished = sum(1 for f in pending if f.done() and not f.cancelled() and f.exception() is None)
         unattempted = sum(1 for f in pending if not f.done())
         pool.shutdown(wait=False, cancel_futures=True)
+        if arguments is None:
+            # A broken pool fails every unfinished future at once, running and queued alike, so
+            # neither the iteration that died nor which ones had started can be told from here.
+            progress = ('  failing iteration: unknown, one of the %d that had not finished\n'
+                        '  %d of %d iterations finished'
+                        % (total - finished, finished, total))
+        else:
+            progress = ('  failing iteration: %s\n'
+                        '  %d of %d iterations finished, %d were never attempted'
+                        % (_iteration_label(arguments), finished, total, unattempted))
         return ParallelIterationFailure(
             '%s\n'
-            '  failing iteration: %s\n'
-            '  %d of %d iterations finished, %d were never attempted\n'
+            '%s\n'
             '  completed outputs and any failure evidence are preserved on disk; a resume will\n'
             '  redo only what is unfinished\n'
             '  original error: %s: %s'
-            % (reason, _iteration_label(arguments), done, total, unattempted,
-               type(error).__name__, error))
+            % (reason, progress, type(error).__name__, error))
 
     try:
         for future in futures_module.as_completed(pending):
@@ -155,7 +164,7 @@ def run_parallel_iterations(num_workers, function, parsed_iterable):
                            'at all. The usual cause is the kernel killing it for memory; check '
                            'the scheduler accounting for an OOM event and lower the worker count '
                            'or raise the allocation before resuming.',
-                           pending[future], error) from error
+                           None, error) from error
             except Exception as error:
                 raise stop('A parallel iteration raised, so the run is stopping.',
                            pending[future], error) from error
