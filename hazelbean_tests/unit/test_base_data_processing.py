@@ -271,6 +271,7 @@ def incoming(tmp_path, pogs):
     (source_dir / "make_it.py").write_text("print('code')\n")
     (source_dir / ".DS_Store").write_bytes(b"x")
     (source_dir / "sub" / "cropland_900sec.tif.aux.xml").write_text("<PAMDataset/>")
+    (source_dir / "sub" / "cropland_900sec.tif.yml").write_text("title: a geometamaker sidecar\n")
     (source_dir / "area_324000sec_displaced_20261020_120000.tif").write_bytes(b"leftover original")
     (source_dir / "old_base_data_manifest.csv").write_text("ref_path\n")
     (source_dir / "raw").mkdir()
@@ -284,7 +285,7 @@ def test_add_directory_dry_run_plans_and_writes_nothing(incoming):
     source_dir, base_data_dir, manifest_path = incoming
     result = store.add_directory_to_base_data(source_dir, "crops", manifest_path, base_data_dir=base_data_dir, client=FakeR2(), **METADATA)
     assert result["actions"] == {"crops/area_324000sec.tif": "copy", "crops/sub/cropland_900sec.tif": "make POG", "crops/table.csv": "copy"}
-    assert set(result["skipped"]) == {".DS_Store", "make_it.py", "sub/cropland_900sec.tif.aux.xml", "area_324000sec_displaced_20261020_120000.tif",
+    assert set(result["skipped"]) == {".DS_Store", "make_it.py", "sub/cropland_900sec.tif.aux.xml", "sub/cropland_900sec.tif.yml", "area_324000sec_displaced_20261020_120000.tif",
                                       "old_base_data_manifest.csv", "raw/ (raw input, never added)"}
     assert len(result["problems"]) == 1 and "sub/cropland_900sec.tif: declare its variable class" in result["problems"][0]
     assert os.listdir(base_data_dir) == [] and not os.path.exists(manifest_path)
@@ -394,14 +395,18 @@ needs_quarto = pytest.mark.skipif(shutil.which("quarto") is None, reason="Quarto
 @needs_quarto
 def test_pages_are_rebuilt_after_a_real_publish(manifest, site):
     with open(os.path.join(manifest[1], "pyramids", "pyramids_base_data_ingestion.py"), "w") as f:
-        f.write('"""Made by the test ingestion script.\n\n  1. first step\n  2. second step,\n     continued\n"""\n')
+        f.write('"""Made by the test ingestion script.\n\n  1. first step\n  2. second step,\n     continued\nFrom https://example.org/x and doi:10.1/y.\n"""\n')
     r2 = FakeR2()
     store.publish_base_data_from_manifests(base_data_dir=manifest[1], note="First.", dry_run=False, client=r2, site_dir=site)
     assert {"index.html", "pyramids/index.html", "teems_logo.png"} <= set(r2.objects)
     landing, page = r2.body("index.html").decode("utf-8"), r2.body("pyramids/index.html").decode("utf-8")
     assert "2 datasets in 1, release" in landing and 'href="/pyramids/"' in landing and "The grids" in landing
     assert all(posixpath.basename(r) in page for r in REFS) and "ha_per_cell_36000sec" not in page  # published rows only
-    assert "Made by the test ingestion script." in page and "2. second step, continued" in page  # the About section, reflowed
+    assert "Made by the test ingestion script." in page and "<ol" in page and "second step," in page  # the docstring, rendered as Markdown
+    assert "Processing steps</h2>" in page and "About</h2>" not in page and 'class="about"' not in page
+    assert '<a href="https://example.org/x"' in page and '<a href="https://doi.org/10.1/y"' in page and "</ol>\n<p>From" in page  # linked; the list closed before the line
+    assert page.index("Metadata</h2>") < page.index("Processing steps</h2>") and "Files</h2>" not in page  # the metadata and table first, the steps last
+    assert f'href="https://data.teemlabs.org/{REFS[0]}.yml" class="sidecar">yml</a>' in page  # Quarto re-emits the table with the attributes reordered
 
 @needs_quarto
 def test_page_dry_run_builds_locally_and_uploads_nothing(manifest, site, tmp_path):
@@ -439,8 +444,31 @@ def test_folder_without_yaml_gets_its_text_from_its_script_and_the_landing_lists
     assert parent.index("Derived products</h2>") < parent.index('<div class="cards">') < parent.index('<div class="tree">')  # a dataset: derived products
     assert "Folders</h2>" not in lulc_page + parent
     assert '<div class="tree">' not in r2.body("pyramids/index.html").decode("utf-8")  # no subfolders: no tree
-    assert "A second sentence." in page and "Maintainer notes." in page  # the lede (first paragraph) and the About section (all of it)
-    assert "Files</h2>" in page and "Datasets</h2>" not in page  # the table of a folder's rows is headed Files; Datasets are the folders of a collection
+    assert "A second sentence." in page and "Maintainer notes." in page  # the lede (first paragraph) and the Processing steps (all of it)
+    assert "Metadata</h2>" in page and "Datasets</h2>" not in page  # a folder's rows are headed Metadata; Datasets are the folders of a collection
+    assert "lulc_esa_seals7_&lt;year&gt;.tif" in page and "<year>" not in page  # the docstring's <year> stays text in the Markdown too
+
+def test_cards_show_the_first_sentences_and_docstrings_become_markdown():
+    about = "One. Two! Three? Four. Five."
+    assert store._first_sentences(about) == "One. Two! Three?" and store._first_sentences("Only one.") == "Only one."
+    assert store._first_sentences(about, n=2) == "One. Two!"
+    docstring = "Lead sentence, lulc_esa_<year>.tif.\n\nSteps, in order:\n  1. first\n     continued\n  2. second\n- a bullet\nAfter.\n\nLast."
+    markdown = store._get_docstring_markdown(docstring)
+    assert "Steps, in order:\n\n  1. first\n     continued\n  2. second\n- a bullet\n\nAfter.\n\nLast." in markdown  # blank lines open and close the list, none inside it
+    assert "lulc_esa_\\<year\\>.tif" in markdown
+    assert store._get_docstring_markdown("See https://zenodo.org/records/1 and doi:10.5281/zenodo.1, done.") == \
+        "See <https://zenodo.org/records/1> and [doi:10.5281/zenodo.1](https://doi.org/10.5281/zenodo.1), done."  # Quarto links neither by itself
+
+@needs_quarto
+def test_long_card_text_is_cut_but_the_page_keeps_it(manifest, site):
+    about = "First sentence. Second sentence. Third sentence. Fourth sentence, only on the page."
+    with open(os.path.join(site, "_collections.yml"), "a") as f:
+        f.write(f"  about: {about}\n")
+    r2 = FakeR2()
+    store.publish_base_data_from_manifests(base_data_dir=manifest[1], note="First.", dry_run=False, client=r2, site_dir=site)
+    landing, page = r2.body("index.html").decode("utf-8"), r2.body("pyramids/index.html").decode("utf-8")
+    assert "Third sentence.</p>" in landing and "Fourth sentence" not in landing  # the card: three sentences
+    assert "Fourth sentence, only on the page." in page
 
 def test_docstring_texts_take_the_first_sentence_and_paragraph():
     assert store._get_docstring_texts("One sentence only.\n\nSecond paragraph.") == {"tagline": "One sentence only.", "about": ""}
@@ -454,6 +482,8 @@ def test_dataset_table_shows_shared_metadata_once_and_archived_versions():
     table = store._get_dataset_table_html(rows)
     assert table.count("CC-BY-4.0") == 1 and '<a href="https://doi.org/10.1/x">' in table  # shared, shown once, linked
     assert "<th>Description</th>" in table and ">A.<" in table and ">B.<" in table  # differs by row: a column
+    assert table.endswith("</tbody></table></div>") and "<th>Metadata</th></tr>" in table  # the yml sidecar: the last column
+    assert table.count('class="sidecar"') == 2 and 'href="https://data.teemlabs.org/pyramids/a.tif.yml">yml</a></td></tr>' in table
     assert '<a class="archive" href="https://data.teemlabs.org/static/pyramids/a/v2026_10_06_1.tif">2026.10.06.1</a>' in table
     assert "2.5 MB" in table and "10\u2033" in table
 

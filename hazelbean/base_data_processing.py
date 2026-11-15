@@ -55,7 +55,7 @@ KINDS_BY_EXTENSION = {".tif": "pog", ".tiff": "pog", ".csv": "table", ".xlsx": "
 SHAPEFILE_SIDECARS = (".shx", ".dbf", ".prj", ".cpg", ".sbn", ".sbx", ".qix")  # copied with their .shp, but not datasets of their own
 CONTENT_TYPES = {".tif": "image/tiff", ".gpkg": "application/geopackage+sqlite3", ".csv": "text/csv",
                  ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}  # the single-file kinds publishing supports
-NOT_DATA = (".py", ".pyc", ".ipynb", ".r", ".sh", ".aux.xml", MANIFEST_SUFFIX)  # ingestion scripts, manifests and GDAL sidecars aren't datasets
+NOT_DATA = (".py", ".pyc", ".ipynb", ".r", ".sh", ".aux.xml", ".yml", MANIFEST_SUFFIX)  # ingestion scripts, manifests, GDAL sidecars and the geometamaker yml sidecars (linneabean.metadata) aren't datasets
 PAGE_CACHE_CONTROL = "public, max-age=300"  # the index pages are rebuilt after every publish
 PAGE_FIELDS = (("variable_class", "Variable class"), ("units", "Units"), ("license", "Licence"), ("data_source", "Source"),
                ("description", "Description"), ("code", "Code"))  # the manifest columns a folder page shows, and their labels
@@ -96,7 +96,7 @@ def add_directory_to_base_data(source_dir, ref_folder, manifest_path, license, u
     they are. GeoTIFFs that are already POGs are kept or copied as they are; the rest are converted with hb.make_path_pog
     using their declared variable class (in place, the original is deleted once its POG is written), or, with
     make_pogs=False, left for publishing to convert. Tables and vectors are kept or copied as they are. Hidden files,
-    code, manifests, GDAL sidecars, displaced or temporary files and raw/ folders (raw downloads) are skipped. Every new dataset gets a row in
+    code, manifests, GDAL and metadata (.yml) sidecars, displaced or temporary files and raw/ folders (raw downloads) are skipped. Every new dataset gets a row in
     manifest_path, which is created if missing; rows already there are left alone. Nothing is written to R2: the run
     ends with the publishing dry run.
 
@@ -375,8 +375,11 @@ def write_base_data_index_pages(site_dir, base_data_dir=None, manifest_paths=Non
     collection (a top-level folder). Every other folder holding published datasets, or above one, gets <folder>/index.html:
     site_dir/_folder_page.qmd filled in and rendered with Quarto. A folder's page shows its title and text from
     site_dir/_collections.yml, cards for its subfolders, the docstring of its ingestion script as its About section, and a
-    table of its published files: their manifest rows, with each file's version, release, size, resolution and archived
-    versions. Metadata every row shares is shown once above the table. Manifest rows not yet published are left out.
+    table of its published files: their manifest rows, with each file's version, release, size, resolution, archived
+    versions and a link to its yml sidecar. Metadata every row shares is shown once above the table. Manifest rows not yet
+    published are left out. The order on a page: Metadata (the shared fields and the table), the subfolder cards and
+    tree, then the docstring as Processing steps. A card shows the first sentences of its folder's text (_first_sentences);
+    the folder's own page shows all of it.
 
     Args:
         site_dir (str): The templates, in earth_economy_devstack/docs/base_data.
@@ -441,7 +444,7 @@ def write_base_data_index_pages(site_dir, base_data_dir=None, manifest_paths=Non
         text = texts.get(folder, {})
         return (f'<a class="{link_class}" href="/{folder}/"><span class="path">{folder}/</span><h3>{html.escape(text.get("title", folder.rsplit("/", 1)[-1]))}</h3>'
                 + (f'<p class="tagline">{html.escape(text["tagline"])}</p>' if text.get("tagline") else "")
-                + (f'<p>{html.escape(text["about"])}</p>' if text.get("about") else "") + chips(rows_under(folder)) + '<div class="go">Browse &rarr;</div></a>')
+                + (f'<p>{html.escape(_first_sentences(text["about"]))}</p>' if text.get("about") else "") + chips(rows_under(folder)) + '<div class="go">Browse &rarr;</div></a>')
 
     def folder_body(folder):
         text, here = texts.get(folder, {}), rows_by_folder.get(folder, [])
@@ -449,6 +452,8 @@ def write_base_data_index_pages(site_dir, base_data_dir=None, manifest_paths=Non
                 + (f'<p class="tagline">{html.escape(text["tagline"])}</p>\n' if text.get("tagline") else "") + chips(rows_under(folder)) + "\n```"]
         if text.get("about"):
             body.append(f'::: {{.lede}}\n{html.escape(text["about"])}\n:::')
+        if here:  # the folder's own files first: the metadata they share, then the table, with each file's yml sidecar in its last column
+            body.append("## Metadata\n\n```{=html}\n" + _get_dataset_table_html(here) + "\n```")
         children = [f for f in folders if posixpath.dirname(f) == folder]
         if children:
             # Three levels: a collection (top-level folder) holds datasets, and a dataset holds derived products. A card per direct
@@ -456,13 +461,10 @@ def write_base_data_index_pages(site_dir, base_data_dir=None, manifest_paths=Non
             heading = "Datasets" if "/" not in folder else "Derived products"
             body.append(f"## {heading}\n\n```{{=html}}\n<div class=\"cards\">" + "".join(card(f) for f in children) + "</div>\n"
                         + _get_folder_tree_html(folders, texts, n_files, root=folder) + "\n```")
-        if here:
-            script_path, docstring = here[0]["script_path"], docstrings.get(folder)
-            if docstring:
-                script_ref = "base_data/" + os.path.relpath(script_path, base_data_dir).replace(os.sep, "/")
-                body.append(f'## About\n\n```{{=html}}\n<div class="about">{_get_docstring_html(docstring)}</div>\n'
-                            f'<p class="source-note">From the ingestion script that made these files, <code>{script_ref}</code>.</p>\n```')
-            body.append("## Files\n\n```{=html}\n" + _get_dataset_table_html(here) + "\n```")
+        if here and docstrings.get(folder):  # the ingestion script's docstring, rendered by Quarto as Markdown
+            script_ref = "base_data/" + os.path.relpath(here[0]["script_path"], base_data_dir).replace(os.sep, "/")
+            body.append(f"## Processing steps\n\n{_get_docstring_markdown(docstrings[folder])}\n\n"
+                        f'```{{=html}}\n<p class="source-note">From the ingestion script that made these files, <code>{script_ref}</code>.</p>\n```')
         return "\n\n".join(body)
 
     # The folder pages: fill the template for each folder and render them all with Quarto, in a project of their own.
@@ -755,12 +757,13 @@ def _run_each_collecting_failures(function, items, parallel=True, n_workers=None
 
 def _get_dataset_table_html(rows):
     """A folder's published datasets as HTML: the metadata every row shares, once, then a table with one row per file (the Resolution
-    cell of a vector or table names its kind instead)."""
+    cell of a vector or table names its kind instead). The last column links each file's geometamaker yml sidecar (<its URL>.yml,
+    written by linneabean.metadata at publish time)."""
     shared = [(k, label) for k, label in PAGE_FIELDS if len({row[k] for row in rows}) == 1]
     varying = [(k, label) for k, label in PAGE_FIELDS if (k, label) not in shared]
     lines = ['<dl class="shared">' + "".join(f"<dt>{label}</dt><dd>{_linkify(rows[0][k])}</dd>" for k, label in shared if rows[0][k]) + "</dl>",
              '<div class="table-wrap"><table class="datasets"><thead><tr>'
-             + "".join(f"<th>{h}</th>" for h in ["File", "Version", "Release", "Size", "Resolution"] + [label for _, label in varying] + ["Earlier versions"])
+             + "".join(f"<th>{h}</th>" for h in ["File", "Version", "Release", "Size", "Resolution"] + [label for _, label in varying] + ["Earlier versions", "Metadata"])
              + "</tr></thead><tbody>"]
     for row in rows:
         archives = "".join(f'<a class="archive" href="https://data.teemlabs.org/{k}">{posixpath.splitext(posixpath.basename(k))[0][1:].replace("_", ".")}</a>'
@@ -768,7 +771,8 @@ def _get_dataset_table_html(rows):
         lines.append(f'<tr><td class="file"><a href="https://data.teemlabs.org/{row["ref_path"]}" download>{posixpath.basename(row["ref_path"])}</a></td>'
                      f'<td><span class="pill">v{row["version"]}</span></td><td class="num">{row["release"]}</td><td class="num">{_format_size(row["size"])}</td>'
                      f'<td class="num">{_format_resolution(hb.token_to_arcseconds(row["rung"])) if row.get("rung") else row["kind"]}</td>'  # a vector or table: its kind
-                     + "".join(f'<td class="meta">{_linkify(row[k])}</td>' for k, _ in varying) + f"<td>{archives or '&ndash;'}</td></tr>")
+                     + "".join(f'<td class="meta">{_linkify(row[k])}</td>' for k, _ in varying) + f"<td>{archives or '&ndash;'}</td>"
+                     f'<td class="yml"><a class="sidecar" href="https://data.teemlabs.org/{row["ref_path"]}.yml">yml</a></td></tr>')
     return "\n".join(lines + ["</tbody></table></div>"])
 
 def _read_module_docstring(script_path):
@@ -804,18 +808,29 @@ def _get_folder_tree_html(folders, texts, n_files, root=""):
     inner = items(root)
     return f'<div class="tree">{inner}</div>' if inner else ""
 
-def _get_docstring_html(docstring):
-    """A docstring as HTML paragraphs: its hard-wrapped lines rejoined, except where a line starts a numbered or bulleted item."""
-    paragraphs = []
-    for block in re.split(r"\n\s*\n", docstring.strip()):
-        lines = []
-        for line in block.split("\n"):
-            if lines and not re.match(r"\s*(\d+\.|[-*])\s", line):
-                lines[-1] += " " + line.strip()
-            else:
-                lines.append(line.strip())
-        paragraphs.append("<p>" + "<br>".join(_linkify(line) for line in lines) + "</p>")
-    return "".join(paragraphs)
+def _get_docstring_markdown(docstring):
+    """A docstring as Markdown for Quarto: a blank line before a list that follows a paragraph line and after a list's last item
+    (Pandoc needs the first, and would otherwise read the unindented line after a list as part of its last item), '<' and
+    '>' escaped so a name like lulc_esa_<year>.tif stays text instead of becoming an HTML tag, and URLs and DOIs made links
+    (Quarto doesn't link bare URLs)."""
+    def linkify(line):
+        line = re.sub(r"[<>]", lambda m: "\\" + m.group(), line)
+        line = re.sub(r"https?://[^\s<>\"]+[^\s<>\".,;:)]", lambda m: f"<{m.group(0)}>", line)
+        return re.sub(r"\bdoi:(10\.\d+/[^\s<>\"]*[^\s<>\".,;:)])", lambda m: f"[{m.group(0)}](https://doi.org/{m.group(1)})", line)
+    out, in_list = [], False
+    for line in docstring.strip().split("\n"):
+        is_item = bool(re.match(r"\s*(\d+\.|[-*])\s", line))
+        if not line.strip():
+            in_list = False
+        elif (is_item and not in_list or in_list and not is_item and not line[:1].isspace()) and out and out[-1].strip():
+            out.append("")  # a list starts after a paragraph line, or a paragraph line follows a list's last item
+        in_list = is_item or (in_list and line[:1].isspace())
+        out.append(linkify(line))
+    return "\n".join(out)
+
+def _first_sentences(text, n=3):
+    """The first n sentences of text (all of it when it has no more): what a card shows of a folder's text."""
+    return " ".join(re.split(r"(?<=[.!?])\s+", text.strip())[:n])
 
 def _linkify(text):
     """text, HTML-escaped, with its URLs and DOIs made links."""
