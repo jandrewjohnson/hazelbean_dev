@@ -1359,7 +1359,11 @@ class ProjectFlow(object):
                 else:
                     self.skip_existing = task.skip_existing
 
-                if self.skip_existing:
+                # A task sharing its iteration's directory cannot be judged done by that directory
+                # existing: the iteration made it. Like any other creates_dir=False task, it runs
+                # and decides for itself what to skip.
+                shares_iteration_dir = task.parent.type == 'iterator' and not task.creates_dir
+                if self.skip_existing and not shares_iteration_dir:
                     if os.path.exists(self.cur_dir):
                         self.run_this = 0
 

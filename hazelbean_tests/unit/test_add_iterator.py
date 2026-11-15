@@ -1374,3 +1374,28 @@ def test_a_killed_worker_is_not_reported_as_everything_having_finished(tmp_path)
     assert total == 40
     assert finished < total, 'the iteration whose worker died cannot have finished: %s' % message
     assert 'never attempted' not in message, 'which iterations had started is not knowable here: %s' % message
+
+
+def test_a_shared_child_is_not_skipped_because_the_iteration_dir_exists(tmp_path):
+    """skip_existing judges a task by its directory, and a sharing child's directory is the iteration's, which always exists."""
+    seen = {}
+
+    def zones(p):
+        p.iterator_replacements = {'cur_dir_parent_dir': [os.path.join(p.cur_dir, '0_0')]}
+        return p
+
+    def own_dir(p):
+        return p
+
+    def shared_dir(p):
+        seen['dir_existed'] = os.path.isdir(p.cur_dir)
+        seen['run_this'] = p.run_this
+        return p
+
+    p = hb.ProjectFlow(project_dir=str(tmp_path / 'proj'))
+    iterator = p.add_iterator(zones, run_in_parallel=False)
+    p.add_task(own_dir, parent=iterator, skip_existing=0)
+    p.add_task(shared_dir, parent=iterator, skip_existing=1, creates_dir=False)
+    p.execute()
+    assert seen['dir_existed'], 'the case under test needs the iteration directory to exist already'
+    assert seen['run_this']
