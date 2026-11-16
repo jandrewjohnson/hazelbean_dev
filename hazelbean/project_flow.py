@@ -747,7 +747,7 @@ class ProjectFlow(object):
         """
         # A task is found by its NAME in the tree, not only by the '<name>_task' attribute: a
         # builder may store a task under any attribute (p.get_vars_task for get_all_extended_vars),
-        # and a name that resolves nowhere used to leave that task silently enabled.
+        # so the tree lookup finds and skips a task stored under such an attribute.
         by_name = {}
         for node in getattr(self.task_tree, 'descendants', []) or []:
             by_name.setdefault(getattr(node, 'name', None), node)
