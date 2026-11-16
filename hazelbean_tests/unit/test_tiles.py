@@ -132,9 +132,12 @@ def test_tile_pog_refuses_non_pog_and_untiled_resolution(half_empty_pog, tmp_pat
 
 def test_make_path_pog_expand_to_global_extent_false_makes_a_subpog(half_empty_pog, tmp_path):
     """A non-aligned regional raster becomes a subpog on the snapped box; the default still makes a global POG."""
-    box = [10.3, -20.7, 45.2, 12.1]
+    box = [10.3, -20.65, 45.3, 12.1]
     regional = str(tmp_path / 'regional.tif')
-    gdal.Translate(regional, half_empty_pog, projWin=[box[0], box[3], box[2], box[1]])
+    ds = gdal.GetDriverByName('GTiff').Create(regional, 140, 131, 1, gdal.GDT_Byte)
+    ds.SetGeoTransform([box[0], 0.25, 0.0, box[3], 0.0, -0.25])
+    ds.SetProjection(gdal.Open(half_empty_pog).GetProjection())
+    ds.GetRasterBand(1).Fill(7); ds.GetRasterBand(1).SetNoDataValue(255); ds = None
     assert not hb.is_path_subpog(regional), 'the unsnapped clip is not aligned'
 
     sub = str(tmp_path / 'regional_sub.tif')
@@ -142,8 +145,8 @@ def test_make_path_pog_expand_to_global_extent_false_makes_a_subpog(half_empty_p
     assert hb.is_path_subpog(sub) and not hb.is_path_pog(sub)
     gt = hb.get_geotransform_path(sub); shape = hb.get_shape_from_dataset_path(sub)
     got = [gt[0], gt[3] + shape[0] * gt[5], gt[0] + shape[1] * gt[1], gt[3]]
-    assert hb.snap_bb_to_pyramid(box, 900) == pytest.approx([10.25, -20.75, 45.25, 12.25])
-    assert got == pytest.approx([10.25, -20.75, 45.25, 12.25])
+    assert hb.snap_bb_to_pyramid(box, 900) == pytest.approx([10.25, -20.75, 45.5, 12.25])
+    assert got == pytest.approx([10.25, -20.75, 45.5, 12.25])
     sds = gdal.Open(sub)
     assert sds.GetRasterBand(1).GetOverviewCount() == len(hb.get_pyramid_overview_levels_for_bb(900, got))
     sds = None
