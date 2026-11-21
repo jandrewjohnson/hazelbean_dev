@@ -1,5 +1,6 @@
 import os
 import math
+import concurrent.futures
 from fractions import Fraction
 from osgeo import gdal, gdal_array, osr
 import numpy as np
@@ -945,7 +946,12 @@ def tile_pog_to_tileset(pog_path, output_dir=None, tile_degrees=None, skip_empty
 def build_pog_tileset_vrt(tile_dir, vrt_path=None):
     """Index the corner-named tiles in tile_dir as one global raster: a VRT with the exact global geotransform and relative
     source paths, so the folder plus VRT move together. A missing tile reads as zero, which is what it holds; for a
-    covariate tile set the VRT declares the per-type nodata instead, so a missing tile reads as nodata. Returns vrt_path."""
+    covariate tile set the VRT declares the per-type nodata instead, so a missing tile reads as nodata. Returns vrt_path.
+
+    vrt_path defaults to <tile_dir>.vrt beside the folder. A set still being produced is indexed the same way, under a name
+    ending _partial.vrt (in base_data: <stem>_partial.vrt in the dataset folder, over subpogs/<stem>_<rung>sec_<edge>deg/),
+    and rebuilt as tiles arrive: it is the same global raster from the first tile to the last, and which tiles exist is
+    its coverage. Source paths are relative only when tile_dir is in or below the VRT's folder."""
     tiles = sorted(i for i in hb.list_filtered_paths_nonrecursively(tile_dir, include_extensions='.tif') if _is_tile_filename(i))
     if not tiles:
         raise ValueError(f'No corner-named tiles (<stem>_<rung>sec_<corner>_<height>_<width>.tif) in {tile_dir}')
@@ -971,9 +977,65 @@ def _is_tile_filename(path):
         return False
 
 
+def _make_path_pog_tile(input_path, tile_path, make_path_pog_options):
+    """One job of make_paths_pog_tiles. Runs in a worker process: it takes paths and values only."""
+    _, arcseconds, corner, height, width = hb.parse_tile_filename(tile_path)
+    building_path = os.path.splitext(tile_path)[0] + '_building.tif'  # not a tile name, so a tile that exists is a finished one
+    make_path_pog(input_path, output_raster_path=building_path, output_arcseconds=arcseconds, output_bb=hb.get_tile_bb_from_corner_string(corner, height, width),
+                  **make_path_pog_options)
+    os.replace(building_path, tile_path)
+    return tile_path
+
+
+def make_paths_pog_tiles(input_paths, tile_paths, num_workers=None, remove_intermediate_files=False, **make_path_pog_options):
+    """Write each input raster as the tile its output path names: a subpog over exactly the box, and at the rung, of a
+    corner-named tile path (<stem>_<rung>sec_<corner>_<height>_<width>.tif, see hb.get_tile_filename_from_bb).
+
+    Each tile is the source resampled straight onto its own box (make_path_pog's output_bb), so it is the window the
+    global POG would hold there and a set of them joins without seams, as a VRT (build_pog_tileset_vrt) or as one POG
+    (write_pog_from_pog_tileset). Give each input a margin of a source cell or more around its tile. A tile that exists
+    is kept, so a rerun does what is left; a tile is built under another name and renamed when finished.
+
+    Args:
+        input_paths (list): One raster per tile, covering its box.
+        tile_paths (list): The tile each becomes, in the same order.
+        num_workers (int): Processes. Defaults to one less than the CPUs this process may use; 1 runs in this process.
+        remove_intermediate_files (bool): Delete each tile's intermediates (make_path_pog's steps) when it is written. False
+            by default, unlike make_path_pog: this is base data processing, where they are kept for the researcher to look
+            at and to remove; pass intermediate_dir (a task's p.cur_dir) so they are kept where they will be found.
+        **make_path_pog_options: Passed to make_path_pog for every tile (variable_class, intermediate_dir, color_table...).
+
+    Returns:
+        list: tile_paths.
+    """
+    make_path_pog_options = dict(make_path_pog_options, remove_intermediate_files=remove_intermediate_files)
+    jobs = [(i, t) for i, t in zip(input_paths, tile_paths) if not os.path.exists(t)]
+    for _, tile_path in jobs:
+        os.makedirs(os.path.dirname(os.path.abspath(tile_path)), exist_ok=True)
+    num_workers = min(num_workers or max(1, hb.available_cpu_count() - 1), max(1, len(jobs)))
+    hb.log(f'Writing {len(jobs)} tiles, {num_workers} at a time; {len(tile_paths) - len(jobs)} already exist.')
+    if num_workers == 1:
+        for input_path, tile_path in jobs:
+            _make_path_pog_tile(input_path, tile_path, make_path_pog_options)
+        return list(tile_paths)
+    failed = []
+    with concurrent.futures.ProcessPoolExecutor(max_workers=num_workers) as executor:
+        futures = {executor.submit(_make_path_pog_tile, i, t, make_path_pog_options): t for i, t in jobs}
+        for c, future in enumerate(concurrent.futures.as_completed(futures), 1):
+            if future.exception() is not None:
+                failed.append(futures[future])
+                hb.log(f'FAILED {futures[future]}: {future.exception()}')
+            if c % 100 == 0 or c == len(jobs):
+                hb.log(f'{c}/{len(jobs)} tiles done')
+    if failed:
+        raise RuntimeError(f'{len(failed)} tiles failed, e.g. {failed[0]}; the others are written, and a rerun skips them.')
+    return list(tile_paths)
+
+
 def is_path_pog_tileset(vrt_path, verbose=False):
     """True if vrt_path presents a set of subpog tiles as the global raster: global pyramid geotransform on the VRT, every
-    source a corner-named tile of one dataset, rung and edge whose extent matches its name, and every tile a subpog."""
+    source a corner-named tile of one dataset, rung and edge whose extent matches its name, and every tile a subpog. The
+    set need not be complete: a tile that is absent reads as zero (nodata for a covariate)."""
     ds = gdal.Open(vrt_path)
     if ds is None:
         return False
@@ -1005,15 +1067,19 @@ def is_path_pog_tileset(vrt_path, verbose=False):
     return True
 
 
-def _aggregate_level(array, ratio, variable_class):
+def _aggregate_level(array, ratio, variable_class, row_weights=None):
     """One overview level from the level ratio times finer: the mode of each ratio x ratio block (ties to the smallest class)
-    for a categorical raster, the sum for an extensive one. The array's sides must be multiples of ratio."""
+    for a categorical raster, the sum for an extensive one, the mean for an intensive one, weighted by row_weights (the
+    hectares of a cell of each row of array; None is unweighted). The array's sides must be multiples of ratio."""
     rows, cols = array.shape
     if rows % ratio or cols % ratio:
         raise ValueError(f'A {rows} x {cols} level cannot be aggregated by {ratio}.')
     blocks = array.reshape(rows // ratio, ratio, cols // ratio, ratio)
     if variable_class == 'extensive':
         return blocks.astype(np.float64).sum(axis=(1, 3))
+    if variable_class == 'intensive':
+        weights = np.ones(rows) if row_weights is None else row_weights
+        return (blocks * weights.reshape(rows // ratio, ratio, 1, 1)).sum(axis=(1, 3)) / (weights.reshape(rows // ratio, ratio).sum(axis=1)[:, None] * ratio)
     best_count = np.zeros((rows // ratio, cols // ratio), dtype=np.int64)
     best = np.zeros_like(best_count, dtype=array.dtype)
     for value in np.unique(array):  # ascending, and a later value replaces an earlier only with a strictly larger count
@@ -1023,12 +1089,13 @@ def _aggregate_level(array, ratio, variable_class):
     return best
 
 
-def _combine_tile_statistics(tile_paths):
+def _combine_tile_statistics(tile_paths, n_empty_tiles=0):
     """Exact statistics of the union of equally sized tiles from each tile's exact statistics, or None if a tile lacks them.
+    n_empty_tiles more tiles, absent from the set and so all zero, are counted in.
 
-    Every cell of a categorical or extensive subpog is valid and all tiles hold the same number of cells, so the global mean is
+    Every cell of a categorical, extensive or intensive subpog is valid and all tiles hold the same number of cells, so the global mean is
     the mean of the tile means and the variance is the mean of the tiles' (variance + mean squared) less the global mean squared."""
-    mins, maxs, means, squares = [], [], [], []
+    mins, maxs, means, squares = [[0.0] * n_empty_tiles for _ in range(4)]
     for path in tile_paths:
         ds = gdal.Open(path)
         md = ds.GetRasterBand(1).GetMetadata()
@@ -1043,9 +1110,13 @@ def _combine_tile_statistics(tile_paths):
 
 
 def write_pog_from_pog_tileset(tileset_vrt_path, output_path, color_table=None, intermediate_dir=None, remove_intermediate_files=True,
-                               compression='DEFLATE', blocksize=512, verbose=False):
-    """The global POG of a POG tile set (hb.is_path_pog_tileset: a global VRT over the corner-named subpogs of one dataset,
-    which must cover the globe) at output_path, built from what the tiles already are rather than from the assembled raster.
+                               compression='DEFLATE', blocksize=512, verbose=False, extent_bb=None):
+    """The global POG of a POG tile set (hb.is_path_pog_tileset: a global VRT over the corner-named subpogs of one dataset)
+    at output_path, built from what the tiles already are rather than from the assembled raster.
+
+    The set must be complete: every tile overlapping extent_bb ([minx, miny, maxx, maxy], the extent the dataset covers;
+    None is the globe) must be there, so a tile still to be produced is never taken for an empty one. Tiles outside
+    extent_bb may be absent, and are zero in the POG as they are in the VRT.
 
     make_path_pog, given the VRT, reads it into a GeoTIFF, applies the nodata rule, computes the statistics and builds
     every overview from the base: four passes over a raster the size of the globe at the rung, on one core each. A subpog
@@ -1054,8 +1125,9 @@ def write_pog_from_pog_tileset(tileset_vrt_path, output_path, color_table=None, 
     combined from the tiles' (_combine_tile_statistics; computed on the base if a tile lacks them), the levels the tiles
     hold are copied from them (a level that divides the tile edge has no block crossing a tile, so these are the levels
     make_path_pog would compute) and each coarser level is aggregated from the one before it (_aggregate_level: the mode
-    for a categorical raster, ties to the smallest class; the sum for an extensive one). Then
-    the COG copy. Categorical and extensive tile sets only; an intensive or covariate set goes through make_path_pog.
+    for a categorical raster, ties to the smallest class; the sum for an extensive one; the mean weighted by ha_per_cell,
+    or unweighted, for an intensive one). Then the COG copy. Categorical, extensive and intensive tile sets; a covariate
+    set, or an intensive one weighted by an observed-area companion, goes through make_path_pog.
     color_table, intermediate_dir and remove_intermediate_files as in make_path_pog. Returns output_path."""
     if not is_path_pog_tileset(tileset_vrt_path, verbose=verbose):
         raise ValueError(f'Not a POG tile set (is_path_pog_tileset with verbose=True says why): {tileset_vrt_path}')
@@ -1066,13 +1138,21 @@ def write_pog_from_pog_tileset(tileset_vrt_path, output_path, color_table=None, 
     stem, arcseconds, corner, tile_height, tile_width = hb.parse_tile_filename(tile_paths[0])
     arcseconds = float(arcseconds)
     res = hb.pyramid_compatible_resolutions[arcseconds]
-    n_tiles_expected = int(round(360 / tile_width)) * int(round(180 / tile_height))
-    if len(tile_paths) != n_tiles_expected:
-        raise ValueError(f'{len(tile_paths)} tiles, but {n_tiles_expected} are needed to cover the globe with {tile_height} x {tile_width} degree tiles: '
-                         f'an overview block over a missing tile would read as nodata. {tileset_vrt_path}')
-    variable_class = get_pog_metadata(tile_paths[0]).get('POG_VARIABLE_CLASS')
-    if variable_class not in ('categorical', 'extensive'):
-        raise ValueError(f'write_pog_from_pog_tileset handles categorical and extensive tile sets; this one is {variable_class!r}: use make_path_pog. {tileset_vrt_path}')
+    present = {tuple(hb.get_tile_bb_from_corner_string(hb.parse_tile_filename(i)[2], tile_height, tile_width)) for i in tile_paths}
+    absent_bbs = [[lon, lat, lon + tile_width, lat + tile_height] for lat in range(90 - tile_height, -91, -tile_height) for lon in range(-180, 180, tile_width)
+                  if (lon, lat, lon + tile_width, lat + tile_height) not in present]
+    needed = extent_bb or [-180, -90, 180, 90]
+    missing = [i for i in absent_bbs if i[0] < needed[2] and i[2] > needed[0] and i[1] < needed[3] and i[3] > needed[1]]
+    if missing:
+        raise ValueError(f'{len(missing)} of the {tile_height} x {tile_width} degree tiles needed to cover {"the globe" if extent_bb is None else extent_bb} are not '
+                         f'in the set, e.g. {missing[0]}: an incomplete set is not made a POG. {tileset_vrt_path}')
+    meta = get_pog_metadata(tile_paths[0])
+    variable_class = meta.get('POG_VARIABLE_CLASS')
+    intensive_weighting = meta.get('POG_INTENSIVE_WEIGHTING', 'area')
+    if variable_class not in ('categorical', 'extensive', 'intensive') or (variable_class == 'intensive' and meta.get('POG_DENOMINATOR', 'ha_per_cell') != 'ha_per_cell'):
+        raise ValueError(f'write_pog_from_pog_tileset handles categorical and extensive tile sets, and intensive ones weighted by ha_per_cell or unweighted; '
+                         f'this one is {variable_class!r}' + (f' weighted by {meta.get("POG_DENOMINATOR")}' if variable_class == 'intensive' else '')
+                         + f': use make_path_pog. {tileset_vrt_path}')
     output_data_type = hb.get_datatype_from_uri(tile_paths[0])
     class_ndv = hb.no_data_values_by_gdal_type[output_data_type][0]
     overview_levels = hb.pyramid_compatible_overview_levels[arcseconds]
@@ -1094,11 +1174,12 @@ def write_pog_from_pog_tileset(tileset_vrt_path, output_path, color_table=None, 
         if color_table is not None and band.SetRasterColorTable(hb.make_gdal_color_table(color_table)) != gdal.CE_None:
             ds = None
             raise ValueError(f'Could not set the color table on {current_path}: a palette needs a single Byte or UInt16 band.')
-        ds.SetMetadata({'AREA_OR_POINT': 'Area', 'POG_VARIABLE_CLASS': variable_class})
+        ds.SetMetadata(dict({'AREA_OR_POINT': 'Area', 'POG_VARIABLE_CLASS': variable_class},
+                            **({k: meta[k] for k in ('POG_INTENSIVE_WEIGHTING', 'POG_DENOMINATOR') if k in meta} if variable_class == 'intensive' else {})))
         if not ds.GetProjection():
             ds.SetProjection(hb.wgs_84_wkt)
         band.SetNoDataValue(class_ndv)
-        stats = _combine_tile_statistics(tile_paths)
+        stats = _combine_tile_statistics(tile_paths, len(absent_bbs))
         if stats is None:
             if verbose:
                 hb.log(f'A tile has no exact statistics, so they are computed over {current_path}.')
@@ -1119,15 +1200,21 @@ def write_pog_from_pog_tileset(tileset_vrt_path, output_path, color_table=None, 
             for k, f in enumerate(tile_levels):
                 overviews[k].WriteArray(tile_band.GetOverview(k).ReadAsArray(), int(round((tile_gt[0] - gt[0]) / (res * f))), int(round((gt[3] - tile_gt[3]) / (res * f))))
             tile_ds = None
+        np_type = gdal_array.GDALTypeCodeToNumericTypeCode(output_data_type)
+        for bb in absent_bbs:  # an absent tile is zero at every level; an unwritten block would read as nodata
+            for k, f in enumerate(tile_levels):
+                overviews[k].WriteArray(np.zeros((int(round(tile_height / (res * f))), int(round(tile_width / (res * f)))), dtype=np_type),
+                                        int(round((bb[0] - gt[0]) / (res * f))), int(round((gt[3] - bb[3]) / (res * f))))
         for k in range(len(tile_levels)):  # the small copied levels are cheap to check; a tile built before 2026-11-07 holds nodata in its top ones
             if overviews[k].XSize * overviews[k].YSize <= 50e6 and (overviews[k].ReadAsArray() == class_ndv).any():
                 ds = None
                 raise ValueError(f'Overview level {overview_levels[k]} copied from the tiles holds the nodata value {class_ndv}: the tiles\' own top overviews '
                                  f'are unwritten (tiles built with hazelbean before 2026-11-07). Rebuild the tiles. {tileset_vrt_path}')
         level = overviews[len(tile_levels) - 1].ReadAsArray()
-        np_type = gdal_array.GDALTypeCodeToNumericTypeCode(output_data_type)
+        ha_rows = ha_per_cell_rows(arcseconds, 0, n_rows) if (variable_class == 'intensive' and intensive_weighting == 'area') else None
         for k in range(len(tile_levels), len(overview_levels)):
-            level = _aggregate_level(level, overview_levels[k] // overview_levels[k - 1], variable_class)
+            row_weights = None if ha_rows is None else ha_rows.reshape(-1, overview_levels[k - 1]).sum(axis=1)  # hectares of a row of the level being aggregated, per column of the base
+            level = _aggregate_level(level, overview_levels[k] // overview_levels[k - 1], variable_class, row_weights)
             overviews[k].WriteArray((np.rint(level) if np.issubdtype(np_type, np.integer) else level).astype(np_type))
         _set_band_statistics(band, *stats)  # BuildOverviews can drop band metadata
         band = overviews = None
@@ -1256,7 +1343,8 @@ def make_path_pog(input_raster_path,
                   categorical_none_value=0,
                   allow_registration_shift=True,
                   color_table=None,
-                  intermediate_dir=None):
+                  intermediate_dir=None,
+                  output_bb=None):
 
     """ Create a POG (pyramidal cog) from input_raster_path. Writes in-place if output_raster_path is not set. Follows the
     steps of the specification (the paper's Appendix D.4; pogs.qmd).
@@ -1278,6 +1366,13 @@ def make_path_pog(input_raster_path,
     expand_to_global_extent=False makes a SUBPOG instead: the input keeps its footprint, snapped outward to the pyramid
     grid at the output resolution (hb.snap_bb_to_pyramid), with the overview chain truncated to the levels that divide
     that extent. Both are no-ops on an input that already is the requested kind.
+
+    output_bb, a pyramid-aligned [minx, miny, maxx, maxy] such as a tile's box, makes a subpog over exactly that box
+    instead of the input's footprint: the input is resampled straight onto it, cells of the input outside the box are
+    dropped and cells of the box the input does not reach are empty. This is how a tile is made (make_paths_pog_tiles):
+    each cell then depends only on the source and the lattice, never on how the source was cut, so tiles made from
+    overlapping pieces of one source join without a seam. Give the input a margin of a source cell or more around the
+    box when the resample interpolates.
 
     output_arcseconds, if given, sets the rung of the output explicitly. Required when the input is not close to any
     rung; also the way to convert deliberately between rungs. Reaching a coarser rung aggregates by the class rule:
@@ -1314,6 +1409,8 @@ def make_path_pog(input_raster_path,
                          f"side rungs {', '.join(hb.arcseconds_to_token(k) for k in hb.pyramid_side_arcseconds)} (fractions written p-q).")
     if variable_class is not None and variable_class not in POG_VARIABLE_CLASSES:
         raise ValueError(f'variable_class must be one of {POG_VARIABLE_CLASSES}, not {variable_class!r}.')
+    if output_bb is not None:
+        expand_to_global_extent = False
 
     # Do a fast check to see if it's pog (or, when not expanding, subpog).
     is_path_requested_kind = is_path_pog if expand_to_global_extent else is_path_subpog
@@ -1340,8 +1437,14 @@ def make_path_pog(input_raster_path,
             if input_resolution is None or hb.pyramid_compatible_resolution_to_arcseconds[input_resolution] != float(output_arcseconds):
                 needs_resolution_change = True
 
+        # A subpog over another box than output_bb is not the one asked for.
+        needs_extent_change = False
+        if output_bb is not None:
+            gt, shape = hb.get_geotransform_path(input_raster_path), hb.get_shape_from_dataset_path(input_raster_path)
+            needs_extent_change = any(abs(a - b) > 1e-9 for a, b in zip([gt[0], gt[3] + shape[0] * gt[5], gt[0] + shape[1] * gt[1], gt[3]], output_bb))
+
         # Do a full check to see if the input is already a POG. If so, skip it.
-        if not (force_rewrite or needs_censoring or needs_reclassification or needs_resolution_change or needs_class_change) and is_path_requested_kind(input_raster_path, verbose=verbose):
+        if not (force_rewrite or needs_censoring or needs_reclassification or needs_resolution_change or needs_class_change or needs_extent_change) and is_path_requested_kind(input_raster_path, verbose=verbose):
             if verbose:
                 hb.log(f"Raster is already a POG: {input_raster_path}")
             return
@@ -1440,7 +1543,9 @@ def make_path_pog(input_raster_path,
             hb.log(f"make_path_pog: expanding {input_raster_path} from extent {[round(i, 6) for i in input_bb]} to the global "
                    f"{int(round(360 / degrees))} x {int(round(180 / degrees))} grid at {hb.arcseconds_to_token(arcseconds)} arcseconds (pass expand_to_global_extent=False for a subpog).")
     else:
-        target_bb = hb.snap_bb_to_pyramid(input_bb, arcseconds)
+        target_bb = hb.snap_bb_to_pyramid(input_bb if output_bb is None else output_bb, arcseconds)
+        if output_bb is not None and any(abs(a - b) > 1e-9 for a, b in zip(output_bb, target_bb)):
+            raise ValueError(f'output_bb {list(output_bb)} is not aligned to the {hb.arcseconds_to_token(arcseconds)}-arcsecond grid; the nearest aligned box is {target_bb} (hb.snap_bb_to_pyramid).')
         needs_reframing = abs(gt[1] - degrees) > 1e-12 or any(abs(a - b) > 1e-9 for a, b in zip(input_bb, target_bb))
         if verbose:
             hb.log(f"make_path_pog: subpog extent {target_bb} (input extent {[round(i, 6) for i in input_bb]})")
