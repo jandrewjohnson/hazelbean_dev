@@ -761,6 +761,7 @@ def test_add_directory_gives_a_categorical_raster_its_legend_colours_and_writes_
     assert readme.startswith("# lulc/toy\n\nA toy land cover map. It has three classes.\n") and "## Metadata" in readme and "`lulc_toy_2020.tif`" in readme
     assert "| 1 | `cropland` | Cropland, rainfed | `#ffff64` | 255, 255, 100 | Herbaceous crops \\| rainfed |" in readme
     assert "```text\n# QGIS Generated Color Map Export File\nINTERPOLATION:EXACT\n0,0,0,0,255,No data\n" in readme and "## Processing steps" in readme and "\n2. listed" in readme
+    assert readme.rstrip().endswith("Part of the TEEMs base data, https://data.teemlabs.org.*") and "This file is generated" not in readme.split("## Metadata")[0]  # the note on how it was made comes last
     again = store.add_directory_to_base_data(folder, "lulc/toy", manifest_path, legend="lulc_toy_base_data_legend.csv", **kwargs)
     assert set(again["actions"].values()) == {"already there"} and again["warnings"] == [] and again["problems"] == []
 
