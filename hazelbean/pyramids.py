@@ -527,6 +527,13 @@ def list_tile_corner_strings(tile_degrees):
     return [get_tile_corner_string(lon, lat) for lat in range(90 - tile_degrees, -91, -tile_degrees) for lon in range(-180, 180, tile_degrees)]
 
 
+def list_tile_bbs_for_bb(bb, tile_degrees):
+    """The [minx, miny, maxx, maxy] of every tile of the global grid with the given edge that bb overlaps (sharing an edge is
+    not overlapping), in list_tile_corner_strings' order: what a dataset covering bb needs for its tile set to be complete."""
+    tile_bbs = [get_tile_bb_from_corner_string(corner, tile_degrees) for corner in list_tile_corner_strings(tile_degrees)]
+    return [t for t in tile_bbs if t[0] < bb[2] and t[2] > bb[0] and t[1] < bb[3] and t[3] > bb[1]]
+
+
 def get_tile_filename(stem, arcseconds, corner, tile_degrees=None, width_degrees=None):
     """'<stem>_<rung>sec_<corner>_<height>_<width>.tif'. The height defaults to the scheme's tile edge for the rung and
     the width to the height; pass both for a rectangular subpog (or use get_tile_filename_from_bb)."""
